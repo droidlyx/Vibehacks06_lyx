@@ -14,5 +14,16 @@
       "round_cap": 10
     }
   },
-  "requests": []
+  "requests": [],
+  "balance_checks": [
+    {
+      "date": "2026-10-31",
+      "tripo": 3000.0,
+      "tripo_frozen": 0.0,
+      "v2fun": 5100.0,
+      "hyper3d": 223,
+      "method": "read-only official API GET",
+      "spent": 0
+    }
+  ]
 }
