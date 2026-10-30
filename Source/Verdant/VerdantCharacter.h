@@ -39,6 +39,8 @@ public:
  float Nutrition = 0.f;
  float AttackTimer = 0.f;
  float AttackDuration = .55f;
+ int32 QueuedAttackType = -1;
+ float AttackInputBuffer = 0.f;
  float DodgeTimer = 0.f;
  float DodgeRecoveryTimer = 0.f;
  static constexpr float DodgeActiveDuration = .60f;
@@ -58,6 +60,17 @@ public:
  int32 HostileId = -1;
  float SharePledge = 0.f;
  float DonationPledge = 0.f;
+ // Local intention and movement recovery; no teleporting or remote fulfilment.
+ int32 AvoidThreatId = -1;
+ float AvoidThreatUntil = 0.f;
+ float MoveSampleAt = 0.f;
+ FVector MoveSamplePosition = FVector::ZeroVector;
+ FVector MoveSampleGoal = FVector::ZeroVector;
+ float DetourUntil = 0.f;
+ FVector DetourPoint = FVector::ZeroVector;
+ int32 MoveRecoveryCount = 0;
+ int32 AvoidGrove = -1;
+ float AvoidGroveUntil = 0.f;
  float BrainClock = 0.f;
  float ReconsiderAt = 0.f;
  FVector Destination = FVector::ZeroVector;
@@ -83,6 +96,7 @@ public:
  void Contribute();
  void Talk();
  void ToggleClaim();
+ void TendGrove();
  void RestartJourney();
  void SetSize(float NewSize);
  void Say(const FString& Line);
@@ -99,6 +113,7 @@ private:
  void LookPitch(float Value);
  void StartHarvest();
  void StopHarvest();
+ void RequestPlayerAttack(bool Heavy);
  void LightAttack();
  void HeavyAttack();
  void EatInput();

@@ -89,3 +89,13 @@ Next: verify normal-resource completion, make the resulting world state easier t
 - Re-tested portable AI from a cold start using its copied runtime, model and DLLs; real native dialogue passed.
 - Fixed the PowerShell5 report-merging array wrapper and verified five latest actual case records survive JSON round-trip, with earlier failed cases retained separately.
 - Verified the original v0.1 executable hash is unchanged; prepared v0.2 launcher promotion and packaged controls/licenses/demo instructions.
+
+## v0.3 first integration
+
+- Started the user-authorized two-hour hidden iteration at2026-10-31 05:47:49 Asia/Shanghai; no game/editor window was shown.
+- Added distinct food reserves, matching donations from real public help, net-gift/spent-credit accounting, follow willingness and peaceful transfer of a single controlled grove. Requests and execution share authoritative limits.
+- Added paid B-key grove tending and player policy cycling (free/taxed/closed), preserving actual food and state changes.
+- Companions now intervene against threats, avoid their party, preserve agreements when attacked by outsiders, retreat/heal from real food and retry blocked travel without remote fulfilment.
+- Added one-shot late-click attack buffering, cancelled by stagger/dialogue/dodge, and targeted input checks.
+- First editor integration compiles. Social/world/NPC/combat/real-AI probes all exited0. These are fixtures/integration cases, not yet the v0.3 normal-resource full route.
+- Render review found Canvas text missing despite valid Slate text: a file-backed Slate font has no UFont object required by this engine's Canvas path. Also found over-wrapped footer context. Both are explicitly pending the next visual fix; not claimed visually complete.

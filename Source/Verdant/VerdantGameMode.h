@@ -15,12 +15,16 @@ private:
  float SmokeStartSize = 0.f;
  float SmokeTargetHealth = 0.f;
  void TickWorldProbe(float Dt);
+ void TickNPCProbe(float Dt);
+ void TickSocialProbe(float Dt);
  void TickAIProbe(float Dt);
  void TickInputJourney(float Dt);
  void TickCombatProbe(float Dt);
  float JourneyPhaseAt=0.f, JourneyFirstHarvest=-1.f, JourneyStartSize=0.f, JourneyFoodBefore=0.f;
  bool bJourneyWalking=false;
  int32 JourneyEatCount=0;
+ int32 JourneyCareCount=0;
+ float JourneyCareBefore=0.f, JourneyFertilityBefore=0.f;
  FVector JourneyOrigin=FVector::ZeroVector;
  int32 JourneyVisitIndex=0, JourneyCollectionGrove=-1, JourneyDialogueStart=0;
  int32 JourneyNegotiationsAttempted=0, JourneyNegotiationsReplied=0;

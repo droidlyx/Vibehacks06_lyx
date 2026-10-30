@@ -96,6 +96,9 @@ public:
  void TickPolicyProbe(float Dt);
  TMap<FString,float> HarvestLedger;
  UPROPERTY() TMap<int32,float> DonationLedger;
+ UPROPERTY() TMap<int32,float> TendLedger;
+ UPROPERTY() TMap<FString,float> TransferLedger;
+ UPROPERTY() TMap<int32,float> SpentGiftCredit;
  UPROPERTY() TMap<int32,FString> DonationNames;
  UPROPERTY() FVerdantSeasonSnapshot OpeningSeason;
  UPROPERTY() FVerdantSeasonSnapshot RestoredSeason;
@@ -117,6 +120,20 @@ public:
  bool Donate(AVerdantCharacter* Who, float Amount);
  bool Transfer(AVerdantCharacter* From, AVerdantCharacter* To, float Amount);
  bool Claim(int32 GroveIndex, AVerdantCharacter* Who);
+ float TendCost(int32 GroveIndex) const;
+ bool Tend(int32 GroveIndex, AVerdantCharacter* Who);
+ bool TransferControl(int32 GroveIndex, AVerdantCharacter* From, AVerdantCharacter* To);
+ float NetPlayerGift(int32 NpcId) const;
+ float AvailableGiftCredit(int32 NpcId) const;
+ float NegotiationReserve(const AVerdantCharacter* NPC) const;
+ float MaxNegotiatedGive(const AVerdantCharacter* NPC, const AVerdantCharacter* Target) const;
+ float MaxNegotiatedDonation(const AVerdantCharacter* NPC) const;
+ int32 NegotiationGrove(const AVerdantCharacter* NPC) const;
+ bool CanNegotiateFollow(const AVerdantCharacter* NPC, const AVerdantCharacter* Target) const;
+ bool CanNegotiatePolicy(const AVerdantCharacter* NPC, const FString& Action, int32 GroveIndex, float* OutGiftCost = nullptr) const;
+ bool ApplyNegotiatedPolicy(AVerdantCharacter* NPC, const FString& Action, int32 GroveIndex);
+ FString NegotiationSummary(const AVerdantCharacter* NPC) const;
+
  bool SetAccess(int32 GroveIndex, AVerdantCharacter* Who, bool bOpen, float Share = 0.f);
  FString WorldSummary() const;
  FVector SurfacePoint(FVector P, float Lift = 0.f) const;

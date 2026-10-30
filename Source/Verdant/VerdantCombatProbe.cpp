@@ -354,7 +354,52 @@ void AVerdantGameMode::TickCombatProbe(float Dt)
         Key(EKeys::W, false);
         Check(P->GetActorLocation().X > F.Origin.X + 10.f, TEXT("Held W moves the player after conversation interruption"));
         P->CancelForConversation(); P->Nutrition = 0; P->HurtTimer = 0;
-        Place(Target, CombatAnchor + FVector(2500, 0, 0)); F.CameraIndex = 0; Next(19);
+        ResetFixture(); Next(26);
+    }
+    else if (SmokeStage == 26 && Phase > .25f)
+    { F.TargetHealth=Target->Health;Tap(EKeys::LeftMouseButton);Next(27); }
+    else if (SmokeStage == 27)
+    {
+        Place(Target,CombatAnchor+FVector(170,0,0));
+        if(P->AttackTimer>0&&P->AttackTimer<.16f){Tap(EKeys::RightMouseButton);Next(28);}
+        else if(Phase>1.f){Check(false,TEXT("Late attack input reached the recovery window"));Next(28);}
+    }
+    else if (SmokeStage == 28)
+    {
+        Place(Target,CombatAnchor+FVector(170,0,0));
+        if(P->bHeavyAttack&&P->AttackTimer>.55f){Check(true,TEXT("A late right-click starts one heavy follow-up after the light attack"));Next(29);}
+        else if(Phase>.65f){Check(false,TEXT("A late right-click starts one heavy follow-up after the light attack"));Next(29);}
+    }
+    else if (SmokeStage == 29)
+    {
+        Place(Target,CombatAnchor+FVector(170,0,0));
+        if(Phase>1.2f){
+            Check(F.TargetHealth-Target->Health>=P->Strength()*2.7f,TEXT("Buffered light-to-heavy sequence causes two real hits"));
+            Check(P->AttackTimer<=0&&P->QueuedAttackType<0,TEXT("One buffered click does not auto-repeat further attacks"));
+            ResetFixture();Tap(EKeys::LeftMouseButton);Next(30);
+        }
+    }
+    else if (SmokeStage == 30)
+    {
+        Place(Target,CombatAnchor+FVector(170,0,0));
+        if(P->AttackTimer>0&&P->AttackTimer<.16f){Tap(EKeys::RightMouseButton);Tap(EKeys::T);F.TargetHealth=Target->Health;Next(31);}
+        else if(Phase>1.f){Check(false,TEXT("Conversation cancellation fixture has a buffered follow-up"));Next(31);}
+    }
+    else if (SmokeStage == 31 && Phase > 1.f)
+    {
+        Check(H->bConversationOpen&&P->QueuedAttackType<0&&P->AttackTimer<=0&&FMath::IsNearlyEqual(Target->Health,F.TargetHealth,.01f),TEXT("Opening dialogue cancels a buffered follow-up without a delayed hit"));
+        ResetFixture();Tap(EKeys::LeftMouseButton);Next(32);
+    }
+    else if (SmokeStage == 32)
+    {
+        Place(Target,CombatAnchor+FVector(170,0,0));
+        if(P->AttackTimer>0&&P->AttackTimer<.16f){Tap(EKeys::RightMouseButton);F.TargetHealth=Target->Health;P->ReceiveStrike(Target,5.f);Next(33);}
+        else if(Phase>1.f){Check(false,TEXT("Stagger cancellation fixture has a buffered follow-up"));Next(33);}
+    }
+    else if (SmokeStage == 33 && Phase > 1.f)
+    {
+        Check(P->QueuedAttackType<0&&P->AttackTimer<=0&&FMath::IsNearlyEqual(Target->Health,F.TargetHealth,.01f),TEXT("Being staggered cancels the buffered follow-up"));
+        ResetFixture();Place(Target,CombatAnchor+FVector(2500,0,0));F.CameraIndex=0;Next(19);
     }
     else if (SmokeStage == 19)
     {

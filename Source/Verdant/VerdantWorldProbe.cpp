@@ -20,13 +20,15 @@ void AVerdantGameMode::TickWorldProbe(float Dt) {
  if(!Courier)return;
  if(SmokeStage==0&&SmokeTime>3) {
   for(AVerdantCharacter* N:W->Folk)if(N&&N!=P){N->SetActorTickEnabled(false);N->GetCharacterMovement()->StopMovementImmediately();N->GetCharacterMovement()->DisableMovement();N->HostileId=-1;N->CombatTarget.Reset();}
+  // Explicit fixture payment establishes real community contribution under v0.3 bargaining rules.
+  Place(P,W->MotherPosition+FVector(650,0,0));P->Food=30.f;W->Donate(P,30.f);
   Place(P,W->Groves[2].Position);
   const float ClosedBefore=P->Food;
   Check(W->Harvest(2,P,5)==0&&P->Food==ClosedBefore,TEXT("Closed territory denies real collection"));
   Check(W->Dialogue->ApplyDecision(W->FindFolk(3),TEXT("open"),0,0),TEXT("Authorized negotiated access change accepted"));
   Check(W->Harvest(2,P,5)>0,TEXT("Negotiated opening enables actual collection"));
   const float Before=W->TreeNutrition;
-  Courier->Food=12;Courier->Nutrition=0;Courier->DonationPledge=0;
+  Courier->Food=22;Courier->Nutrition=0;Courier->DonationPledge=0;
   Place(Courier,FVector(2000,-800,0));Place(P,FVector(1800,-800,0));
   Courier->SetActorTickEnabled(true);Courier->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
   ProbeStart=Courier->GetActorLocation();ProbeTreeBefore=W->TreeNutrition;ProbeInventoryBefore=Courier->Food;
@@ -47,9 +49,9 @@ void AVerdantGameMode::TickWorldProbe(float Dt) {
  else if(SmokeStage==2&&(Courier->DonationPledge<=.01f||SmokeTime>40)) {
   Check(Courier->DonationPledge<=.01f&&W->TreeNutrition>=ProbeTreeBefore+9.99f,TEXT("Promised food arrives through travel and donation"));
   Check(FVector::Dist2D(Courier->GetActorLocation(),W->MotherPosition)<1100,TEXT("Delivery happens at the Mother Tree"));
-  Courier->Food=12;Courier->Nutrition=0;Courier->DonationPledge=0;
+  Courier->Food=22;Courier->Nutrition=0;Courier->DonationPledge=0;
   Place(Courier,FVector(2000,-800,0));Place(P,FVector(1800,-800,0));ProbeTreeBefore=W->TreeNutrition;
-  W->Dialogue->ApplyDecision(Courier,TEXT("donate"),0,10);
+  W->Dialogue->ApplyDecision(Courier,TEXT("donate"),0,5);
   Courier->ReceiveStrike(P,99999.f);
   Check(Courier->bDead,TEXT("Combat can interrupt a delivery"));
   ProbeInventoryBefore=Courier->Food;
@@ -71,7 +73,7 @@ void AVerdantGameMode::TickWorldProbe(float Dt) {
   Check(FMath::IsNearlyEqual(Miya->Trust.FindRef(0),12.f,.001f),TEXT("Gift-only goodwill is bounded at friendly trust"));
   P->Food=5;P->ActionCooldown=0;Miya->Trust.FindOrAdd(0)=30.f;P->Contribute();
   Check(FMath::IsNearlyEqual(Miya->Trust.FindRef(0),30.f,.001f),TEXT("Sharing does not reduce previously earned higher trust"));
-  Miya->Food=.01f;Miya->Nutrition=0;Miya->DonationPledge=0;
+  Miya->Food=W->NegotiationReserve(Miya)+.01f;Miya->Nutrition=0;Miya->DonationPledge=0;
   Place(Miya,W->MotherPosition+FVector(600,0,0));Place(P,W->MotherPosition+FVector(650,0,0));
   ProbeTreeBefore=W->TreeNutrition;
   Check(W->Dialogue->ApplyDecision(Miya,TEXT("donate"),0,.01f),TEXT("Smallest schema-legal delivery pledge is accepted"));

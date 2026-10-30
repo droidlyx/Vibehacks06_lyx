@@ -349,6 +349,7 @@ bool AVerdantWorld::Transfer(AVerdantCharacter* From, AVerdantCharacter* To, flo
         return false;
     From->Food -= Paid;
     To->Food += Paid;
+    TransferLedger.FindOrAdd(FString::Printf(TEXT("%d:%d"), From->AgentId, To->AgentId)) += Paid;
     if(From->AgentId==0||To->AgentId==0) PlayCue(TEXT("Pickup"),To->GetActorLocation(),To->BodySize);
     Record(FString::Printf(TEXT("%s 把 %.1f 份养分交给了 %s。"), *From->DisplayName, Paid, *To->DisplayName));
     return true;
@@ -376,7 +377,44 @@ bool AVerdantWorld::Claim(int32 GroveIndex, AVerdantCharacter* Who)
     Who->HomeGrove = GroveIndex;
     Record(FString::Printf(TEXT("%s 开始管理%s，并开放采集。"), *Who->DisplayName, *Grove.Name));
     if (Who->AgentId == 0)
-        Notify(TEXT("已接管果林，目前开放采集。再次按 G 可切换开放与关闭。"));
+        Notify(TEXT("已接管果林，目前免费开放。按 G 切换免费、分成或关闭。"));
+    return true;
+}
+
+float AVerdantWorld::TendCost(int32 GroveIndex) const
+{
+    if (!Groves.IsValidIndex(GroveIndex)) return 0.f;
+    return FMath::Clamp((1.f - Groves[GroveIndex].Fertility) / .03f, 0.f, 5.f);
+}
+
+bool AVerdantWorld::Tend(int32 GroveIndex, AVerdantCharacter* Who)
+{
+    if (!Groves.IsValidIndex(GroveIndex) || !IsLiving(Who)) return false;
+    auto& Grove = Groves[GroveIndex];
+    if (FVector::Dist2D(Who->GetActorLocation(), Grove.Position) > GroveInteractionRadius || !CanHarvest(GroveIndex, Who)) return false;
+    const float Cost = TendCost(GroveIndex);
+    if (Cost < .01f) { if (Who->AgentId == 0) Notify(TEXT("果林生机充足，不需要额外养护。")); return false; }
+    if (Who->Food + .001f < Cost) { if (Who->AgentId == 0) Notify(FString::Printf(TEXT("养护需要 %.1f 份食物，作为新的土壤养分。"), Cost)); return false; }
+    Who->Food = FMath::Max(0.f, Who->Food - Cost);
+    Grove.Fertility = FMath::Min(1.f, Grove.Fertility + Cost * .03f);
+    TendLedger.FindOrAdd(Who->AgentId) += Cost;
+    Record(FString::Printf(TEXT("%s 把 %.1f 份食物还给%s的土地，生机提升至 %.0f%%。"), *Who->DisplayName, Cost, *Grove.Name, Grove.Fertility * 100.f));
+    if (Who->AgentId == 0) Notify(TEXT("果林恢复得更快了。这份真实帮助也会被居民记住。"));
+    PlayCue(TEXT("Grow"), Grove.Position, Who->BodySize);
+    UpdateGroveVisuals();
+    return true;
+}
+
+bool AVerdantWorld::TransferControl(int32 GroveIndex, AVerdantCharacter* From, AVerdantCharacter* To)
+{
+    if (!Groves.IsValidIndex(GroveIndex) || !IsLiving(From) || !IsLiving(To) || From == To) return false;
+    auto& Grove = Groves[GroveIndex];
+    if (Grove.ControllerId != From->AgentId || FVector::Dist2D(From->GetActorLocation(), To->GetActorLocation()) > 750.f * FMath::Max(1.f, To->BodySize)) return false;
+    Grove.ControllerId = To->AgentId;
+    Grove.bOpen = true; Grove.Share = 0.f; Grove.Permitted.Reset();
+    To->HomeGrove = GroveIndex;
+    Record(FString::Printf(TEXT("%s 将%s的管理权交给%s，居民仍可自由采集。"), *From->DisplayName, *Grove.Name, *To->DisplayName));
+    UpdateGroveVisuals();
     return true;
 }
 
@@ -393,7 +431,7 @@ bool AVerdantWorld::SetAccess(int32 GroveIndex, AVerdantCharacter* Who, bool bOp
     Record(FString::Printf(TEXT("%s 将%s设为%s，采集分成为 %.0f%%。"),
         *Who->DisplayName, *Grove.Name, bOpen ? TEXT("开放") : TEXT("凭许可进入"), Grove.Share * 100.f));
     if (Who->AgentId == 0)
-        Notify(bOpen ? TEXT("果林已开放，居民可以进入采集。") : TEXT("果林已关闭，其他居民会寻找新的采集地点。"));
+        Notify(!bOpen ? TEXT("果林已关闭，其他居民会寻找新的采集地点。") : Grove.Share > .001f ? TEXT("果林开放并收取三成分成；居民采集时会实际交粮。") : TEXT("果林免费开放，居民可以自由采集。"));
     return true;
 }
 

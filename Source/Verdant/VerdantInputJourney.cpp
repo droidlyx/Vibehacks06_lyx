@@ -23,7 +23,8 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
  auto* W=AVerdantWorld::Find(this);auto* P=Cast<AVerdantCharacter>(UGameplayStatics::GetPlayerCharacter(this,0));
  auto* PC=P?Cast<APlayerController>(P->GetController()):nullptr;
  if(!W||!P||!PC)return;
- const bool bFullJourney=FParse::Param(FCommandLine::Get(),TEXT("VerdantFullJourney"));
+ const bool bStewardJourney=FParse::Param(FCommandLine::Get(),TEXT("VerdantStewardJourney"));
+ const bool bFullJourney=bStewardJourney||FParse::Param(FCommandLine::Get(),TEXT("VerdantFullJourney"));
  if(!bJourneyHasPosition){JourneyLastPosition=P->GetActorLocation();bJourneyHasPosition=true;}
  JourneyTravelDistance+=FVector::Dist2D(JourneyLastPosition,P->GetActorLocation());JourneyLastPosition=P->GetActorLocation();
  if(SmokeTime>=JourneyNextPathSample) {
@@ -55,6 +56,9 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   TArray<TSharedPtr<FJsonValue>> Notes;for(auto& S:SmokeChecks)Notes.Add(MakeShared<FJsonValueString>(S));Result->SetArrayField(TEXT("checks"),Notes);
 
   Result->SetBoolField(TEXT("full_journey"),bFullJourney);
+  Result->SetBoolField(TEXT("steward_journey"),bStewardJourney);
+  Result->SetNumberField(TEXT("player_care_food_paid"),W->TendLedger.FindRef(0));
+  Result->SetNumberField(TEXT("restoration_player_groves"),W->RestoredSeason.PlayerGroves);
   Result->SetBoolField(TEXT("completed_full_goal"),W->bRestored);
   Result->SetNumberField(TEXT("restored_at_seconds"),W->RestoredSeason.bCaptured?W->RestoredSeason.AtSeconds:-1.f);
   Result->SetNumberField(TEXT("travel_distance_m"),JourneyTravelDistance/100.f);
@@ -98,7 +102,7 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   Result->SetArrayField(TEXT("final_groves"),FinalGroves);
 
   FString Json;auto Writer=TJsonWriterFactory<>::Create(&Json);FJsonSerializer::Serialize(Result,Writer);
-  FFileHelper::SaveStringToFile(Json,*(Dir/(bFullJourney?TEXT("full-journey.json"):TEXT("input-journey.json"))),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+  FFileHelper::SaveStringToFile(Json,*(Dir/(bStewardJourney?TEXT("steward-journey.json"):bFullJourney?TEXT("full-journey.json"):TEXT("input-journey.json"))),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
   UE_LOG(LogTemp,Display,TEXT("VERDANT_JOURNEY_COMPLETE failures=%d seconds=%.1f"),SmokeFailures,SmokeTime);
   SmokeStage=99;FPlatformMisc::RequestExitWithStatus(false,SmokeFailures?1:0);
  };
@@ -186,13 +190,30 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   if(bFullJourney) {
    Stop();Key(EKeys::E,false);
    JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: original growth/combat/first-offering loop complete; continuing with named negotiations."),SmokeTime));
-   JourneyVisitIndex=0;JourneyPhaseAt=SmokeTime;SmokeStage=20;
+   JourneyVisitIndex=0;JourneyPhaseAt=SmokeTime;SmokeStage=15;
   } else Finish();
+ }
+ else if(bFullJourney&&SmokeStage==15&&Walk(W->Groves[1].Position,550.f)) {
+  JourneyFoodBefore=P->Food;Key(EKeys::E,true);JourneyPhaseAt=SmokeTime;SmokeStage=16;
+ }
+ else if(bFullJourney&&SmokeStage==16&&P->Food>=10.f) {
+  Key(EKeys::E,false);JourneyCareBefore=W->TendLedger.FindRef(0);JourneyFertilityBefore=W->Groves[1].Fertility;
+  JourneyFoodBefore=P->Food;JourneyCareCount=0;JourneyPhaseAt=SmokeTime;SmokeStage=17;
+ }
+ else if(bFullJourney&&SmokeStage==17&&SmokeTime-JourneyPhaseAt>.8f) {
+  if(JourneyCareCount<2){Tap(EKeys::B);++JourneyCareCount;JourneyPhaseAt=SmokeTime;}
+  else {
+   const float CarePaid=W->TendLedger.FindRef(0)-JourneyCareBefore;
+   Check(CarePaid>.01f&&FMath::IsNearlyEqual(JourneyFoodBefore-P->Food,CarePaid,.01f),TEXT("B input invests actual collected food in grove care"));
+   Check(W->Groves[1].Fertility>JourneyFertilityBefore+.1f,TEXT("Paid care improves the actual grove rather than granting dialogue credit alone"));
+   JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: invested %.2f actual food in care before negotiating access/control."),SmokeTime,CarePaid));
+   JourneyPhaseAt=SmokeTime;SmokeStage=20;
+  }
  }
  else if(bFullJourney&&SmokeStage==20) {
   if(W->bRestored){JourneyPhaseAt=SmokeTime;SmokeStage=40;return;}
   if(JourneyVisitIndex>=4){JourneyPhaseAt=SmokeTime;SmokeStage=30;return;}
-  const int32 VisitId=JourneyVisitIndex<2?3:2;
+  const int32 VisitId=JourneyVisitIndex<2?(bStewardJourney?1:3):2;
   auto* N=W->FindFolk(VisitId);
   if(!N||N->bDead) {
    JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: resident %d unavailable; retained the real outcome and moved on."),SmokeTime,VisitId));
@@ -204,7 +225,7 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   }
  }
  else if(bFullJourney&&SmokeStage==21&&SmokeTime-JourneyPhaseAt>.25f) {
-  const int32 VisitId=JourneyVisitIndex<2?3:2;
+  const int32 VisitId=JourneyVisitIndex<2?(bStewardJourney?1:3):2;
   auto* H=Cast<AVerdantHUD>(PC->GetHUD());
   const bool Correct=H&&H->bConversationOpen&&W->Dialogue&&W->Dialogue->Selected.IsValid()
    &&W->Dialogue->Selected->AgentId==VisitId;
@@ -215,11 +236,15 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   }
   JourneyDialogueStart=W->Dialogue->Lines.Num();
   ++JourneyNegotiationsAttempted;
-  const FString Prompt=JourneyVisitIndex%2==0
-   ?TEXT("我想复苏母树。你愿意亲自把20份自己的食物送到母树吗？如果不愿意或食物不够，可以拒绝或说明你愿意承担多少。")
-   :TEXT("请免费开放你管理的果林，取消采集分成，让大家都能采集。你可以拒绝；我想知道你的真实打算。");
+  const FString Prompt=bStewardJourney
+   ?(JourneyVisitIndex%2==0
+     ?TEXT("我已经实际供奉母树、养护土地。我想承担果林的管理责任，请把你管理的果林交给我。我希望你继续生活在山谷里，不会伤害你。你愿意现在移交管理权吗？")
+     :TEXT("在保留自己口粮的前提下，你愿意亲自给母树送去目前能够承担的养分吗？请只承诺你真正愿意送的数量。"))
+   :(JourneyVisitIndex%2==0
+     ?TEXT("我已经供奉并养护土地。你愿意保留口粮，亲自把你现在能够承担的养分送到母树吗？请按真实情况提出数量。")
+     :TEXT("请免费开放你管理的果林，取消采集分成，让大家都能采集。你可以拒绝；我想知道你的真实打算。"));
   JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: requested %s from resident %d through the real dialogue service."),
-   SmokeTime,JourneyVisitIndex%2==0?TEXT("a 20-food physical delivery"):TEXT("free access"),VisitId));
+   SmokeTime,bStewardJourney?(JourneyVisitIndex%2==0?TEXT("peaceful stewardship"):TEXT("affordable physical delivery")):(JourneyVisitIndex%2==0?TEXT("affordable physical delivery"):TEXT("free access")),VisitId));
   W->Dialogue->Request(W->Dialogue->Selected.Get(),Prompt);
   JourneyPhaseAt=SmokeTime;SmokeStage=22;
  }
@@ -265,6 +290,8 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
    JourneyPhaseAt=SmokeTime;SmokeStage=30;return;
   }
   if(Walk(W->Groves[JourneyCollectionGrove].Position,550.f)) {
+   const auto& G=W->Groves[JourneyCollectionGrove];
+   if(bStewardJourney&&G.ControllerId==0&&G.bOpen&&G.Share<.001f)Tap(EKeys::G);
    JourneyFoodBefore=P->Food;Key(EKeys::E,true);JourneyPhaseAt=SmokeTime;SmokeStage=32;
   }
  }
@@ -312,11 +339,12 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   float RecordedDonations=0.f;for(const auto& Pair:W->DonationLedger)RecordedDonations+=Pair.Value;
   Check(FMath::IsNearlyEqual(RecordedDonations,W->TreeNutrition,.02f),
    TEXT("Each resident's actual contribution ledger sums to the restored tree"));
+  if(bStewardJourney)Check(W->RestoredSeason.PlayerGroves>=2&&W->RestoredSeason.ResidentsAlive==3,TEXT("Peaceful stewardship forms a distinct world outcome with all main residents alive"));
   PC->SetControlRotation(FRotator(12.f,(W->MotherPosition-P->GetActorLocation()).Rotation().Yaw,0));
   JourneyPhaseAt=SmokeTime;SmokeStage=41;
  }
  else if(bFullJourney&&SmokeStage==41&&SmokeTime-JourneyPhaseAt>1.f) {
-  FScreenshotRequest::RequestScreenshot(Dir/TEXT("full-journey-world.png"),true,false);
+  FScreenshotRequest::RequestScreenshot(Dir/(bStewardJourney?TEXT("steward-journey-world.png"):TEXT("full-journey-world.png")),true,false);
   JourneyPhaseAt=SmokeTime;SmokeStage=42;
  }
  else if(bFullJourney&&SmokeStage==42&&SmokeTime-JourneyPhaseAt>2.f)Finish();

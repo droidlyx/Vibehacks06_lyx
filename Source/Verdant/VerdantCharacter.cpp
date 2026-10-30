@@ -144,6 +144,8 @@ void AVerdantCharacter::Tick(float Dt) {
  HurtTimer = FMath::Max(0.f,HurtTimer-Dt);
  DodgeTimer = FMath::Max(0.f,DodgeTimer-Dt);
  DodgeRecoveryTimer = FMath::Max(0.f,DodgeRecoveryTimer-Dt);
+ AttackInputBuffer=FMath::Max(0.f,AttackInputBuffer-Dt);
+ if(AttackInputBuffer<=0)QueuedAttackType=-1;
  if (GetWorld()->GetTimeSeconds()>FeedbackUntil) CombatFeedback.Empty();
  if (AttackTimer > 0) {
   SetActorRotation(FRotator(0,LockedActionYaw,0));
@@ -152,6 +154,9 @@ void AVerdantCharacter::Tick(float Dt) {
   if (!bHitApplied && Prior > StrikeAt && AttackTimer <= StrikeAt) ApplyStrike();
  }
  if (!bDead) {
+  if(QueuedAttackType>=0 && AttackTimer<=0 && DodgeTimer<=0 && HurtTimer<=0) {
+   const bool Heavy=QueuedAttackType==1;QueuedAttackType=-1;AttackInputBuffer=0;Attack(Heavy);
+  }
   if (Nutrition > 0) {
    const float Used = FMath::Min(Nutrition,2.2f*Dt);
    const float Prior = BodySize;
@@ -248,7 +253,7 @@ void AVerdantCharacter::UpdateAnimation() {
 }
 bool AVerdantCharacter::Attack(bool Heavy) {
  if (bDead || AttackTimer>0 || DodgeTimer>0 || HurtTimer>0) return false;
- StopHarvest();
+ StopHarvest();QueuedAttackType=-1;AttackInputBuffer=0;
  bHeavyAttack=Heavy; AttackDuration=Heavy?.85f:.55f; AttackTimer=AttackDuration;
  bHitApplied=false; AnimationState=-1;
  if(auto* W=Valley())W->PlayCue(TEXT("Swing"),GetActorLocation(),BodySize);
@@ -265,6 +270,8 @@ void AVerdantCharacter::ApplyStrike() {
  FString Defeated;
  for(AVerdantCharacter* Other:W->Folk) {
   if(!IsValid(Other) || Other==this || Other->bDead) continue;
+  // Companions protect their leader; player attacks remain an unrestricted choice.
+  if(AgentId!=0 && FollowId>=0 && (Other->AgentId==FollowId || Other->FollowId==FollowId)) continue;
   FVector Delta=Other->GetActorLocation()-GetActorLocation();
   const float Dist=Delta.Size2D();
   if(Dist>Reach()+Other->GetCapsuleComponent()->GetScaledCapsuleRadius()) continue;
@@ -286,6 +293,7 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From,float Damage) {
  StopHarvest();
  if(bDead || !IsValid(From) || From==this || !FMath::IsFinite(Damage) || Damage<=0)return;
  if(IsDodgeInvulnerable()){SetCombatFeedback(TEXT("闪避成功"));return;}
+ QueuedAttackType=-1;AttackInputBuffer=0;
  bool ConversationInterrupted=false;
  if(AgentId==0) if(auto* PC=Cast<APlayerController>(GetController()))
   if(auto* H=Cast<AVerdantHUD>(PC->GetHUD())) if(H->bConversationOpen){H->CloseConversation();ConversationInterrupted=true;}
@@ -293,7 +301,8 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From,float Damage) {
  if(auto* W=Valley())W->PlayCue(TEXT("Hit"),GetActorLocation(),From->BodySize);
  Health=FMath::Max(0.f,Health-Damage); HurtTimer=.3f; HostileId=From->AgentId; CombatTarget=From;
  Trust.FindOrAdd(From->AgentId)-=25;
- FollowId=-1;
+ // Outside danger interrupts escorting; betrayal by the leader ends the agreement.
+ if(FollowId==From->AgentId)FollowId=-1;
  const bool HeavyCommitted=bHeavyAttack&&AttackTimer>0;
  if(!HeavyCommitted) {
   AttackTimer=0; bHitApplied=true; AnimationState=-1;
@@ -341,6 +350,7 @@ void AVerdantCharacter::Dodge() {
   if(AgentId==0)SetCombatFeedback(TEXT("站稳后再闪避"),.55f);
   return;
  }
+ QueuedAttackType=-1;AttackInputBuffer=0;
  DodgeDirection=GetPendingMovementInputVector().GetSafeNormal2D();
  if(DodgeDirection.IsNearlyZero())DodgeDirection=GetLastMovementInputVector().GetSafeNormal2D();
  if(DodgeDirection.IsNearlyZero())DodgeDirection=GetActorForwardVector();
@@ -356,7 +366,7 @@ void AVerdantCharacter::Dodge() {
  UpdateAnimation();
 }
 void AVerdantCharacter::CancelForConversation() {
- StopHarvest();
+ StopHarvest();QueuedAttackType=-1;AttackInputBuffer=0;
  AttackTimer=0; bHitApplied=true; bSprinting=false;
  if(DodgeTimer>0)DodgeRecoveryTimer=FMath::Max(DodgeRecoveryTimer,.25f);
  DodgeTimer=0;
@@ -417,8 +427,21 @@ void AVerdantCharacter::ToggleClaim() {
  if(bDead)return;auto* W=Valley();if(!W)return;
  int32 I=W->NearestGrove(GetActorLocation(),700.f);
  if(I<0) {W->Notify(TEXT("在果林范围内按 G 宣告管理；再次按 G 切换开放采集。"));return;}
- if(W->Groves[I].ControllerId==AgentId) W->SetAccess(I,this,!W->Groves[I].bOpen);
+ if(W->Groves[I].ControllerId==AgentId) {
+  const auto& G=W->Groves[I];
+  if(!G.bOpen)W->SetAccess(I,this,true,0.f);
+  else if(G.Share<.001f)W->SetAccess(I,this,true,.3f);
+  else W->SetAccess(I,this,false,0.f);
+ }
  else W->Claim(I,this);
+}
+void AVerdantCharacter::TendGrove() {
+ if(bDead||ActionCooldown>0||AttackTimer>0||DodgeTimer>0||HurtTimer>0)return;
+ auto* W=Valley();if(!W)return;
+ const int32 I=W->NearestGrove(GetActorLocation(),700.f);
+ if(I<0){W->Notify(TEXT("靠近可以采集的果林，按 B 用食物养护土地。"));return;}
+ if(!W->CanHarvest(I,this)){W->Notify(TEXT("先获得这里的采集许可，再参与养护。"));return;}
+ if(W->Tend(I,this))ActionCooldown=.7f;
 }
 void AVerdantCharacter::Say(const FString& Line) { LastSpeech=Line;SpeechUntil=GetWorld()->GetTimeSeconds()+8.f; }
 void AVerdantCharacter::RestartJourney() { UGameplayStatics::OpenLevel(this,FName(TEXT("Valley"))); }
@@ -428,7 +451,16 @@ void AVerdantCharacter::LookYaw(float V) { AddControllerYawInput(V); }
 void AVerdantCharacter::LookPitch(float V) { AddControllerPitchInput(V); }
 void AVerdantCharacter::StartHarvest(){ bHarvestHeld=true; HarvestRepeatTimer=.7f; Interact(); }
 void AVerdantCharacter::StopHarvest(){ bHarvestHeld=false; HarvestRepeatTimer=0; }
-void AVerdantCharacter::LightAttack(){Attack(false);} void AVerdantCharacter::HeavyAttack(){Attack(true);}
+void AVerdantCharacter::RequestPlayerAttack(bool Heavy) {
+ if(bDead||DodgeTimer>0||HurtTimer>0)return;
+ if(AttackTimer>0) {
+  // One late click is remembered, never an indefinitely repeating attack.
+  if(AttackTimer<=.18f){QueuedAttackType=Heavy?1:0;AttackInputBuffer=.24f;}
+  return;
+ }
+ Attack(Heavy);
+}
+void AVerdantCharacter::LightAttack(){RequestPlayerAttack(false);} void AVerdantCharacter::HeavyAttack(){RequestPlayerAttack(true);}
 void AVerdantCharacter::EatInput(){Eat(5.f);} void AVerdantCharacter::SprintStart(){bSprinting=true;} void AVerdantCharacter::SprintStop(){bSprinting=false;}
 void AVerdantCharacter::SetupPlayerInputComponent(UInputComponent* Input) {
  Super::SetupPlayerInputComponent(Input);
@@ -443,6 +475,7 @@ void AVerdantCharacter::SetupPlayerInputComponent(UInputComponent* Input) {
  Input->BindKey(EKeys::F,IE_Pressed,this,&ThisClass::Contribute);
  Input->BindKey(EKeys::T,IE_Pressed,this,&ThisClass::Talk);
  Input->BindKey(EKeys::G,IE_Pressed,this,&ThisClass::ToggleClaim);
+ Input->BindKey(EKeys::B,IE_Pressed,this,&ThisClass::TendGrove);
  Input->BindKey(EKeys::R,IE_Pressed,this,&ThisClass::RestartJourney);
  Input->BindKey(EKeys::LeftShift,IE_Pressed,this,&ThisClass::SprintStart);
  Input->BindKey(EKeys::LeftShift,IE_Released,this,&ThisClass::SprintStop);

@@ -14,65 +14,55 @@ namespace
     bool KnownAction(const FString& Action)
     {
         static const TSet<FString> Actions = { TEXT("none"), TEXT("give"), TEXT("open"), TEXT("close"),
-            TEXT("share"), TEXT("donate"), TEXT("follow"), TEXT("leave"), TEXT("truce") };
+            TEXT("share"), TEXT("cede"), TEXT("donate"), TEXT("follow"), TEXT("leave"), TEXT("truce") };
         return Actions.Contains(Action);
     }
 
     TSharedPtr<FJsonObject> DecisionSchema(AVerdantWorld* World, AVerdantCharacter* NPC)
     {
-        // Each branch binds an action to legal parameter types and current targets.
-        // The executor still revalidates against state changes while inference runs.
         TArray<TSharedPtr<FJsonValue>> Branches;
-        const TArray<FString> Actions = { TEXT("none"), TEXT("open"), TEXT("close"), TEXT("share"),
+        const TArray<FString> Actions = { TEXT("none"), TEXT("open"), TEXT("close"), TEXT("share"), TEXT("cede"),
             TEXT("give"), TEXT("donate"), TEXT("follow"), TEXT("leave"), TEXT("truce") };
-        bool bOwnsGrove = false, bCanLeave = false;
-        for (int32 I = 0; I < World->Groves.Num(); ++I)
-        {
-            const auto& Grove = World->Groves[I];
-            bOwnsGrove |= Grove.ControllerId == NPC->AgentId;
-            bCanLeave |= !NPC->bWild && I != NPC->HomeGrove && Grove.Food >= 3.f && World->CanHarvest(I, NPC);
-        }
         for (const FString& Action : Actions)
         {
-            const bool bResource = Action == TEXT("give") || Action == TEXT("donate");
-            if (bResource && NPC->Food < .01f) continue;
-            if ((Action == TEXT("open") || Action == TEXT("close") || Action == TEXT("share")) && !bOwnsGrove) continue;
-            if (Action == TEXT("donate") && (NPC->bWild || World->bRestored)) continue;
-            if (Action == TEXT("leave") && !bCanLeave) continue;
-            TArray<TSharedPtr<FJsonValue>> Targets;
+            const bool Resource = Action == TEXT("give") || Action == TEXT("donate");
+            TArray<int32> Candidates = {0};
             if (Action == TEXT("give") || Action == TEXT("follow"))
-            {
                 for (AVerdantCharacter* Other : World->Folk)
-                    if (IsValid(Other) && Other != NPC && !Other->bDead
-                        && (Action != TEXT("give") || FVector::Dist2D(NPC->GetActorLocation(), Other->GetActorLocation()) <= 1100.f))
-                        Targets.Add(MakeShared<FJsonValueNumber>(Other->AgentId));
-            }
-            else Targets.Add(MakeShared<FJsonValueNumber>(0));
-            if (Targets.IsEmpty()) continue;
-            auto Properties = MakeShared<FJsonObject>();
-            auto ActionRule = MakeShared<FJsonObject>(); ActionRule->SetStringField(TEXT("const"), Action);
-            Properties->SetObjectField(TEXT("action"), ActionRule);
-            auto TargetRule = MakeShared<FJsonObject>(); TargetRule->SetStringField(TEXT("type"), TEXT("integer"));
-            TargetRule->SetArrayField(TEXT("enum"), Targets); Properties->SetObjectField(TEXT("target"), TargetRule);
-            auto AmountRule = MakeShared<FJsonObject>();
-            if (bResource)
+                    if (IsValid(Other) && Other->AgentId != 0) Candidates.AddUnique(Other->AgentId);
+            for (int32 TargetId : Candidates)
             {
-                AmountRule->SetStringField(TEXT("type"), TEXT("number"));
-                AmountRule->SetNumberField(TEXT("minimum"), .01);
-                AmountRule->SetNumberField(TEXT("maximum"), FMath::Min(20.f, NPC->Food));
+                const float Maximum = Action == TEXT("give")
+                    ? World->MaxNegotiatedGive(NPC, World->FindFolk(TargetId))
+                    : Action == TEXT("donate") ? World->MaxNegotiatedDonation(NPC) : 0.f;
+                if (Resource && Maximum < .01f) continue;
+                if (!World->Dialogue || !World->Dialogue->CanApplyDecision(NPC, Action, TargetId, Resource ? .01f : 0.f))
+                    continue;
+                auto Properties = MakeShared<FJsonObject>();
+                auto ActionRule = MakeShared<FJsonObject>(); ActionRule->SetStringField(TEXT("const"), Action);
+                Properties->SetObjectField(TEXT("action"), ActionRule);
+                auto TargetRule = MakeShared<FJsonObject>(); TargetRule->SetStringField(TEXT("type"), TEXT("integer"));
+                TargetRule->SetNumberField(TEXT("const"), TargetId); Properties->SetObjectField(TEXT("target"), TargetRule);
+                auto AmountRule = MakeShared<FJsonObject>();
+                if (Resource)
+                {
+                    AmountRule->SetStringField(TEXT("type"), TEXT("number"));
+                    AmountRule->SetNumberField(TEXT("minimum"), .01);
+                    AmountRule->SetNumberField(TEXT("maximum"), FMath::Max(.01, double(Maximum)));
+                }
+                else AmountRule->SetNumberField(TEXT("const"), 0);
+                Properties->SetObjectField(TEXT("amount"), AmountRule);
+                auto SayRule = MakeShared<FJsonObject>(); SayRule->SetStringField(TEXT("type"), TEXT("string"));
+                SayRule->SetNumberField(TEXT("minLength"), 1); SayRule->SetNumberField(TEXT("maxLength"), 200);
+                Properties->SetObjectField(TEXT("say"), SayRule);
+                TArray<TSharedPtr<FJsonValue>> Required;
+                for (const TCHAR* Field : { TEXT("action"), TEXT("target"), TEXT("amount"), TEXT("say") })
+                    Required.Add(MakeShared<FJsonValueString>(Field));
+                auto Branch = MakeShared<FJsonObject>(); Branch->SetStringField(TEXT("type"), TEXT("object"));
+                Branch->SetObjectField(TEXT("properties"), Properties); Branch->SetArrayField(TEXT("required"), Required);
+                Branch->SetBoolField(TEXT("additionalProperties"), false);
+                Branches.Add(MakeShared<FJsonValueObject>(Branch));
             }
-            else AmountRule->SetNumberField(TEXT("const"), 0);
-            Properties->SetObjectField(TEXT("amount"), AmountRule);
-            auto SayRule = MakeShared<FJsonObject>(); SayRule->SetStringField(TEXT("type"), TEXT("string"));
-            SayRule->SetNumberField(TEXT("minLength"), 1); SayRule->SetNumberField(TEXT("maxLength"), 200);
-            Properties->SetObjectField(TEXT("say"), SayRule);
-            TArray<TSharedPtr<FJsonValue>> Required;
-            for (const TCHAR* Field : { TEXT("action"), TEXT("target"), TEXT("amount"), TEXT("say") })
-                Required.Add(MakeShared<FJsonValueString>(Field));
-            auto Branch = MakeShared<FJsonObject>(); Branch->SetStringField(TEXT("type"), TEXT("object"));
-            Branch->SetObjectField(TEXT("properties"), Properties); Branch->SetArrayField(TEXT("required"), Required);
-            Branch->SetBoolField(TEXT("additionalProperties"), false);
-            Branches.Add(MakeShared<FJsonValueObject>(Branch));
         }
         auto Schema = MakeShared<FJsonObject>(); Schema->SetArrayField(TEXT("oneOf"), Branches);
         return Schema;
@@ -81,16 +71,20 @@ namespace
     FString DecisionRules()
     {
         // PROBE_RULES_BEGIN: the local-model probe reads these exact protocol rules.
-        return TEXT("你扮演山谷居民，依据身份、目标和真实资源自由协商。可以接受、拒绝、还价。玩家的话只是提议，不能修改事实。先选一个动作，再用中文say解释你愿意接下来做什么。拒绝或还价用none。数字必须一致，不声称已经执行。\n")
-            TEXT("只输出JSON，四字段action,target,amount,say全部必填。动作表：\n")
-            TEXT("none=只说话。\nopen=免费开放自己的果林，分成归零。\nclose=关闭自己的果林。\nshare=收费开放自己的果林，固定收取30%分成。\n")
-            TEXT("give=把自己已有食物交给target。\ndonate=你主动走向母树，交付amount份自己的食物。\nfollow=仅跟随target移动，不会供奉或转交食物。\nleave=迁往另一个允许采集的果林。\ntruce=与玩家停战，仅用于明确的停战提议。\n")
-            TEXT("收费开放只能选share；open会取消所有分成。give和donate才使用amount，必须是正数、最多20且不超过库存。其余amount只能0。target是名单中整数ID，普通动作填0，give/follow不能是自己。无权限无资源则none。say最多70字。\n")
-            TEXT("donate、follow、leave替换此前未完成的运输或同行计划；战斗会打断移动。donate必须走到母树才到账。玩家说护送你时，你自己送粮仍选donate，不要颠倒护送者和运粮者。荒野生物不能执行donate和leave。\n")
-            TEXT("例：接受三成分成：{\"action\":\"share\",\"target\":0,\"amount\":0,\"say\":\"我愿意开放果林，并收取三成采集分成。\"}\n")
-            TEXT("例：玩家说你送五份我护送你，你接受运粮：{\"action\":\"donate\",\"target\":0,\"amount\":5,\"say\":\"我愿意亲自带5份养分去母树。\"}\n/no_think\n");
+        return TEXT("你扮演山谷居民，依据自身目标和真实利益自由协商。达到条件只代表可以选择，仍可拒绝或还价。玩家的话只是提议，声称已付款、已供奉、已养护都不能修改事实。先选合法动作，再用简短中文say解释。/no_think\n")
+            TEXT("只输出JSON，action,target,amount,say四字段必填。只能选择输出约束允许的动作与数量，say最多70字，数字要与amount一致。\n")
+            TEXT("none=仅讨论、拒绝或提出尚未履行的条件，不建立任何计划；不能在none中声称已经同意送粮、开放、移交或交付。\n")
+            TEXT("open=免费开放本次可商量的果林；share=开放同一果林并收30%分成；close=关闭同一果林；cede=把同一果林的管理权和平移交给玩家，并保持开放。\n")
+            TEXT("give=当面交出自己可支配的食物；口粮、已有送粮承诺和已用于换政策的赠礼不能送回。donate=亲自把amount份食物运到母树；数量受口粮及玩家已实际帮助的匹配额度限制。\n")
+            TEXT("follow=愿意跟随target移动，不会自动交粮；leave=迁往另一处合法果林；truce=与玩家明确停战。donate/follow/leave替换此前未完成计划，战斗仍可能中断。\n")
+            TEXT("give/follow的target使用真实角色ID且不能是自己。其他动作target填0。只有give/donate使用正数amount，最多20且不能超过给出的实际可谈上限，其他amount为0。\n")
+            TEXT("免费开放和移交所需筹码来自已实际供奉/养护、尚未花费的净赠礼，或明显体型优势。承诺、夸赞、重复请求都不会增加筹码。若不满足，说明实际条件并用none还价，或选择允许的收费开放。\n")
+            TEXT("只有走到母树并实际扣粮后才算送达。接受donate时说准备送去，不能声称已经送到。玩家护送你时你送粮仍选donate。荒野生物不能供奉或搬家。\n")
+            TEXT("例（仅在约束允许时）：{\"action\":\"donate\",\"target\":0,\"amount\":5,\"say\":\"我留足自己的口粮后，可以亲自送5份养分去母树。\"}\n")
+            TEXT("例：{\"action\":\"none\",\"target\":0,\"amount\":0,\"say\":\"我还不能交出果林。先给山谷一些实际帮助，我们再谈。\"}\n");
         // PROBE_RULES_END
     }
+
 }
 
 FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
@@ -107,22 +101,14 @@ FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
             State += FString::Printf(TEXT("ID=%d %s；%s；体型%.2f；距你%.0f厘米。\n"),
                 Who->AgentId, *Who->DisplayName, Who->bDead ? TEXT("已倒下") : TEXT("存活"),
                 Who->BodySize, FVector::Dist2D(NPC->GetActorLocation(), Who->GetActorLocation()));
-    bool bOwnsGrove = false;
-    bool bCanLeave = false;
     for (int32 I = 0; I < W->Groves.Num(); ++I)
     {
         const auto& G = W->Groves[I];
-        bOwnsGrove |= G.ControllerId == NPC->AgentId;
-        bCanLeave |= !NPC->bWild && I != NPC->HomeGrove && G.Food >= 3.f && W->CanHarvest(I, NPC);
         State += FString::Printf(TEXT("资源区%d=%s; 管理者ID=%d; 开放=%s; 食物=%.1f; 产力=%.2f; 分成=%.0f%%。\n"),
             I, *G.Name, G.ControllerId, G.bOpen ? TEXT("是") : TEXT("否"), G.Food, G.Fertility, G.Share * 100);
     }
-    State += TEXT("你当前可以考虑的动作：none,follow,truce");
-    if (NPC->Food >= .01f) State += TEXT(",give");
-    if (!NPC->bWild && NPC->Food >= .01f && !W->bRestored) State += TEXT(",donate");
-    if (bOwnsGrove) State += TEXT(",open,close,share");
-    if (bCanLeave) State += TEXT(",leave");
-    State += TEXT("。最终还会重新验证目标、距离和库存。\n");
+    State += TEXT("真实协商条件（实际账本，承诺不能替代）：\n") + W->NegotiationSummary(NPC) + TEXT("\n");
+    State += TEXT("条件满足只是可选项，不强迫你答应。以输出约束中的当前合法动作、目标和最大数量为准。\n");
     if (const auto* History = Memories.Find(NPC->AgentId))
         for (const auto& Line : *History) State += Line + TEXT("\n");
     return State;
@@ -138,31 +124,71 @@ bool UVerdantDialogue::CanConverse(const AVerdantCharacter* NPC) const
             <= 750.f * FMath::Max(1.f, Player->BodySize);
 }
 
+bool UVerdantDialogue::CanApplyDecision(const AVerdantCharacter* NPC, const FString& Action,
+    int32 TargetId, float Amount, FString* Reason) const
+{
+    const auto Reject = [Reason](const FString& Message) { if (Reason) *Reason = Message; return false; };
+    if (Reason) Reason->Empty();
+    const auto* W = AVerdantWorld::Find(this);
+    if (!W || !CanConverse(NPC) || !IsValid(NPC) || NPC->AgentId == 0 ||
+        W->FindFolk(NPC->AgentId) != NPC)
+        return Reject(TEXT("对方已经走远或无法回应，需要当面重新协商。"));
+    if (!KnownAction(Action) || !FMath::IsFinite(Amount) || TargetId < 0)
+        return Reject(TEXT("这项行动的参数不合法。"));
+    const auto* Target = W->FindFolk(TargetId);
+    if (!IsValid(Target)) return Reject(TEXT("没有这个真实对象。"));
+    const bool Resource = Action == TEXT("give") || Action == TEXT("donate");
+    if (Resource)
+    {
+        const float Limit = Action == TEXT("give")
+            ? W->MaxNegotiatedGive(NPC, Target) : W->MaxNegotiatedDonation(NPC);
+        if (Amount < .01f || Amount > Limit + .00001f)
+            return Reject(FString::Printf(TEXT("保留口粮、承诺和实际筹码后，本次最多可以%s %.1f 份。"),
+                Action == TEXT("give") ? TEXT("转交") : TEXT("供奉"), Limit));
+    }
+    else if (Amount != 0.f)
+        return Reject(TEXT("这个行动不直接转交食物，数量应为零。"));
+
+    if (Action == TEXT("give"))
+        return Target != NPC && !Target->bDead &&
+            FVector::Dist2D(NPC->GetActorLocation(), Target->GetActorLocation()) <= 1100.f
+            ? true : Reject(TEXT("只能把食物交给身旁仍然存活的其他人。"));
+    if (Action == TEXT("follow"))
+        return W->CanNegotiateFollow(NPC, Target) ? true
+            : Reject(TEXT("目前还不愿同行。请先实际帮助山谷、分享口粮，或展现足够的实力。"));
+    if (TargetId != 0) return Reject(TEXT("这项约定需要由眼前的玩家确认。"));
+    if (Action == TEXT("none")) return true;
+    if (Action == TEXT("donate")) return true;
+    if (Action == TEXT("open") || Action == TEXT("close") || Action == TEXT("share") || Action == TEXT("cede"))
+    {
+        const int32 GroveIndex = W->NegotiationGrove(NPC);
+        if (GroveIndex == INDEX_NONE) return Reject(TEXT("对方已不管理果林，不能修改或移交管理权。"));
+        return W->CanNegotiatePolicy(NPC, Action, GroveIndex) ? true : Reject(W->NegotiationSummary(NPC));
+    }
+    if (Action == TEXT("leave"))
+    {
+        if (NPC->bWild) return Reject(TEXT("这位荒野居民不会接下搬家计划。"));
+        for (int32 I = 0; I < W->Groves.Num(); ++I)
+            if (I != NPC->HomeGrove && W->Groves[I].Food >= 3.f && W->CanHarvest(I, NPC))
+                return true;
+        return Reject(TEXT("目前没有另一处有粮食且允许进入的果林。"));
+    }
+    if (Action == TEXT("truce"))
+        return !Target->bDead ? true : Reject(TEXT("对方已经无法达成停战。"));
+    return Reject(TEXT("无法执行这项行动。"));
+}
+
 bool UVerdantDialogue::ApplyDecision(AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount)
 {
+    LastDecisionReason.Empty();
+    if (!CanApplyDecision(NPC, Action, TargetId, Amount, &LastDecisionReason)) return false;
     auto* W = AVerdantWorld::Find(this);
-    if (!W || !CanConverse(NPC) || NPC->AgentId == 0 || W->FindFolk(NPC->AgentId) != NPC
-        || !KnownAction(Action) || !FMath::IsFinite(Amount) || Amount < 0.f || Amount > 20.f || TargetId < 0)
-        return false;
     auto* Target = W->FindFolk(TargetId);
-    if (!IsValid(Target)) return false;
-    const bool bResourceAction = Action == TEXT("give") || Action == TEXT("donate");
-    if (bResourceAction ? (Amount <= .001f || Amount > NPC->Food) : Amount != 0.f)
-        return false;
     if (Action == TEXT("none")) return true;
     if (Action == TEXT("give"))
         return Target != NPC && !Target->bDead && W->Transfer(NPC, Target, Amount);
-    if (Action == TEXT("open") || Action == TEXT("close") || Action == TEXT("share"))
-    {
-        TArray<int32> Owned;
-        for (int32 I = 0; I < W->Groves.Num(); ++I)
-            if (W->Groves[I].ControllerId == NPC->AgentId) Owned.Add(I);
-        if (Owned.IsEmpty()) return false;
-        // All preconditions are checked before the first authoritative mutation.
-        for (int32 I : Owned)
-            W->SetAccess(I, NPC, Action != TEXT("close"), Action == TEXT("share") ? .3f : 0.f);
-        return true;
-    }
+    if (Action == TEXT("open") || Action == TEXT("close") || Action == TEXT("share") || Action == TEXT("cede"))
+        return W->ApplyNegotiatedPolicy(NPC, Action, W->NegotiationGrove(NPC));
     if (Action == TEXT("donate"))
     {
         if (NPC->bWild || W->bRestored) return false;
@@ -327,14 +353,24 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
         Self->Lines.Add(Line);
         auto& Memory = Self->Memories.FindOrAdd(WeakNPC->AgentId);
         Memory.Add(TEXT("玩家说：") + Input);
-        const TCHAR* Result = !Applied ? TEXT("条件不满足，未执行")
+        const TCHAR* Result = !Applied ? TEXT("未执行")
+            : Action == TEXT("none") ? TEXT("仅商议，未建立新计划")
             : (Action == TEXT("donate") || Action == TEXT("follow") || Action == TEXT("leave"))
             ? TEXT("已接受计划，尚待实际行动") : TEXT("已执行并验证");
         Memory.Add(Line + FString::Printf(TEXT(" [动作=%s；%s]"), *Action, Result));
         while (Memory.Num() > 16) Memory.RemoveAt(0);
         while (Self->Lines.Num() > 20) Self->Lines.RemoveAt(0);
-        Self->Status = Applied ? TEXT("对话完成；移动与供奉将在世界中实际执行。")
-            : TEXT("当前条件不满足，未改变资源、权限或行动计划。");
+        if (!Applied)
+            Self->Status = Self->LastDecisionReason.IsEmpty()
+                ? TEXT("执行前世界状态已变化，本次未执行。") : Self->LastDecisionReason;
+        else if (Action == TEXT("none"))
+            Self->Status = TEXT("仅商议，未建立新计划，未改变资源或权限。");
+        else if (Action == TEXT("donate") || Action == TEXT("follow") || Action == TEXT("leave"))
+            Self->Status = TEXT("计划已接受，还需在世界中实际行动；尚未算作送达。");
+        else if (Action == TEXT("truce"))
+            Self->Status = TEXT("已实际停战；再次攻击会破坏约定。");
+        else
+            Self->Status = TEXT("转交或果林权限已按实际条件确认执行。");
     });
     if (!Http->ProcessRequest()) { bBusy = false; Status = TEXT("无法发起本地模型请求。"); }
 }
