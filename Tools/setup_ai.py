@@ -33,6 +33,8 @@ def main():
     for source in a.llama_source.iterdir():
         if source.is_file() and source.suffix.lower() in ('.dll','.exe'):
             shutil.copy2(source,runtime/source.name)
+    vendor_licenses=a.llama_source.parent/'licenses'
+    if vendor_licenses.is_dir():shutil.copytree(vendor_licenses,runtime/'licenses',dirs_exist_ok=True)
     urllib.request.urlretrieve('https://huggingface.co/'+REPO+'/resolve/main/LICENSE',LOCAL/'Qwen-LICENSE.txt')
     urllib.request.urlretrieve('https://raw.githubusercontent.com/ggml-org/llama.cpp/b11463/LICENSE',LOCAL/'llama-LICENSE.txt')
     (LOCAL/'provenance.json').write_text(json.dumps({'model':REPO,'model_file':MODEL,'sha256':sha,'size':size,'license':'Apache-2.0','runtime':'ggml-org/llama.cpp b11463','runtime_license':'MIT','note':'Vendor binaries only; no Ember game code or plugin is reused.'},indent=2),encoding='utf-8')

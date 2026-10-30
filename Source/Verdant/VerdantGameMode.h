@@ -15,6 +15,9 @@ private:
  float SmokeStartSize = 0.f;
  float SmokeTargetHealth = 0.f;
  void TickWorldProbe(float Dt);
+ void TickAIProbe(float Dt);
+ float ProbeNPCFoodBefore = 0.f;
+ float CaptureAt = 0.f;
  float ProbeTreeBefore = 0.f;
  float ProbeInventoryBefore = 0.f;
  FVector ProbeStart = FVector::ZeroVector;

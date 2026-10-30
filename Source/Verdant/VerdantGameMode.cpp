@@ -28,11 +28,14 @@ void AVerdantGameMode::BeginPlay() {
  if(W) if(auto* P=Cast<AVerdantCharacter>(UGameplayStatics::GetPlayerCharacter(this,0))) {
   P->SetActorLocation(W->SurfacePoint(FVector(-1000,-5800,0),P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+5.f));
   P->GetCharacterMovement()->StopMovementImmediately();
+  P->SetActorRotation(FRotator(0,78,0));
+  if(P->GetController())P->GetController()->SetControlRotation(FRotator(-10,78,0));
  }
  UE_LOG(LogTemp,Display,TEXT("VERDANT_READY world=%d"),W!=nullptr);
 }
 void AVerdantGameMode::Tick(float Dt) {
  Super::Tick(Dt);
+ if(FParse::Param(FCommandLine::Get(),TEXT("VerdantAIProbe"))){TickAIProbe(Dt);return;}
  if(FParse::Param(FCommandLine::Get(),TEXT("VerdantWorldProbe"))){TickWorldProbe(Dt);return;}
  if(!FParse::Param(FCommandLine::Get(),TEXT("VerdantSmoke")))return;
  SmokeTime+=Dt;
@@ -52,7 +55,7 @@ void AVerdantGameMode::Tick(float Dt) {
   const bool Grounded=GetWorld()->LineTraceSingleByChannel(Hit,Pos,Pos-FVector(0,0,500),ECC_Visibility,Params);
   Check(Grounded && Hit.GetComponent()==W->Ground,TEXT("Procedural terrain has live collision beneath player"));
   Check(P->GetCharacterMovement()->IsMovingOnGround(),TEXT("Player stands on generated landscape"));
-  FScreenshotRequest::RequestScreenshot(Output/TEXT("valley-start.png"),true,false);
+
   for(AVerdantCharacter* N:W->Folk)if(N&&N!=P){N->SetActorTickEnabled(false);N->GetCharacterMovement()->StopMovementImmediately();N->GetCharacterMovement()->DisableMovement();}
   auto* GroveOwner=W->FindFolk(2);
   P->SetActorLocation(W->SurfacePoint(W->Groves[1].Position,P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+3));
@@ -65,6 +68,9 @@ void AVerdantGameMode::Tick(float Dt) {
   P->SetActorLocation(W->SurfacePoint(FVector(-1000,-5800,0),P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+3));
   SmokeStartSize=P->BodySize;Check(P->Eat(5),TEXT("Eating transfers food into nutrition reserve"));
   SmokeStage=1;
+ }
+ else if(SmokeStage==1&&SmokeTime>5.f&&CaptureAt==0) {
+  FScreenshotRequest::RequestScreenshot(Output/TEXT("valley-start.png"),true,false); CaptureAt=SmokeTime;
  }
  else if(SmokeStage==1&&SmokeTime>10.f) {
   Check(P->BodySize>SmokeStartSize+.02f,TEXT("Continuous growth occurs over simulated time"));
@@ -91,7 +97,7 @@ void AVerdantGameMode::Tick(float Dt) {
    bool Given=W->Transfer(P,Trader,2);
    Check(Given&&FMath::IsNearlyEqual(Before,P->Food+Trader->Food,.01f),TEXT("Sharing is a real conserving transfer"));
   }
-  P->SetActorLocation(W->SurfacePoint(W->MotherPosition,P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+3));
+  P->SetActorLocation(W->SurfacePoint(W->MotherPosition+FVector(0,-700,0),P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+3));
   P->Food=120;
   const float Before=P->Food+W->TreeNutrition;
   bool Donated=W->Donate(P,100.f);
@@ -99,10 +105,17 @@ void AVerdantGameMode::Tick(float Dt) {
   const FString BeforeSummary=W->WorldSummary();
   const bool Changed=W->SetAccess(2,W->FindFolk(3),true);
   Check(Changed && W->WorldSummary()!=BeforeSummary,TEXT("Outcome changes when actual grove access changes"));
-  FScreenshotRequest::RequestScreenshot(Output/TEXT("valley-restored.png"),true,false);
+  P->SetActorLocation(W->SurfacePoint(W->MotherPosition+FVector(-350,-1800,0),P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+3));
+  P->GetCharacterMovement()->StopMovementImmediately();
+  P->SetActorRotation(FRotator(0,80,0));
+  if(P->GetController())P->GetController()->SetControlRotation(FRotator(12,80,0));
+  CaptureAt=0;
   SmokeStage=3;
  }
- else if(SmokeStage==3&&SmokeTime>16.f) {
+ else if(SmokeStage==3&&SmokeTime>14.f&&CaptureAt==0) {
+  FScreenshotRequest::RequestScreenshot(Output/TEXT("valley-restored.png"),true,false); CaptureAt=SmokeTime;
+ }
+ else if(SmokeStage==3&&SmokeTime>18.f) {
   SmokeChecks.Add(FString::Printf(TEXT("Failures: %d"),SmokeFailures));
   FFileHelper::SaveStringArrayToFile(SmokeChecks,*(Output/TEXT("smoke-results.txt")),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
   UE_LOG(LogTemp,Display,TEXT("VERDANT_SMOKE_COMPLETE failures=%d"),SmokeFailures);

@@ -2,6 +2,7 @@
 #include "VerdantWorld.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/SkyAtmosphereComponent.h"
@@ -270,7 +271,24 @@ void AVerdantWorld::BuildScenery()
             AddShape(TEXT("MeadowSprout"), Cone, SurfacePoint(P, 22), FVector(.45f, .45f, .6f), Moss);
     }
     MotherPosition = SurfacePoint(MotherPosition);
-    AddShape(TEXT("MotherTrunk"), Cylinder, MotherPosition + FVector(0, 0, 690), FVector(2.7f, 2.7f, 13.8f), Bark, true);
+    AddShape(TEXT("MotherTrunk"), Cylinder, MotherPosition + FVector(0, 0, 690), FVector(2.7f, 2.7f, 13.8f), Bark);
+    // Explicit primitive collision keeps the trunk solid even if its visual mesh
+    // lacks cooked simple collision. The cylindrical section spans z=0..1380;
+    // rounded caps extend below the soil and into the canopy, never across paths.
+    auto* TrunkCollision = NewObject<UCapsuleComponent>(this,
+        MakeUniqueObjectName(this, UCapsuleComponent::StaticClass(), TEXT("MotherTrunkCollision")));
+    AddInstanceComponent(TrunkCollision);
+    TrunkCollision->SetupAttachment(GetRootComponent());
+    TrunkCollision->SetMobility(EComponentMobility::Movable);
+    TrunkCollision->SetCapsuleSize(135.f, 825.f);
+    TrunkCollision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    TrunkCollision->SetCollisionObjectType(ECC_WorldStatic);
+    TrunkCollision->SetCollisionResponseToAllChannels(ECR_Block);
+    TrunkCollision->SetGenerateOverlapEvents(false);
+    TrunkCollision->SetCanEverAffectNavigation(false);
+    TrunkCollision->SetHiddenInGame(true);
+    TrunkCollision->RegisterComponent();
+    TrunkCollision->SetWorldLocation(MotherPosition + FVector(0, 0, 690));
     for (int32 I = 0; I < 5; ++I)
     {
         const float A = I * 2.f * PI / 5.f;
@@ -294,7 +312,7 @@ void AVerdantWorld::BuildScenery()
         for (int32 J = 0; J < 12; ++J)
         {
             const float A = J * 2.f * PI / 12.f;
-            const float R = 640.f + (J % 3) * 90.f;
+            const float R = 500.f + (J % 3) * 60.f;
             const FVector P = SurfacePoint(G.Position + FVector(FMath::Cos(A) * R, FMath::Sin(A) * R, 0));
             AddShape(TEXT("FruitStem"), Cylinder, P + FVector(0, 0, 48), FVector(.12f, .12f, .96f), Bark);
             AddShape(TEXT("FruitLeaves"), Sphere, P + FVector(0, 0, 62), FVector(1.45f, 1.1f, .45f), Moss);

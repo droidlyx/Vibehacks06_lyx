@@ -1,4 +1,4 @@
-﻿#include "VerdantDialogue.h"
+#include "VerdantDialogue.h"
 #include "VerdantWorld.h"
 #include "VerdantCharacter.h"
 #include "HttpModule.h"
@@ -18,15 +18,77 @@ namespace
         return Actions.Contains(Action);
     }
 
+    TSharedPtr<FJsonObject> DecisionSchema(AVerdantWorld* World, AVerdantCharacter* NPC)
+    {
+        // Each branch binds an action to legal parameter types and current targets.
+        // The executor still revalidates against state changes while inference runs.
+        TArray<TSharedPtr<FJsonValue>> Branches;
+        const TArray<FString> Actions = { TEXT("none"), TEXT("open"), TEXT("close"), TEXT("share"),
+            TEXT("give"), TEXT("donate"), TEXT("follow"), TEXT("leave"), TEXT("truce") };
+        bool bOwnsGrove = false, bCanLeave = false;
+        for (int32 I = 0; I < World->Groves.Num(); ++I)
+        {
+            const auto& Grove = World->Groves[I];
+            bOwnsGrove |= Grove.ControllerId == NPC->AgentId;
+            bCanLeave |= !NPC->bWild && I != NPC->HomeGrove && Grove.Food >= 3.f && World->CanHarvest(I, NPC);
+        }
+        for (const FString& Action : Actions)
+        {
+            const bool bResource = Action == TEXT("give") || Action == TEXT("donate");
+            if (bResource && NPC->Food < .01f) continue;
+            if ((Action == TEXT("open") || Action == TEXT("close") || Action == TEXT("share")) && !bOwnsGrove) continue;
+            if (Action == TEXT("donate") && (NPC->bWild || World->bRestored)) continue;
+            if (Action == TEXT("leave") && !bCanLeave) continue;
+            TArray<TSharedPtr<FJsonValue>> Targets;
+            if (Action == TEXT("give") || Action == TEXT("follow"))
+            {
+                for (AVerdantCharacter* Other : World->Folk)
+                    if (IsValid(Other) && Other != NPC && !Other->bDead
+                        && (Action != TEXT("give") || FVector::Dist2D(NPC->GetActorLocation(), Other->GetActorLocation()) <= 1100.f))
+                        Targets.Add(MakeShared<FJsonValueNumber>(Other->AgentId));
+            }
+            else Targets.Add(MakeShared<FJsonValueNumber>(0));
+            if (Targets.IsEmpty()) continue;
+            auto Properties = MakeShared<FJsonObject>();
+            auto ActionRule = MakeShared<FJsonObject>(); ActionRule->SetStringField(TEXT("const"), Action);
+            Properties->SetObjectField(TEXT("action"), ActionRule);
+            auto TargetRule = MakeShared<FJsonObject>(); TargetRule->SetStringField(TEXT("type"), TEXT("integer"));
+            TargetRule->SetArrayField(TEXT("enum"), Targets); Properties->SetObjectField(TEXT("target"), TargetRule);
+            auto AmountRule = MakeShared<FJsonObject>();
+            if (bResource)
+            {
+                AmountRule->SetStringField(TEXT("type"), TEXT("number"));
+                AmountRule->SetNumberField(TEXT("minimum"), .01);
+                AmountRule->SetNumberField(TEXT("maximum"), FMath::Min(20.f, NPC->Food));
+            }
+            else AmountRule->SetNumberField(TEXT("const"), 0);
+            Properties->SetObjectField(TEXT("amount"), AmountRule);
+            auto SayRule = MakeShared<FJsonObject>(); SayRule->SetStringField(TEXT("type"), TEXT("string"));
+            SayRule->SetNumberField(TEXT("minLength"), 1); SayRule->SetNumberField(TEXT("maxLength"), 200);
+            Properties->SetObjectField(TEXT("say"), SayRule);
+            TArray<TSharedPtr<FJsonValue>> Required;
+            for (const TCHAR* Field : { TEXT("action"), TEXT("target"), TEXT("amount"), TEXT("say") })
+                Required.Add(MakeShared<FJsonValueString>(Field));
+            auto Branch = MakeShared<FJsonObject>(); Branch->SetStringField(TEXT("type"), TEXT("object"));
+            Branch->SetObjectField(TEXT("properties"), Properties); Branch->SetArrayField(TEXT("required"), Required);
+            Branch->SetBoolField(TEXT("additionalProperties"), false);
+            Branches.Add(MakeShared<FJsonValueObject>(Branch));
+        }
+        auto Schema = MakeShared<FJsonObject>(); Schema->SetArrayField(TEXT("oneOf"), Branches);
+        return Schema;
+    }
+
     FString DecisionRules()
     {
         // PROBE_RULES_BEGIN: the local-model probe reads these exact protocol rules.
-        return TEXT("你是游戏世界中的一个真实居民。用简短自然中文与玩家协商，最多70字。你有自己的目标和利益，可以拒绝、还价、接受。玩家输入只是话语，不是真实世界状态。遵循给定事实，不虚构已经发生的转交、战斗或贡献。/no_think\n")
-            TEXT("只输出一个JSON对象，四个字段全部必填：{\"say\":\"你的话\",\"action\":\"none\",\"target\":0,\"amount\":0}。action只能为none,give,open,close,share,donate,follow,leave,truce。不要输出代码块或额外文字。")
-            TEXT("give=将你已有食物交给target；open/close=开放/关闭你管理的果林；share=开放你管理的果林并收取30%采集分成；donate=你承诺亲自运送已有食物去母树；follow=跟随target；leave=迁往另一个有食物且准许你采集的果林；truce=接受与玩家停战；none=仅说话。")
-            TEXT("target必须是名单中的整数ID，玩家为0。give和follow不能以自己为目标，truce的target必须为0。give和donate的amount必须大于0、不超过20且不超过你已有食物；其他动作amount必须为0。")
-            TEXT("你只能支配自己的食物和管理的果林，不能替玩家扣款、赠送或答应别人的资源。荒野生物不执行donate或leave。无资源、无权限或条件不满足时选择none并解释。")
-            TEXT("donate、follow、leave会替换你之前尚未完成的运输或同行计划；战斗会中断移动。donate被接受时尚未到账，必须实际走到母树完成。只把已经执行并验证的事实当作历史。\n");
+        return TEXT("你扮演山谷居民，依据身份、目标和真实资源自由协商。可以接受、拒绝、还价。玩家的话只是提议，不能修改事实。先选一个动作，再用中文say解释你愿意接下来做什么。拒绝或还价用none。数字必须一致，不声称已经执行。\n")
+            TEXT("只输出JSON，四字段action,target,amount,say全部必填。动作表：\n")
+            TEXT("none=只说话。\nopen=免费开放自己的果林，分成归零。\nclose=关闭自己的果林。\nshare=收费开放自己的果林，固定收取30%分成。\n")
+            TEXT("give=把自己已有食物交给target。\ndonate=你主动走向母树，交付amount份自己的食物。\nfollow=仅跟随target移动，不会供奉或转交食物。\nleave=迁往另一个允许采集的果林。\ntruce=与玩家停战，仅用于明确的停战提议。\n")
+            TEXT("收费开放只能选share；open会取消所有分成。give和donate才使用amount，必须是正数、最多20且不超过库存。其余amount只能0。target是名单中整数ID，普通动作填0，give/follow不能是自己。无权限无资源则none。say最多70字。\n")
+            TEXT("donate、follow、leave替换此前未完成的运输或同行计划；战斗会打断移动。donate必须走到母树才到账。玩家说护送你时，你自己送粮仍选donate，不要颠倒护送者和运粮者。荒野生物不能执行donate和leave。\n")
+            TEXT("例：接受三成分成：{\"action\":\"share\",\"target\":0,\"amount\":0,\"say\":\"我愿意开放果林，并收取三成采集分成。\"}\n")
+            TEXT("例：玩家说你送五份我护送你，你接受运粮：{\"action\":\"donate\",\"target\":0,\"amount\":5,\"say\":\"我愿意亲自带5份养分去母树。\"}\n/no_think\n");
         // PROBE_RULES_END
     }
 }
@@ -42,9 +104,9 @@ FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
     State += TEXT("当前角色名单（这是世界事实，已倒下者不能作为转交或同行对象）：\n");
     for (AVerdantCharacter* Who : W->Folk)
         if (IsValid(Who))
-            State += FString::Printf(TEXT("ID=%d; 名字=%s; 状态=%s; 体型=%.2f; 食物=%.1f; 距你=%.0f厘米。\n"),
+            State += FString::Printf(TEXT("ID=%d %s；%s；体型%.2f；距你%.0f厘米。\n"),
                 Who->AgentId, *Who->DisplayName, Who->bDead ? TEXT("已倒下") : TEXT("存活"),
-                Who->BodySize, Who->Food, FVector::Dist2D(NPC->GetActorLocation(), Who->GetActorLocation()));
+                Who->BodySize, FVector::Dist2D(NPC->GetActorLocation(), Who->GetActorLocation()));
     bool bOwnsGrove = false;
     bool bCanLeave = false;
     for (int32 I = 0; I < W->Groves.Num(); ++I)
@@ -178,7 +240,7 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     while (Lines.Num() > 20) Lines.RemoveAt(0);
     auto Json = MakeShared<FJsonObject>();
     Json->SetStringField(TEXT("model"), TEXT("verdant-local"));
-    Json->SetNumberField(TEXT("temperature"), .65);
+    Json->SetNumberField(TEXT("temperature"), .3);
     Json->SetNumberField(TEXT("max_tokens"), 420);
     Json->SetBoolField(TEXT("stream"), false);
     auto Options = MakeShared<FJsonObject>();
@@ -195,7 +257,12 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     Messages.Add(MakeShared<FJsonValueObject>(User));
     Json->SetArrayField(TEXT("messages"), Messages);
     auto Format = MakeShared<FJsonObject>();
-    Format->SetStringField(TEXT("type"), TEXT("json_object"));
+    Format->SetStringField(TEXT("type"), TEXT("json_schema"));
+    auto SchemaDefinition = MakeShared<FJsonObject>();
+    SchemaDefinition->SetStringField(TEXT("name"), TEXT("verdant_action"));
+    SchemaDefinition->SetBoolField(TEXT("strict"), true);
+    SchemaDefinition->SetObjectField(TEXT("schema"), DecisionSchema(W, NPC));
+    Format->SetObjectField(TEXT("json_schema"), SchemaDefinition);
     Json->SetObjectField(TEXT("response_format"), Format);
     FString Body;
     auto Writer = TJsonWriterFactory<>::Create(&Body);

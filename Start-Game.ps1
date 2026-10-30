@@ -16,7 +16,8 @@ if (-not $NoAI) {
         } else { Write-Host 'Local AI is not installed. See Docs/LocalAI.md; gameplay remains available.' }
     }
 }
-$packaged=Join-Path $projectRoot 'Builds\Windows\Verdant.exe'
+$packaged=Join-Path $projectRoot 'Verdant.exe'
+if(-not(Test-Path -LiteralPath $packaged)){$packaged=Join-Path $projectRoot 'Builds\Windows\Verdant.exe'}
 if ((Test-Path -LiteralPath $packaged) -and -not $Editor) {
     $exe=$packaged
     $arguments=@('-windowed','-ResX=1600','-ResY=900','-log')
@@ -27,4 +28,4 @@ if ((Test-Path -LiteralPath $packaged) -and -not $Editor) {
 }
 if($Smoke){$arguments+=@('-VerdantSmoke','-RenderOffscreen','-unattended')}
 if(-not(Test-Path -LiteralPath $exe)){throw 'Build missing. Set UE_ROOT or create the packaged Windows build.'}
-Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $projectRoot -WindowStyle Hidden
+Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $projectRoot

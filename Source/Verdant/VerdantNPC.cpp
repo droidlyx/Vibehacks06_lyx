@@ -294,8 +294,12 @@ void AVerdantCharacter::TickNPC(float Dt)
     }
 
     int32 Chosen = INDEX_NONE;
-    if (W->Groves.IsValidIndex(HomeGrove) && W->CanHarvest(HomeGrove, this) &&
-        W->Groves[HomeGrove].Food >= 3.f)
+    const bool bAccessibleHome = W->Groves.IsValidIndex(HomeGrove) && W->CanHarvest(HomeGrove, this);
+    // Commit to the chosen trip until arrival. Another resident harvesting a few
+    // fruit must not reverse a traveller every decision tick; lost permission can.
+    const bool bStillTravelling = bAccessibleHome &&
+        FVector::Dist2D(GetActorLocation(), W->Groves[HomeGrove].Position) >= 620.f;
+    if (bAccessibleHome && (bStillTravelling || W->Groves[HomeGrove].Food >= 3.f))
     {
         Chosen = HomeGrove;
     }

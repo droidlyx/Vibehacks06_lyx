@@ -48,3 +48,11 @@ Validation: repository clone succeeded. Engine compilation and gameplay validati
 - Improved negotiated action schema after retaining and inspecting failed small-model cases; 3 selected protocol cases now pass.
 - Captured and inspected stable gameplay/dialogue images. Original teleport-frame image was rejected and replaced.
 - Independent Windows packaging underway. Explicitly included runtime-loaded engine basic shapes after inspecting cook output.
+
+## First playable / v0.1
+
+- Packaged Windows executable passed 16 smoke + 13 world-behaviour + 3 real-AI integration checks.
+- Verified the staged model hash, local AI runtime, Chinese UI and packaged runtime-generated geometry.
+- Added explicit engine basic-shape cook dependencies and disabled unused Android file serving.
+- Portable entry point: Builds/Windows/Play.cmd. This folder includes the local model and licenses.
+- User subsequently authorized continued autonomous playtesting and fun/quality iterations after this prototype milestone. Preserve this first playable while making the next iteration.

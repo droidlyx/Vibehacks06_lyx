@@ -127,6 +127,6 @@ void AVerdantHUD::DrawHUD() {
    if(NPC->SpeechUntil>GetWorld()->GetTimeSeconds())Label(Head+FVector(0,0,70*NPC->BodySize),NPC->LastSpeech.Left(42),Gold,14);
   }
  }
- for(const auto& G:W->Groves) if(FVector::Dist2D(P->GetActorLocation(),G.Position)<4000) Label(G.Position+FVector(0,0,300),G.Name,G.Color,17);
+ for(const auto& G:W->Groves) if(FVector::Dist2D(P->GetActorLocation(),G.Position)<11000) Label(G.Position+FVector(0,0,300),G.Name,G.Color,17);
  Label(W->MotherPosition+FVector(0,0,1700),W->bRestored?TEXT("母树 · 新生"):TEXT("母树"),Gold,20);
 }
