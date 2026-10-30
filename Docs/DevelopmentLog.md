@@ -23,3 +23,19 @@ Validation: repository clone succeeded. Engine compilation and gameplay validati
 - Found CC0 original Quaternius character/animation/nature archives. Preparing a fresh import and animation validation; no derived Ember asset copied.
 - Independent VerdantEditor build passed on UE 5.8.3 (BuildSettings V7).
 - Corrected README UTF-8 title after the initial PowerShell pipe encoding issue.
+
+## First integrated runtime findings
+
+- Core gameplay module compiles. Fresh map and palette materials generated successfully.
+- First real launch exposed an accidental APawn::Restart override in the R-key handler, causing repeated map travel. Renamed the handler to RestartJourney. Rider currently indexes only the reference project, so the attempted semantic rename could not operate on the new project; three direct references were corrected locally.
+- Local Qwen service loaded successfully and returned a real Chinese JSON negotiation response in about 0.25 seconds in a simple probe.
+- Runtime validation remains in progress; no playable-complete claim yet.
+
+## Original gameplay milestone
+
+- Added an original procedural valley, continuous size/health/reach growth, timed melee, dodge, loot, harvesting and sharing.
+- Added three territorial food sources, NPC harvesting/flight/migration, true delivery pledges and Mother Tree restoration.
+- Added Chinese HUD, dialogue input, real local model HTTP requests and validated action execution.
+- Full editor compilation passes after refreshing the UBT source manifest with -gather.
+- Added runtime smoke and world-behaviour probes; gameplay/visual pass is still pending final character import.
+- Fixed start-up map reload caused by the APawn lifecycle collision and corrected invalid/contradictory dialogue actions during review.
