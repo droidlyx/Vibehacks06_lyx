@@ -14,3 +14,5 @@ Local/
 *.pem
 *.key
 Tools/__pycache__/
+
+Assets/Prepared/*.log

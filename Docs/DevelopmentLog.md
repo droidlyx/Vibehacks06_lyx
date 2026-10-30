@@ -39,3 +39,12 @@ Validation: repository clone succeeded. Engine compilation and gameplay validati
 - Full editor compilation passes after refreshing the UBT source manifest with -gather.
 - Added runtime smoke and world-behaviour probes; gameplay/visual pass is still pending final character import.
 - Fixed start-up map reload caused by the APawn lifecycle collision and corrected invalid/contradictory dialogue actions during review.
+
+## Art and live-world verification milestone
+
+- Rebuilt 3 CC0 characters on a shared rig, imported 9 clips and 6 nature meshes from original vendor files. No generated-asset credits spent.
+- Fixed Blender hidden bone-display geometry, material slots and source rest-pose differences before final import.
+- Rendered game smoke passes 16/16, world delivery/territory tests pass 13/13, actual in-game local AI integration passes 3/3.
+- Improved negotiated action schema after retaining and inspecting failed small-model cases; 3 selected protocol cases now pass.
+- Captured and inspected stable gameplay/dialogue images. Original teleport-frame image was rejected and replaced.
+- Independent Windows packaging underway. Explicitly included runtime-loaded engine basic shapes after inspecting cook output.
