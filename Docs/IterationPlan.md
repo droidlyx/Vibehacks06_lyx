@@ -18,8 +18,8 @@ Stable baseline: prototype-v0.1 / dc0fbca. Its packaged folder remains unchanged
 2. Show nearby interaction eligibility and the actual last negotiated delivery; render carried nutrition.
 3. Hold E for repeated harvesting, Shift+F for an explicitly contextual bulk offering.
 4. Try actual wildlife reserves (16/24/36) and starting inventories (22/34/48), without spawning extra death rewards.
-5. Try asymmetric grove supply (42/8/38, fertility1/.35/1) so access policy can change real routes.
-6. Narrow the visual road, add a few nonblocking nearby scale references, reduce uniform yellow haze. Generate zero new assets.
+5. Try asymmetric grove supply (42/8/48, fertility1/.35/1) so access policy can change real routes.
+6. Narrow the visual road, add a few nonblocking nearby scale references, reduce uniform yellow haze. Use no paid generation. Add six short original synthesized feedback sounds.
 
 ## Evaluation
 

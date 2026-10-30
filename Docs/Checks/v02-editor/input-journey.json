@@ -1,0 +1,27 @@
+{
+	"kind": "normal-game-engine-input-replay",
+	"physical_desktop_input": false,
+	"resource_or_size_grants": false,
+	"elapsed_seconds": 40.779720306396484,
+	"stage": 14,
+	"first_harvest_seconds": 14.60973072052002,
+	"start_size": 0.44999998807907104,
+	"end_size": 0.88294714689254761,
+	"player_food": 0,
+	"tree_nutrition": 27,
+	"failures": 0,
+	"world": "开放的山谷 · 居民存活 3/3 · 开放果林 2/3 · 平均生机 78%\n苔石果林：米芽，储粮 14，开放\n赤土果林：陶恩，储粮 14，开放\n高地果林：岚石，储粮 30，受限",
+	"checks": [
+		"PASS Held movement key moves player across actual terrain",
+		"PASS One held E gathers multiple real batches without repeated taps",
+		"PASS Q input eats existing food rather than granting growth",
+		"PASS T input opens the actual conversation window",
+		"PASS Normal-state resident responds through the real local model",
+		"你：我想复苏母树。你愿意亲自带5份自己的食物过去吗？",
+		"米芽：我愿意亲自带5份养分去母树。",
+		"PASS Earned growth develops during travel and conversation",
+		"PASS Winning a normal encounter returns at least 15 actual food",
+		"PASS One Shift+F makes a real bulk offering",
+		"PASS Offering consumes the player's earned inventory"
+	]
+}

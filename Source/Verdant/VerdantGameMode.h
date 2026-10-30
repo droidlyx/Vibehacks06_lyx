@@ -16,6 +16,12 @@ private:
  float SmokeTargetHealth = 0.f;
  void TickWorldProbe(float Dt);
  void TickAIProbe(float Dt);
+ void TickInputJourney(float Dt);
+ void TickCombatProbe(float Dt);
+ float JourneyPhaseAt=0.f, JourneyFirstHarvest=-1.f, JourneyStartSize=0.f, JourneyFoodBefore=0.f;
+ bool bJourneyWalking=false;
+ int32 JourneyEatCount=0;
+ FVector JourneyOrigin=FVector::ZeroVector;
  float ProbeNPCFoodBefore = 0.f;
  float CaptureAt = 0.f;
  float ProbeTreeBefore = 0.f;

@@ -1,4 +1,4 @@
-﻿// Original runtime valley composition for Verdant. All dimensions are centimetres.
+// Original runtime valley composition for Verdant. All dimensions are centimetres.
 #include "VerdantWorld.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -183,7 +183,8 @@ void AVerdantWorld::BuildLandscape()
             Tangents.Emplace(FVector(1, 0, DX).GetSafeNormal(), false);
             const float Variation = .5f + .5f * FMath::PerlinNoise2D(FVector2D(PX / 1700.f + 17, PY / 1700.f - 31));
             FLinearColor C = FMath::Lerp(FLinearColor(.12f, .23f, .075f), FLinearColor(.29f, .37f, .13f), Variation);
-            C = FMath::Lerp(C, FLinearColor(.49f, .38f, .23f), 1.f - Ease(220.f, 650.f, RoadDistance(PX, PY)));
+            // Only the painted trail narrows; terrain/collision and route centres stay fixed.
+            C = FMath::Lerp(C, FLinearColor(.47f, .38f, .25f), 1.f - Ease(150.f, 380.f, RoadDistance(PX, PY)));
             C = FMath::Lerp(C, FLinearColor(.43f, .40f, .30f), Ease(.3f, 1.1f, FVector2D(DX, DY).Size()) * .8f);
             C = FMath::Lerp(C, FLinearColor(.48f, .51f, .43f), Ease(2400.f, 4300.f, H));
             Colors.Add(C);
@@ -220,7 +221,29 @@ void AVerdantWorld::BuildScenery()
     auto Tree = [&](const FString& Name, FVector P, float Height, int32 Type)
     {
         const TCHAR* Path = Type == 0 ? TEXT("/Game/Art/Nature/SM_Tree01.SM_Tree01") : TEXT("/Game/Art/Nature/SM_Tree02.SM_Tree02");
-        if (Native(Name, Path, P, Height, true)) return;
+        if (Native(Name, Path, P, Height, false))
+        {
+            // Imported whole-tree hulls include the canopy and can trap ground-level
+            // movement sweeps several metres from the trunk. Only the trunk blocks.
+            const float Radius = FMath::Clamp(Height * .035f, 25.f, 50.f);
+            const float HalfHeight = FMath::Max(Radius, Height * .28f);
+            auto* Trunk = NewObject<UCapsuleComponent>(this,
+                MakeUniqueObjectName(this, UCapsuleComponent::StaticClass(),
+                    FName(*(Name + TEXT("_TrunkCollision")))));
+            AddInstanceComponent(Trunk);
+            Trunk->SetupAttachment(GetRootComponent());
+            Trunk->SetMobility(EComponentMobility::Movable);
+            Trunk->SetCapsuleSize(Radius, HalfHeight);
+            Trunk->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+            Trunk->SetCollisionObjectType(ECC_WorldStatic);
+            Trunk->SetCollisionResponseToAllChannels(ECR_Block);
+            Trunk->SetGenerateOverlapEvents(false);
+            Trunk->SetCanEverAffectNavigation(false);
+            Trunk->SetHiddenInGame(true);
+            Trunk->RegisterComponent();
+            Trunk->SetWorldLocation(SurfacePoint(P, HalfHeight));
+            return;
+        }
         const FVector Base = SurfacePoint(P);
         AddShape(Name + TEXT("_Stem"), Cylinder, Base + FVector(0, 0, Height * .32f), FVector(Height / 1050.f, Height / 1050.f, Height * .64f / 100.f), Bark, true);
         for (int32 J = 0; J < 3; ++J)
@@ -266,7 +289,7 @@ void AVerdantWorld::BuildScenery()
     for (int32 I = 0; I < 140; ++I)
     {
         const FVector P(Random.FRandRange(-10800, 10800), Random.FRandRange(-10500, 11500), 0);
-        if (RoadDistance(P.X, P.Y) < 420.f || FVector::Dist2D(P, MotherPosition) < 1100.f) continue;
+        if (RoadDistance(P.X, P.Y) < 280.f || FVector::Dist2D(P, MotherPosition) < 1100.f) continue;
         if (!Native(FString::Printf(TEXT("Grass_%d"), I), TEXT("/Game/Art/Nature/SM_Grass01.SM_Grass01"), P, Random.FRandRange(45, 100), false))
             AddShape(TEXT("MeadowSprout"), Cone, SurfacePoint(P, 22), FVector(.45f, .45f, .6f), Moss);
     }
@@ -321,6 +344,38 @@ void AVerdantWorld::BuildScenery()
         }
         Tree(FString::Printf(TEXT("Grove_%d_Shade"), Index), G.Position + FVector(1050, 800, 0), 1050, Index % 2);
     }
+    // Small roadside clusters establish a foreground scale without adding obstacles.
+    // The nearest cluster centres sit 4.5 m from the route axis. Decorative meshes
+    // have no collision, so the existing maximum-body-size clearance stays intact.
+    // Place these last: their rotations must not perturb the seeded woodland layout.
+    const FVector ApproachStart(-1000.f, -6200.f, 0.f);
+    const FVector ApproachEnd(0.f, 1000.f, 0.f);
+    const FVector Along = (ApproachEnd - ApproachStart).GetSafeNormal2D();
+    const FVector Across(-Along.Y, Along.X, 0.f);
+    constexpr float ApproachFractions[] = { .12f, .23f, .36f, .52f };
+    for (int32 Cluster = 0; Cluster < UE_ARRAY_COUNT(ApproachFractions); ++Cluster)
+    {
+        const FVector Centre = FMath::Lerp(ApproachStart, ApproachEnd, ApproachFractions[Cluster]);
+        for (int32 Side : { -1, 1 })
+        {
+            const FVector Shoulder = Centre + Across * float(Side) * (450.f + (Cluster % 2) * 75.f);
+            const TCHAR* StonePaths[] = {
+                TEXT("/Game/Art/Nature/SM_Rock01.SM_Rock01"),
+                TEXT("/Game/Art/Nature/SM_Rock02.SM_Rock02"),
+                TEXT("/Game/Art/Nature/SM_Rock03.SM_Rock03")
+            };
+            Native(FString::Printf(TEXT("ApproachPebble_%d_%d"), Cluster, Side),
+                StonePaths[Cluster % 3], Shoulder, 25.f + Cluster * 6.f, false);
+            for (int32 Tuft = 0; Tuft < 3; ++Tuft)
+            {
+                const FVector P = Shoulder + Along * (65.f + Tuft * 85.f)
+                    + Across * float(Side) * (60.f + (Tuft % 2) * 55.f);
+                Native(FString::Printf(TEXT("ApproachGrass_%d_%d_%d"), Cluster, Side, Tuft),
+                    TEXT("/Game/Art/Nature/SM_Grass01.SM_Grass01"), P,
+                    28.f + Tuft * 9.f + (Cluster % 2) * 6.f, false);
+            }
+        }
+    }
     // Fallback lighting also makes an Entry-map launch usable before map creation.
     if (!TActorIterator<ASkyAtmosphere>(GetWorld()))
     {
@@ -334,7 +389,7 @@ void AVerdantWorld::BuildScenery()
         {
             Light->SetMobility(EComponentMobility::Movable);
             Light->SetIntensity(4.2f);
-            Light->SetLightColor(FLinearColor(1.f, .88f, .67f));
+            Light->SetLightColor(FLinearColor(1.f, .93f, .82f));
             Light->SetAtmosphereSunLight(true);
         }
     }
@@ -345,7 +400,7 @@ void AVerdantWorld::BuildScenery()
         {
             auto* Light = Sky->GetLightComponent();
             Light->SetMobility(EComponentMobility::Movable);
-            Light->SetIntensity(1.1f);
+            Light->SetIntensity(1.25f);
             Light->SetRealTimeCapture(true);
         }
     }
@@ -354,9 +409,9 @@ void AVerdantWorld::BuildScenery()
         auto* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>();
         if (Fog)
         {
-            Fog->GetComponent()->SetFogDensity(.009f);
-            Fog->GetComponent()->SetFogHeightFalloff(.15f);
-            Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(.57f, .68f, .72f));
+            Fog->GetComponent()->SetFogDensity(.0045f);
+            Fog->GetComponent()->SetFogHeightFalloff(.18f);
+            Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(.51f, .62f, .68f));
         }
     }
     UpdateGroveVisuals();

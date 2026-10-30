@@ -25,6 +25,49 @@
 namespace {
  FSlateFontInfo Font(int32 Size) {return FSlateFontInfo(FPaths::EngineContentDir()/TEXT("Slate/Fonts/DroidSansFallback.ttf"),Size);}
  const FLinearColor Ink(.9f,.94f,.86f), Gold(1.f,.73f,.30f), Muted(.62f,.73f,.68f), Panel(.025f,.065f,.05f,.88f);
+ FString ContextHint(AVerdantCharacter* P,AVerdantWorld* W) {
+  if(!P||!W||P->bDead)return TEXT("");
+  for(AVerdantCharacter* N:W->Folk) if(IsValid(N)&&N->bDead&&N->Food>0&&FVector::Dist2D(P->GetActorLocation(),N->GetActorLocation())<220.f*FMath::Max(1.f,P->BodySize))
+   return FString::Printf(TEXT("[E] 收取 %s 的 %.0f 份战利品"),*N->DisplayName,N->Food);
+  if(FVector::Dist2D(P->GetActorLocation(),W->MotherPosition)<1000.f&&!W->bRestored)
+   return FString::Printf(TEXT("母树还需 %.0f 份  ·  [F] 供奉5份  ·  [Shift+F] 批量供奉（最多 %.0f 份）"),W->TreeGoal-W->TreeNutrition,FMath::Min(P->Food,W->TreeGoal-W->TreeNutrition));
+  const int32 I=W->NearestGrove(P->GetActorLocation(),700.f);
+  FString Text;
+  if(I>=0) {
+   const auto& G=W->Groves[I];auto* Keeper=W->FindFolk(G.ControllerId);
+   Text=FString::Printf(TEXT("%s · %s · 储粮 %.0f  |  "),*G.Name,Keeper&&!Keeper->bDead?*Keeper->DisplayName:TEXT("无人管理"),G.Food);
+   if(!W->CanHarvest(I,P)) Text+=TEXT("尚未获准采集，需与管理者协商");
+   else if(G.Food<.5f)Text+=TEXT("果实暂时采空，正在缓慢再生");
+   else {const float Take=FMath::Min(5.f,G.Food);const float Tax=Keeper&&Keeper!=P&&!Keeper->bDead?Take*G.Share:0;
+    Text+=FString::Printf(TEXT("[按住 E] 采集 · 每次实得 %.1f"),Take-Tax);if(Tax>.01f)Text+=FString::Printf(TEXT("，分成 %.1f"),Tax);
+   }
+  }
+  if(auto* N=P->NearestFolk(750.f*FMath::Max(1.f,P->BodySize))) Text+=(Text.IsEmpty()?TEXT(""):TEXT("\n"))+FString::Printf(TEXT("[T] 与%s交谈 · 身高 %.1f米 · [F] 分享5份食物"),*N->DisplayName,N->BodySize*1.8f);
+  if(Text.IsEmpty()) {
+   if(W->HarvestLedger.FindRef(TEXT("0:0"))<.01f && W->Groves.Num()>0) {
+    FVector Delta=W->Groves[0].Position-P->GetActorLocation();
+    const float ViewYaw=P->GetController()?P->GetController()->GetControlRotation().Yaw:P->GetActorRotation().Yaw;
+    const float Relative=FMath::FindDeltaAngleDegrees(ViewYaw,Delta.Rotation().Yaw);
+    const TCHAR* Direction=FMath::Abs(Relative)>140?TEXT("身后"):Relative>25?TEXT("右前方"):Relative< -25?TEXT("左前方"):TEXT("前方");
+    Text=FString::Printf(TEXT("朝%s寻找苔石果林 · %.0f米 · 米芽愿意分享采集机会"),Direction,Delta.Size2D()/100.f);
+   } else Text=TEXT("食物可以让你长大、帮助同伴，或供奉母树；更大的对手也持有更多养分。");
+  }
+  return Text;
+ }
+ FString DeliveryHint(AVerdantWorld* W) {
+  if(!W||!W->Dialogue||!W->Dialogue->Selected.IsValid())return TEXT("");
+  auto* N=W->Dialogue->Selected.Get();
+  if(N->bDead&&N->DonationPledge>0)return N->DisplayName+TEXT("已倒下，未完成的运送已中断。");
+  if(N->DonationPledge>0) {
+   const float Dist=FVector::Dist2D(N->GetActorLocation(),W->MotherPosition)/100.f;
+   return FString::Printf(TEXT("%s → 母树 · 正在运送 %.0f 份 · 距目的地 %.0f 米"),*N->DisplayName,N->DonationPledge,Dist);
+  }
+  if(N->LastDonationTime>=0&&W->GetWorld()->GetTimeSeconds()-N->LastDonationTime<12.f)
+   return FString::Printf(TEXT("%s 已实际送达 %.0f 份养分"),*N->DisplayName,N->LastDonatedAmount);
+  if(N->FollowId==0&&!N->bDead)return N->DisplayName+TEXT("正在与你同行。");
+  return TEXT("");
+ }
+
 }
 void AVerdantHUD::BeginPlay() {
  Super::BeginPlay();
@@ -61,10 +104,14 @@ void AVerdantHUD::BeginPlay() {
  +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(24)
  [SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(Panel).Padding(14)
   [SNew(SVerticalBox)
+   +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,0,0,6)[SNew(STextBlock).Font(Font(15)).ColorAndOpacity(Gold).Text_Lambda([World](){return FText::FromString(DeliveryHint(World()));}).Visibility_Lambda([World](){return DeliveryHint(World()).IsEmpty()?EVisibility::Collapsed:EVisibility::Visible;})]
+   +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,0,0,7)[SNew(STextBlock).Font(Font(14)).ColorAndOpacity(Ink).Justification(ETextJustify::Center).Text_Lambda([Player,World](){return FText::FromString(ContextHint(Player(),World()));})]
    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)[SNew(STextBlock).Font(Font(14)).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("WASD 移动  ·  鼠标观察  ·  Shift 奔跑  ·  左/右键轻/重击  ·  空格闪避")))]
-   +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,5)[SNew(STextBlock).Font(Font(14)).ColorAndOpacity(Gold).Text(FText::FromString(TEXT("E 采集/战利品   Q 食用成长   F 分享/供奉   T 自由交谈   G 管理果林   R 重开")))]
+   +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,5)[SNew(STextBlock).Font(Font(14)).ColorAndOpacity(Gold).Text(FText::FromString(TEXT("按住E 采集   Q 食用成长   F 分享/供奉   T 自由交谈   G 管理果林   R 重开")))]
    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)[SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Muted).Text_Lambda([World](){auto* W=World();return FText::FromString(W&&W->GetWorld()->GetTimeSeconds()<W->NoticeUntil?W->Notice:TEXT("食物可以让你长大，也可以改变别人和整个世界。"));})]
   ]]
+ +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(20,190,20,0)
+ [SNew(STextBlock).Font(Font(22)).ColorAndOpacity(Gold).ShadowOffset(FVector2D(1,1)).Text_Lambda([Player](){auto* P=Player();return FText::FromString(P&&P->GetWorld()->GetTimeSeconds()<P->FeedbackUntil?P->CombatFeedback:TEXT(""));})]
  +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
  [SNew(SBorder).Visibility_Lambda([Player](){auto* P=Player();return P&&P->bDead?EVisibility::Visible:EVisibility::Collapsed;}).BorderBackgroundColor(Panel).Padding(35)
   [SNew(SVerticalBox)
@@ -96,6 +143,7 @@ void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason) {
 void AVerdantHUD::OpenConversation(AVerdantCharacter* NPC) {
  auto* W=AVerdantWorld::Find(this);if(!W||!W->Dialogue||!IsValid(NPC)||NPC->bDead)return;
  W->Dialogue->Selected=NPC;bConversationOpen=true;
+ if(auto* P=Cast<AVerdantCharacter>(GetOwningPawn()))P->CancelForConversation();
  if(auto* PC=GetOwningPlayerController()) {
   PC->StopMovement();PC->SetIgnoreMoveInput(true);PC->SetIgnoreLookInput(true);PC->bShowMouseCursor=true;
   FInputModeUIOnly Mode;if(InputBox.IsValid())Mode.SetWidgetToFocus(InputBox);PC->SetInputMode(Mode);

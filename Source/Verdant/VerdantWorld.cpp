@@ -52,8 +52,8 @@ void AVerdantWorld::BeginPlay()
         Grove.Position = SurfacePoint(Centers[I]);
         Grove.Color = Colors[I];
         Grove.ControllerId = I + 1;
-        Grove.Food = I == 2 ? 38.f : 32.f;
-        Grove.Fertility = 1.f;
+        Grove.Food = I == 0 ? 42.f : I == 1 ? 8.f : 48.f;
+        Grove.Fertility = I == 1 ? .35f : 1.f;
         Grove.bOpen = I != 2;
         Grove.Share = I == 1 ? .2f : 0.f;
         Groves.Add(Grove);
@@ -91,6 +91,7 @@ void AVerdantWorld::Tick(float DeltaSeconds)
         }
     }
     TickEconomy(DeltaSeconds);
+    TickPolicyProbe(DeltaSeconds);
     if (GetWorld()->GetTimeSeconds() > NoticeUntil)
         Notice.Empty();
 }
@@ -127,11 +128,11 @@ void AVerdantWorld::SpawnResidents()
         {3, TEXT("岚石"), TEXT("守住高地的粮食；尊重实力，也会考虑可靠的交换与承诺。"),
             FVector(850.f,6350.f,0.f), 2.f, 2, 2, FLinearColor(.39f,.49f,.73f), false, 16.f},
         {4, TEXT("荒枝游民"), TEXT("寻找食物，驱赶靠近的陌生生物。"),
-            FVector(-1800.f,-300.f,0.f), .8f, 0, 2, FLinearColor(.58f,.44f,.25f), true, 7.f},
+            FVector(-1800.f,-300.f,0.f), .8f, 0, 2, FLinearColor(.58f,.44f,.25f), true, 22.f},
         {5, TEXT("赤背掠夺者"), TEXT("沿荒地觅食，避开比自己强大的威胁。"),
-            FVector(2800.f,3000.f,0.f), 1.25f, 1, 2, FLinearColor(.66f,.28f,.22f), true, 10.f},
+            FVector(2800.f,3000.f,0.f), 1.25f, 1, 2, FLinearColor(.66f,.28f,.22f), true, 34.f},
         {6, TEXT("古岩守卫"), TEXT("在北侧荒地游荡，保卫身边的食物。"),
-            FVector(-3300.f,6200.f,0.f), 2.1f, 2, 2, FLinearColor(.43f,.43f,.35f), true, 12.f}
+            FVector(-3300.f,6200.f,0.f), 2.1f, 2, 2, FLinearColor(.43f,.43f,.35f), true, 48.f}
     };
 
     for (const FResidentSpec& Spec : Specs)
@@ -273,18 +274,23 @@ float AVerdantWorld::Harvest(int32 GroveIndex, AVerdantCharacter* Who, float Amo
         ? Taken * FMath::Clamp(Grove.Share, 0.f, .9f) : 0.f;
     Grove.Food -= Taken;
     Who->Food += Taken - Tax;
+    HarvestLedger.FindOrAdd(FString::Printf(TEXT("%d:%d"),Who->AgentId,GroveIndex)) += Taken - Tax;
     if (Tax > 0.f)
         GroveOwner->Food += Tax;
     if (Grove.Food < 5.f)
         Grove.Fertility = FMath::Max(.2f, Grove.Fertility - Taken * .003f);
 
-    if (Tax > .01f)
+    const float Now = GetWorld()->GetTimeSeconds();
+    const bool bAnnounce = Who->AgentId == 0 || !LastHarvestNotice.Contains(Who->AgentId) || Now - LastHarvestNotice.FindRef(Who->AgentId) >= 20.f;
+    if (bAnnounce) LastHarvestNotice.Add(Who->AgentId, Now);
+    if (bAnnounce && Tax > .01f)
         Record(FString::Printf(TEXT("%s 在%s采得 %.1f 份，按约定交给%s %.1f 份。"),
             *Who->DisplayName, *Grove.Name, Taken, *GroveOwner->DisplayName, Tax));
-    else if (Who->AgentId == 0 || Taken >= 4.f)
+    else if (bAnnounce && (Who->AgentId == 0 || Taken >= 4.f))
         Record(FString::Printf(TEXT("%s 在%s采得 %.1f 份养分。"), *Who->DisplayName, *Grove.Name, Taken));
     if (Who->AgentId == 0)
         Notify(FString::Printf(TEXT("获得 %.1f 份养分。Q 吸收成长；F 分享或供奉。"), Taken - Tax));
+    if(Who->AgentId==0) PlayCue(TEXT("Pickup"),Who->GetActorLocation(),Who->BodySize);
     return Taken - Tax;
 }
 
@@ -309,6 +315,8 @@ bool AVerdantWorld::Donate(AVerdantCharacter* Who, float Amount)
     }
     Who->Food -= Paid;
     TreeNutrition += Paid;
+    Who->LastDonationTime = GetWorld()->GetTimeSeconds();
+    Who->LastDonatedAmount = Paid;
     Record(FString::Printf(TEXT("%s 向母树供奉 %.1f 份养分（%.0f / %.0f）。"),
         *Who->DisplayName, Paid, TreeNutrition, TreeGoal));
     if (Who->AgentId == 0)
@@ -321,6 +329,7 @@ bool AVerdantWorld::Donate(AVerdantCharacter* Who, float Amount)
         Record(WorldSummary());
         Notify(TEXT("母树复苏！观察三片果林：你们的行动已经改变了山谷。"));
     }
+    PlayCue(bRestored?TEXT("Restore"):TEXT("Offer"),MotherPosition,1.f);
     UpdateGroveVisuals();
     return true;
 }
@@ -336,6 +345,7 @@ bool AVerdantWorld::Transfer(AVerdantCharacter* From, AVerdantCharacter* To, flo
         return false;
     From->Food -= Paid;
     To->Food += Paid;
+    if(From->AgentId==0||To->AgentId==0) PlayCue(TEXT("Pickup"),To->GetActorLocation(),To->BodySize);
     Record(FString::Printf(TEXT("%s 把 %.1f 份养分交给了 %s。"), *From->DisplayName, Paid, *To->DisplayName));
     return true;
 }

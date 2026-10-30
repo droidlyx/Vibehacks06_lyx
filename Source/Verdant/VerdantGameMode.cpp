@@ -35,6 +35,8 @@ void AVerdantGameMode::BeginPlay() {
 }
 void AVerdantGameMode::Tick(float Dt) {
  Super::Tick(Dt);
+ if(FParse::Param(FCommandLine::Get(),TEXT("VerdantCombatProbe"))){TickCombatProbe(Dt);return;}
+ if(FParse::Param(FCommandLine::Get(),TEXT("VerdantInputJourney"))){TickInputJourney(Dt);return;}
  if(FParse::Param(FCommandLine::Get(),TEXT("VerdantAIProbe"))){TickAIProbe(Dt);return;}
  if(FParse::Param(FCommandLine::Get(),TEXT("VerdantWorldProbe"))){TickWorldProbe(Dt);return;}
  if(!FParse::Param(FCommandLine::Get(),TEXT("VerdantSmoke")))return;

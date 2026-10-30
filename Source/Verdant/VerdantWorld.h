@@ -7,6 +7,9 @@ class UProceduralMeshComponent;
 class UStaticMeshComponent;
 class UMaterialInterface;
 class UVerdantDialogue;
+class USoundBase;
+class USoundAttenuation;
+class USoundConcurrency;
 USTRUCT()
 struct FVerdantGrove {
  GENERATED_BODY()
@@ -49,8 +52,11 @@ public:
  void SpawnResidents();
  void UpdateGroveVisuals();
  void TickEconomy(float Dt);
+ void TickPolicyProbe(float Dt);
+ TMap<FString,float> HarvestLedger;
  void Record(const FString& Message);
  void Notify(const FString& Message);
+ void PlayCue(FName Cue, FVector Position, float BodySize = 1.f);
  int32 NearestGrove(const FVector& At, float MaxDistance = 1800.f) const;
  AVerdantCharacter* FindFolk(int32 Id) const;
  bool CanHarvest(int32 GroveIndex, const AVerdantCharacter* Who) const;
@@ -64,5 +70,12 @@ public:
  UStaticMeshComponent* AddShape(const FString& Name, const TCHAR* MeshPath, FVector Position, FVector Scale, FLinearColor Color, bool Collision = false);
  UMaterialInterface* ColoredMaterial(FLinearColor Color, float Glow = 0.f);
 private:
+ UPROPERTY() TMap<FName,TObjectPtr<USoundBase>> CueCache;
+ UPROPERTY() TObjectPtr<USoundAttenuation> CueAttenuation;
+ UPROPERTY() TObjectPtr<USoundConcurrency> CueConcurrency;
  float EconomyClock = 0.f;
+ TMap<int32,float> LastHarvestNotice;
+ float PolicyProbeElapsed=0.f, PolicyProbeNextSample=0.f, PolicyProbeInterventionAt=-1.f;
+ bool bPolicyProbeInterventionApplied=false, bPolicyProbeFinished=false;
+ TArray<FString> PolicyProbeSamples;
 };

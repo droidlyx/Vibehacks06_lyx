@@ -260,7 +260,10 @@ void AVerdantCharacter::TickNPC(float Dt)
     }
 
     const float DesiredSize = AgentId == 1 ? .92f : AgentId == 2 ? 1.45f : 2.4f;
-    const float UnpromisedFood = FMath::Max(0.f, Food - DonationPledge);
+    // Keep an actual carried reserve: growth spends only the surplus, so a
+    // difficult fight still yields useful food after the wanderer has eaten.
+    const float WildFoodReserve = !bWild ? 0.f : AgentId == 4 ? 16.f : AgentId == 5 ? 24.f : 36.f;
+    const float UnpromisedFood = FMath::Max(0.f, Food - DonationPledge - WildFoodReserve);
     if (BodySize < DesiredSize && Nutrition < 3.f && UnpromisedFood >= 5.f)
         Eat(FMath::Min(3.f, UnpromisedFood));
 

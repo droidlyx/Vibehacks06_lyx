@@ -56,3 +56,16 @@ Validation: repository clone succeeded. Engine compilation and gameplay validati
 - Added explicit engine basic-shape cook dependencies and disabled unused Android file serving.
 - Portable entry point: Builds/Windows/Play.cmd. This folder includes the local model and licenses.
 - User subsequently authorized continued autonomous playtesting and fun/quality iterations after this prototype milestone. Preserve this first playable while making the next iteration.
+
+## v0.2 playability checkpoint
+
+- Preserved the v0.1 Windows package and tagged source; developed on iteration/playability-v0.2.
+- Fixed strafing attack direction, interrupted ghost attacks, animation/hit-clock disagreement, roll recovery, conversation interruption and growth-camera framing. All 40 explicit combat/input checks passed at 1280x720, including the 4.5m body above the expanded HUD.
+- Added contextual legal gathering/tax information, actual delivery progress and carried-food visuals. Held E gathers repeatedly; Shift+F makes a bounded bulk offering.
+- Kept real food reserves on wilderness opponents so combat loot remains useful; no synthetic kill reward.
+- A normal-resource engine-input journey passed 9 checks in 40.78 simulated seconds: first gathering at 14.61s, height 0.81m to 1.59m, 19 real food looted, player22 + Miya5 actually delivered. No teleports, grants or frozen NPCs were used in this journey. It is not yet a full100-food completion.
+- Deterministic 90s policy comparison exposed a genuine tree-canopy navigation blockage. Rider/LLDB captured the actual collider and stopped branch; replaced foliage collision with trunk capsules. After the fix, opening highland changed a resident route and caused30 actual non-owner food harvests versus0 in the closed control, followed by resource-driven migration. Failed baseline retained; see NavigationDebug.md.
+- Narrowed paths, added nearby natural scale references and reduced haze. Added six reproducible original mono48kHz SFX, imported and ran the journey with the audio device enabled. Waveform checks pass; physical listening has not been verified. Paid generation spend remains0.
+- Native desktop-control helper was unavailable after retry/reinitialization. Validation uses engine-input replay, not physical desktop automation or a human fun rating.
+
+Next: verify normal-resource completion, make the resulting world state easier to compare, then package separately from v0.1.

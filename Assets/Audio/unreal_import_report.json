@@ -1,0 +1,60 @@
+{
+  "success": true,
+  "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+  "gain_db": -4.0,
+  "linear_gain": 0.6309573444801932,
+  "sounds": [
+    {
+      "path": "/Game/Art/Audio/AFX_Swing",
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX.SC_VerdantSFX",
+      "duration_seconds": 0.1599999964237213,
+      "channels": 1,
+      "imported_sample_rate_hz": 48000,
+      "source_sha256": "e59a07fd1a4dc930a1e1d0dbaa7e8cf348ab32f748b0ce9ddb07f96cb48480eb"
+    },
+    {
+      "path": "/Game/Art/Audio/AFX_Hit",
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX.SC_VerdantSFX",
+      "duration_seconds": 0.1599999964237213,
+      "channels": 1,
+      "imported_sample_rate_hz": 48000,
+      "source_sha256": "383b7cf6ea76512dc0a8996689b37a69c2dde00c19359b4a4fa25f294e1f5b84"
+    },
+    {
+      "path": "/Game/Art/Audio/AFX_Pickup",
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX.SC_VerdantSFX",
+      "duration_seconds": 0.2199999988079071,
+      "channels": 1,
+      "imported_sample_rate_hz": 48000,
+      "source_sha256": "59169b4175c05a176534777379aaa9986e04ac35356588047663ab32b47879c2"
+    },
+    {
+      "path": "/Game/Art/Audio/AFX_Grow",
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX.SC_VerdantSFX",
+      "duration_seconds": 0.5,
+      "channels": 1,
+      "imported_sample_rate_hz": 48000,
+      "source_sha256": "44786649ea2ebaea019d8b4c45e7b3c85209a21f88a0b8926eaefe7c85dce5f1"
+    },
+    {
+      "path": "/Game/Art/Audio/AFX_Offer",
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX.SC_VerdantSFX",
+      "duration_seconds": 0.3499999940395355,
+      "channels": 1,
+      "imported_sample_rate_hz": 48000,
+      "source_sha256": "5bb88b25f42d583b0f5a532b085338b5582a0d45bccbaf96a8fe9c29a9bff66a"
+    },
+    {
+      "path": "/Game/Art/Audio/AFX_Restore",
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX.SC_VerdantSFX",
+      "duration_seconds": 1.0,
+      "channels": 1,
+      "imported_sample_rate_hz": 48000,
+      "source_sha256": "5052ad7f7af09635881d1ad013010e0fbfca7ec63c9e333bf222c50987888fd4"
+    }
+  ],
+  "errors": [],
+  "listening_review": "Not performed by import; requires actual listening.",
+  "runtime_mix_review": "Not performed by import; requires gameplay playback.",
+  "verified_class_gain": 0.6309573650360107
+}
