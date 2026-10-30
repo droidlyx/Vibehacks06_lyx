@@ -16,3 +16,4 @@ Local/
 Tools/__pycache__/
 
 Assets/Prepared/*.log
+Build/*/FileOpenOrder/
