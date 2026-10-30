@@ -179,6 +179,18 @@ bool AVerdantWorld::CanNegotiateFollow(const AVerdantCharacter* NPC, const AVerd
     if (!RegisteredAlive(this, NPC) || !RegisteredAlive(this, Target) || NPC == Target ||
         NPC->AgentId == 0 || !PeacefulWithPlayer(this, NPC))
         return false;
+    // Reject both a newly closed loop and a pre-existing corrupt loop in the
+    // requested leader's chain. Dead or missing leaders end the effective chain.
+    TSet<int32> SeenLeaders;
+    const AVerdantCharacter* Leader = Target;
+    for (int32 Link = 0; RegisteredAlive(this, Leader) && Link < Folk.Num(); ++Link)
+    {
+        if (Leader == NPC || SeenLeaders.Contains(Leader->AgentId)) return false;
+        SeenLeaders.Add(Leader->AgentId);
+        Leader = FindFolk(Leader->FollowId);
+    }
+    if (RegisteredAlive(this, Leader)) return false;
+
     const auto* Player = FindFolk(0);
     if (!RegisteredAlive(this, Player)) return false;
     if (NPC->bWild)

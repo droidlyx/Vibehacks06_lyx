@@ -55,7 +55,7 @@ void AVerdantCharacter::MoveToward(const FVector& Goal, float Acceptance)
                 Say(TEXT("这边受阻，我试着绕开。"));
                 W->Record(DisplayName + TEXT(" 遇到阻挡，开始寻找绕行路线。"));
             }
-            if (MoveRecoveryCount >= 3 && !bWild && FollowId < 0 && DonationPledge <= .001f
+            if (MoveRecoveryCount >= 3 && HostileId < 0 && !bWild && FollowId < 0 && DonationPledge <= .001f
                 && W->Groves.IsValidIndex(HomeGrove))
             {
                 AvoidGrove = HomeGrove; AvoidGroveUntil = Now + 8.f;
@@ -190,9 +190,9 @@ void AVerdantCharacter::TickNPC(float Dt)
     {
         const float Distance = FVector::Dist2D(GetActorLocation(), Enemy->GetActorLocation());
         const bool Outmatched = Enemy->BodySize > BodySize * 1.45f || Health < MaxHealth() * .28f;
-        const FVector Anchor = bWild ? WildHome(AgentId) : Leader ? Leader->GetActorLocation()
+        const FVector Anchor = Leader ? Leader->GetActorLocation() : bWild ? WildHome(AgentId)
             : W->Groves.IsValidIndex(HomeGrove) ? W->Groves[HomeGrove].Position : W->MotherPosition;
-        const float Leash = bWild ? 2300.f : Leader ? 1400.f : 1800.f;
+        const float Leash = Leader ? 1400.f : bWild ? 2300.f : 1800.f;
         const bool TooFarFromDuty = FVector::Dist2D(GetActorLocation(), Anchor) > Leash
             && Distance > FMath::Max(350.f, Reach() + Enemy->GetCapsuleComponent()->GetScaledCapsuleRadius() + 120.f);
         const bool SafeRetreat = Outmatched && Distance > FMath::Max(1150.f, Enemy->Reach() + 500.f);
@@ -230,14 +230,34 @@ void AVerdantCharacter::TickNPC(float Dt)
             const bool DefendingLeader = Leader && Enemy->HostileId == Leader->AgentId;
             ActionLabel = DefendingLeader ? TEXT("援护 ") + Leader->DisplayName : TEXT("反击与争夺");
             const float StrikeDistance = Reach() + Enemy->GetCapsuleComponent()->GetScaledCapsuleRadius() * .7f;
-            if (Distance <= StrikeDistance)
+            FHitResult StrikeWall;
+            FCollisionQueryParams StrikeQuery(SCENE_QUERY_STAT(VerdantNPCAttackSight), false, this);
+            StrikeQuery.AddIgnoredActor(Enemy);
+            // Use the same obstruction test as actual melee damage. Being close
+            // through a rock is a routing problem, not a reason to swing forever.
+            const bool ClearStrike = Distance > StrikeDistance || !GetWorld()->LineTraceSingleByChannel(
+                StrikeWall, GetActorLocation(), Enemy->GetActorLocation(), ECC_Visibility, StrikeQuery);
+            auto MoveDuringCombat = [&](const FVector& Goal, float Acceptance)
+            {
+                MoveToward(Goal, Acceptance);
+                if (MoveRecoveryCount >= 3)
+                {
+                    AvoidThreatId = Enemy->AgentId; AvoidThreatUntil = Now + 8.f;
+                    HostileId = -1; CombatTarget.Reset();
+                    AttackTimer = 0.f; bHitApplied = true;
+                    BrainClock = 0.f; MoveSampleAt = 0.f; MoveRecoveryCount = 0; DetourUntil = 0.f;
+                    GetCharacterMovement()->StopMovementImmediately();
+                    W->Record(DisplayName + TEXT(" 无法接近对手，暂时停止追逐，回到原来的行程。"));
+                }
+            };
+            if (Distance <= StrikeDistance && ClearStrike)
             {
                 const FVector ToEnemy = (Enemy->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
                 if (Leader && FVector::Dist2D(GetActorLocation(), Leader->GetActorLocation()) < Distance
                     && FVector::DotProduct(ToEnemy, (Leader->GetActorLocation() - GetActorLocation()).GetSafeNormal2D()) > .9f)
                 {
                     const FVector Side = FVector::CrossProduct(FVector::UpVector, ToEnemy);
-                    MoveToward(W->SurfacePoint(Enemy->GetActorLocation() + Side * (AgentId % 2 ? 1.f : -1.f)
+                    MoveDuringCombat(W->SurfacePoint(Enemy->GetActorLocation() + Side * (AgentId % 2 ? 1.f : -1.f)
                         * FMath::Max(160.f, Reach() * .8f)), 65.f);
                     return;
                 }
@@ -245,13 +265,18 @@ void AVerdantCharacter::TickNPC(float Dt)
                 SetActorRotation(FRotator(0.f, ToEnemy.Rotation().Yaw, 0.f));
                 if (AttackTimer <= 0.f) Attack(AgentId % 2 != 0 && Enemy->BodySize >= BodySize * .8f);
             }
-            else { Destination = Enemy->GetActorLocation(); MoveToward(Destination, FMath::Max(60.f, StrikeDistance * .8f)); }
+            else
+            {
+                Destination = Enemy->GetActorLocation();
+                if (!ClearStrike) ActionLabel = TEXT("绕过阻挡接近对手");
+                MoveDuringCombat(Destination, ClearStrike ? FMath::Max(60.f, StrikeDistance * .8f) : 35.f);
+            }
             return;
         }
     }
 
     // A model response cannot freeze the world, but its addressee waits while replying.
-    if (W->Dialogue && W->Dialogue->bBusy && W->Dialogue->Selected.Get() == this)
+    if (W->Dialogue && W->Dialogue->bBusy && W->Dialogue->RequestNPC.Get() == this)
     {
         ActionLabel = TEXT("思考你的提议");
         GetCharacterMovement()->StopMovementImmediately();
@@ -439,6 +464,21 @@ void AVerdantCharacter::TickNPC(float Dt)
     {
         if (Grove.ControllerId < 0 && Food >= 3.f)
             W->Claim(Chosen, this);
+        // A modest, local ecological choice: keep food promised to others and
+        // personal rations, and use the same real transaction as the player.
+        const float CareCost = W->TendCost(Chosen);
+        if (FollowId < 0 && DonationPledge <= .001f && Health >= MaxHealth() * .6f
+            && Grove.Fertility < .55f && Now >= NextTendAt && ActionCooldown <= 0.f
+            && CareCost > .001f && Food + .001f >= W->NegotiationReserve(this) + DonationPledge + CareCost
+            && W->CanHarvest(Chosen, this) && W->Tend(Chosen, this))
+        {
+            NextTendAt = Now + 60.f;
+            ActionCooldown = 1.5f;
+            ActionLabel = TEXT("把余粮还给土地，照料果林");
+            Say(TEXT("这片土地需要歇一歇，我用一些余粮照料它。"));
+            GetCharacterMovement()->StopMovementImmediately();
+            return;
+        }
         if (Food < 28.f && ActionCooldown <= 0.f)
         {
             W->Harvest(Chosen, this, 5.f);

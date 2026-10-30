@@ -3,6 +3,7 @@
 #include "VerdantCharacter.h"
 #include "VerdantDialogue.h"
 #include "Engine/Canvas.h"
+#include "Engine/Font.h"
 #include "CanvasItem.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -121,8 +122,18 @@ namespace {
   return TEXT("");
  }
 }
+bool AVerdantHUD::HasCanvasFont() const {
+ return IsValid(CanvasFont.Get())&&CanvasFont->FontCacheType==EFontCacheType::Runtime
+  &&CanvasFont->GetInternalCompositeFont().DefaultTypeface.Fonts.Num()>0;
+}
 void AVerdantHUD::BeginPlay() {
  Super::BeginPlay();
+ // Canvas requires a real UFont even when Slate can render a filename-only font.
+ // Keep the same Chinese-capable composite, with UObject lifetime owned by this HUD.
+ const FSlateFontInfo SourceFont=Font(14);
+ CanvasFont=NewObject<UFont>(this,TEXT("VerdantCanvasFont"),RF_Transient);
+ CanvasFont->FontCacheType=EFontCacheType::Runtime;
+ CanvasFont->GetMutableInternalCompositeFont()=*SourceFont.GetCompositeFont();
  auto Player=[this](){return Cast<AVerdantCharacter>(GetOwningPawn());};
  auto World=[this](){return AVerdantWorld::Find(this);};
  auto Send=[this](){
@@ -170,19 +181,19 @@ void AVerdantHUD::BeginPlay() {
   [SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(Panel).Padding(10)
    .Visibility_Lambda([this](){return bConversationOpen?EVisibility::Collapsed:EVisibility::HitTestInvisible;})
    [SNew(SVerticalBox)
-    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,0,0,4)
-    [SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Gold).AutoWrapText(true).WrapTextAt(790)
+    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Fill).Padding(0,0,0,4)
+    [SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Gold).AutoWrapText(true).WrapTextAt(790).Justification(ETextJustify::Center)
      .Text_Lambda([World](){return FText::FromString(DeliveryHint(World()));})
      .Visibility_Lambda([World](){return DeliveryHint(World()).IsEmpty()?EVisibility::Collapsed:EVisibility::HitTestInvisible;})]
-    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,0,0,5)
+    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Fill).Padding(0,0,0,5)
     [SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Ink).AutoWrapText(true).WrapTextAt(790).Justification(ETextJustify::Center)
      .Text_Lambda([Player,World](){return FText::FromString(ContextHint(Player(),World()));})]
     +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
     [SNew(STextBlock).Font(Font(12)).ColorAndOpacity(Muted).Text(FText::FromString(TEXT("WASD 移动 · 鼠标观察 · Shift 奔跑 · 左/右键轻/重击 · 空格闪避")))]
     +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,4,0,0)
     [SNew(STextBlock).Font(Font(12)).ColorAndOpacity(Gold).Text(FText::FromString(TEXT("E 采集/战利品 · Q 成长 · F 分享/供奉 · T 交谈 · B 养护 · G 管理 · R 重开")))]
-    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,4,0,0)
-    [SNew(STextBlock).Font(Font(12)).ColorAndOpacity(Ink).AutoWrapText(true).WrapTextAt(790)
+    +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Fill).Padding(0,4,0,0)
+    [SNew(STextBlock).Font(Font(12)).ColorAndOpacity(Ink).AutoWrapText(true).WrapTextAt(790).Justification(ETextJustify::Center)
      .Visibility_Lambda([World](){auto* W=World();return W&&W->GetWorld()->GetTimeSeconds()<W->NoticeUntil?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
      .Text_Lambda([World](){auto* W=World();return FText::FromString(W?W->Notice:TEXT(""));})]
    ]
@@ -257,7 +268,12 @@ void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason) {
 }
 void AVerdantHUD::OpenConversation(AVerdantCharacter* NPC) {
  auto* W=AVerdantWorld::Find(this);if(!W||!W->Dialogue||!IsValid(NPC)||NPC->bDead||!W->Dialogue->CanConverse(NPC))return;
- W->Dialogue->Selected=NPC;
+ const bool ChangedNPC=W->Dialogue->Selected.Get()!=NPC;
+ W->Dialogue->SelectNPC(NPC);
+ if(ChangedNPC) {
+  if(InputBox.IsValid())InputBox->SetText(FText::GetEmpty());
+  LastDialogueLineCount=-1;
+ }
  if(bConversationOpen){if(InputBox.IsValid())FSlateApplication::Get().SetKeyboardFocus(InputBox);return;}
  bConversationOpen=true;
  if(auto* P=Cast<AVerdantCharacter>(GetOwningPawn()))P->CancelForConversation();
@@ -295,8 +311,8 @@ void AVerdantHUD::DrawHUD() {
   return PC->ProjectWorldLocationToScreen(Position,At)&&At.X>=18&&At.X<=Canvas->SizeX-18&&At.Y>=18&&At.Y<=Canvas->SizeY-BottomReserve;
  };
  auto TextAt=[this](FVector2D At,const FString& Text,FLinearColor Color,int32 Size,bool Center=true) {
-  if(Text.IsEmpty())return;
-  FCanvasTextItem Item(At,FText::FromString(Text),Font(Size),Color);
+  if(Text.IsEmpty()||!HasCanvasFont())return;
+  FCanvasTextItem Item(At,FText::FromString(Text),FSlateFontInfo(CanvasFont.Get(),Size),Color);
   Item.bCentreX=Center;Item.EnableShadow(FLinearColor(0,0,0,Color.A));Canvas->DrawItem(Item);
  };
  auto Label=[&](const FVector& Position,const FString& Text,FLinearColor Color,int32 Size) {
@@ -351,7 +367,8 @@ void AVerdantHUD::DrawHUD() {
   if(NPC->bDead)Name=NPC->Food>0?TEXT("倒下的 ")+NPC->DisplayName+TEXT(" · E 收取食物"):TEXT("");
   Label(Head,Name,NPC->bDead?Muted:StanceColor(NPC),14);
   if(!NPC->bDead&&Distance<1800.f) {
-   Label(Head+FVector(0,0,30.f*NPC->BodySize),NPC->ActionLabel,Muted,12);
+   const bool ShowingDamage=DamageFloats.ContainsByPredicate([NPC](const FVerdantHUDDamageFloat& Float){return Float.Character.Get()==NPC;});
+   if(!ShowingDamage)Label(Head+FVector(0,0,30.f*NPC->BodySize),NPC->ActionLabel,Muted,12);
    if(NPC->SpeechUntil>Now)Label(Head+FVector(0,0,70.f*NPC->BodySize),NPC->LastSpeech.Left(42),Gold,14);
   }
  }
@@ -380,7 +397,6 @@ void AVerdantHUD::DrawHUD() {
   WorldLine(W->SurfacePoint(Origin+Forward*Radius*.35f,12.f),Tip,Color,2.f);
   for(float Side:{-1.f,1.f})
    WorldLine(Tip,W->SurfacePoint(Origin+Forward*Radius*.78f+Who->GetActorRightVector()*Side*Radius*.10f,12.f),Color,2.f);
-  if(Who==P&&!Who->bHitApplied)Label(Tip+FVector(0,0,25.f),Who->bHeavyAttack?TEXT("重击准备"):TEXT("出拳准备"),Color,12);
  };
  AttackArc(P);
  VisibleFolk.Sort([P](const AVerdantCharacter& A,const AVerdantCharacter& B){
@@ -394,8 +410,12 @@ void AVerdantHUD::DrawHUD() {
  }
  for(const auto& Float:DamageFloats)if(Float.Character.IsValid()&&VisibleIds.Contains(Float.Character->AgentId)) {
   const float Age=Now-Float.BornAt;FLinearColor Color=Gold;Color.A=FMath::Clamp(1.f-Age/DamageLifetime,0.f,1.f);
-  Label(Float.Position+FVector(0,0,(28.f+Age*65.f)*Float.Character->BodySize),
-    (Float.Amount<10.f?FString::Printf(TEXT("-%.1f"),Float.Amount):FString::Printf(TEXT("-%.0f"),Float.Amount)),Color,17);
+  FVector2D At;
+  if(Project(Float.Position+FVector(0,0,(28.f+Age*65.f)*Float.Character->BodySize),At)) {
+   // Keep the short damage number beside the actor's centered name/action rows.
+   At.X+=At.X+160.f<Canvas->SizeX?118.f:-118.f;
+   TextAt(At,Float.Amount<10.f?FString::Printf(TEXT("-%.1f"),Float.Amount):FString::Printf(TEXT("-%.0f"),Float.Amount),Color,17);
+  }
  }
  const float Height=P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()*2.f;
  if(Height>LastPlayerHeightCm+.02f)GrowthVisibleUntil=Now+2.4f;
@@ -419,7 +439,25 @@ void AVerdantHUD::DrawHUD() {
   }
  }
  if(!bConversationOpen) {
-  for(const auto& G:W->Groves)if(FVector::Dist2D(P->GetActorLocation(),G.Position)<11000.f)Label(G.Position+FVector(0,0,300),G.Name,G.Color,17);
-  Label(W->MotherPosition+FVector(0,0,1700),W->bRestored?TEXT("母树 · 新生"):TEXT("母树"),Gold,20);
+  const float HalfHeight=P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+  const FVector ScreenRight=FRotationMatrix(ViewRotation).GetUnitAxis(EAxis::Y);
+  FVector2D HeadAt,FeetAt,CenterAt,SideAt;
+  const bool BodyOnScreen=PC->ProjectWorldLocationToScreen(P->GetActorLocation()+FVector(0,0,HalfHeight),HeadAt)
+   &&PC->ProjectWorldLocationToScreen(P->GetActorLocation()-FVector(0,0,HalfHeight),FeetAt)
+   &&PC->ProjectWorldLocationToScreen(P->GetActorLocation(),CenterAt)
+   &&PC->ProjectWorldLocationToScreen(P->GetActorLocation()+ScreenRight*P->GetCapsuleComponent()->GetScaledCapsuleRadius(),SideAt);
+  const float BodyHalfWidth=BodyOnScreen?FMath::Max(36.f,float(FMath::Abs(SideAt.X-CenterAt.X))+20.f):0.f;
+  auto PlaceLabel=[&](const FVector& Position,const FString& Text,FLinearColor Color,int32 Size) {
+   FVector2D At;if(!Project(Position,At))return;
+   // Conservative text bounds include the shadow and Chinese glyph widths.
+   const float TextHalfWidth=Size*Text.Len()*.75f,TextHeight=Size*1.7f;
+   if(At.Y<230.f&&(At.X-TextHalfWidth<340.f||At.X+TextHalfWidth>Canvas->SizeX-370.f))return;
+   if(BodyOnScreen&&At.X+TextHalfWidth>=FMath::Min(HeadAt.X,FeetAt.X)-BodyHalfWidth
+     &&At.X-TextHalfWidth<=FMath::Max(HeadAt.X,FeetAt.X)+BodyHalfWidth
+     &&At.Y+TextHeight>=FMath::Min(HeadAt.Y,FeetAt.Y)-16.f&&At.Y<=FMath::Max(HeadAt.Y,FeetAt.Y)+16.f)return;
+   TextAt(At,Text,Color,Size);
+  };
+  for(const auto& G:W->Groves)if(FVector::Dist2D(P->GetActorLocation(),G.Position)<11000.f)PlaceLabel(G.Position+FVector(0,0,300),G.Name,G.Color,17);
+  PlaceLabel(W->MotherPosition+FVector(0,0,1700),W->bRestored?TEXT("母树 · 新生"):TEXT("母树"),Gold,20);
  }
 }

@@ -5,6 +5,7 @@
 class SWidget;
 class SMultiLineEditableTextBox;
 class SScrollBox;
+class UFont;
 class AVerdantCharacter;
 
 struct FVerdantHUDObservation {
@@ -31,9 +32,11 @@ public:
  virtual void DrawHUD() override;
  void OpenConversation(AVerdantCharacter* NPC);
  void CloseConversation();
+ bool HasCanvasFont() const;
  bool bConversationOpen=false;
 private:
  void FillConversationPrompt(const FString& Text);
+ UPROPERTY(Transient) TObjectPtr<UFont> CanvasFont;
  TSharedPtr<SWidget> RootWidget;
  TSharedPtr<SMultiLineEditableTextBox> InputBox;
  TSharedPtr<SScrollBox> ConversationScroll;

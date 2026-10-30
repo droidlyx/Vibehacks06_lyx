@@ -18,9 +18,19 @@ namespace
         return Actions.Contains(Action);
     }
 
-    TSharedPtr<FJsonObject> DecisionSchema(AVerdantWorld* World, AVerdantCharacter* NPC)
+    struct FLegalDecision
     {
-        TArray<TSharedPtr<FJsonValue>> Branches;
+        FString Action;
+        int32 TargetId;
+        float Maximum;
+        bool bResource;
+    };
+
+    // Both the readable model state and JSON grammar use this same live validator.
+    TArray<FLegalDecision> LegalDecisions(AVerdantWorld* World, AVerdantCharacter* NPC)
+    {
+        TArray<FLegalDecision> Options;
+        if (!World || !World->Dialogue) return Options;
         const TArray<FString> Actions = { TEXT("none"), TEXT("open"), TEXT("close"), TEXT("share"), TEXT("cede"),
             TEXT("give"), TEXT("donate"), TEXT("follow"), TEXT("leave"), TEXT("truce") };
         for (const FString& Action : Actions)
@@ -36,33 +46,43 @@ namespace
                     ? World->MaxNegotiatedGive(NPC, World->FindFolk(TargetId))
                     : Action == TEXT("donate") ? World->MaxNegotiatedDonation(NPC) : 0.f;
                 if (Resource && Maximum < .01f) continue;
-                if (!World->Dialogue || !World->Dialogue->CanApplyDecision(NPC, Action, TargetId, Resource ? .01f : 0.f))
+                if (!World->Dialogue->CanApplyDecision(NPC, Action, TargetId, Resource ? .01f : 0.f))
                     continue;
-                auto Properties = MakeShared<FJsonObject>();
-                auto ActionRule = MakeShared<FJsonObject>(); ActionRule->SetStringField(TEXT("const"), Action);
-                Properties->SetObjectField(TEXT("action"), ActionRule);
-                auto TargetRule = MakeShared<FJsonObject>(); TargetRule->SetStringField(TEXT("type"), TEXT("integer"));
-                TargetRule->SetNumberField(TEXT("const"), TargetId); Properties->SetObjectField(TEXT("target"), TargetRule);
-                auto AmountRule = MakeShared<FJsonObject>();
-                if (Resource)
-                {
-                    AmountRule->SetStringField(TEXT("type"), TEXT("number"));
-                    AmountRule->SetNumberField(TEXT("minimum"), .01);
-                    AmountRule->SetNumberField(TEXT("maximum"), FMath::Max(.01, double(Maximum)));
-                }
-                else AmountRule->SetNumberField(TEXT("const"), 0);
-                Properties->SetObjectField(TEXT("amount"), AmountRule);
-                auto SayRule = MakeShared<FJsonObject>(); SayRule->SetStringField(TEXT("type"), TEXT("string"));
-                SayRule->SetNumberField(TEXT("minLength"), 1); SayRule->SetNumberField(TEXT("maxLength"), 200);
-                Properties->SetObjectField(TEXT("say"), SayRule);
-                TArray<TSharedPtr<FJsonValue>> Required;
-                for (const TCHAR* Field : { TEXT("action"), TEXT("target"), TEXT("amount"), TEXT("say") })
-                    Required.Add(MakeShared<FJsonValueString>(Field));
-                auto Branch = MakeShared<FJsonObject>(); Branch->SetStringField(TEXT("type"), TEXT("object"));
-                Branch->SetObjectField(TEXT("properties"), Properties); Branch->SetArrayField(TEXT("required"), Required);
-                Branch->SetBoolField(TEXT("additionalProperties"), false);
-                Branches.Add(MakeShared<FJsonValueObject>(Branch));
+                Options.Add({Action, TargetId, Maximum, Resource});
             }
+        }
+        return Options;
+    }
+
+    TSharedPtr<FJsonObject> DecisionSchema(AVerdantWorld* World, AVerdantCharacter* NPC)
+    {
+        TArray<TSharedPtr<FJsonValue>> Branches;
+        for (const FLegalDecision& Option : LegalDecisions(World, NPC))
+        {
+            auto Properties = MakeShared<FJsonObject>();
+            auto ActionRule = MakeShared<FJsonObject>(); ActionRule->SetStringField(TEXT("const"), Option.Action);
+            Properties->SetObjectField(TEXT("action"), ActionRule);
+            auto TargetRule = MakeShared<FJsonObject>(); TargetRule->SetStringField(TEXT("type"), TEXT("integer"));
+            TargetRule->SetNumberField(TEXT("const"), Option.TargetId); Properties->SetObjectField(TEXT("target"), TargetRule);
+            auto AmountRule = MakeShared<FJsonObject>();
+            if (Option.bResource)
+            {
+                AmountRule->SetStringField(TEXT("type"), TEXT("number"));
+                AmountRule->SetNumberField(TEXT("minimum"), .01);
+                AmountRule->SetNumberField(TEXT("maximum"), FMath::Max(.01, double(Option.Maximum)));
+            }
+            else AmountRule->SetNumberField(TEXT("const"), 0);
+            Properties->SetObjectField(TEXT("amount"), AmountRule);
+            auto SayRule = MakeShared<FJsonObject>(); SayRule->SetStringField(TEXT("type"), TEXT("string"));
+            SayRule->SetNumberField(TEXT("minLength"), 1); SayRule->SetNumberField(TEXT("maxLength"), 200);
+            Properties->SetObjectField(TEXT("say"), SayRule);
+            TArray<TSharedPtr<FJsonValue>> Required;
+            for (const TCHAR* Field : { TEXT("action"), TEXT("target"), TEXT("amount"), TEXT("say") })
+                Required.Add(MakeShared<FJsonValueString>(Field));
+            auto Branch = MakeShared<FJsonObject>(); Branch->SetStringField(TEXT("type"), TEXT("object"));
+            Branch->SetObjectField(TEXT("properties"), Properties); Branch->SetArrayField(TEXT("required"), Required);
+            Branch->SetBoolField(TEXT("additionalProperties"), false);
+            Branches.Add(MakeShared<FJsonValueObject>(Branch));
         }
         auto Schema = MakeShared<FJsonObject>(); Schema->SetArrayField(TEXT("oneOf"), Branches);
         return Schema;
@@ -78,13 +98,61 @@ namespace
             TEXT("give=当面交出自己可支配的食物；口粮、已有送粮承诺和已用于换政策的赠礼不能送回。donate=亲自把amount份食物运到母树；数量受口粮及玩家已实际帮助的匹配额度限制。\n")
             TEXT("follow=愿意跟随target移动，不会自动交粮；leave=迁往另一处合法果林；truce=与玩家明确停战。donate/follow/leave替换此前未完成计划，战斗仍可能中断。\n")
             TEXT("give/follow的target使用真实角色ID且不能是自己。其他动作target填0。只有give/donate使用正数amount，最多20且不能超过给出的实际可谈上限，其他amount为0。\n")
-            TEXT("免费开放和移交所需筹码来自已实际供奉/养护、尚未花费的净赠礼，或明显体型优势。承诺、夸赞、重复请求都不会增加筹码。若不满足，说明实际条件并用none还价，或选择允许的收费开放。\n")
+            TEXT("免费开放和移交所需筹码来自已实际供奉/养护、尚未花费的净赠礼，或明显体型优势。承诺、夸赞、重复请求都不会增加筹码。若不满足，只能用none说明实际条件或提出反提议；反提议未获玩家同意前不能执行。\n")
+            TEXT("只执行玩家本次明确请求且当前合法的行为；不允许用无关动作代替拒绝。特别是玩家要求cede但条件不足时必须用none，绝不能改成close、share或其他动作。close意味着真的关闭果林，不是拒绝交出管理权。\n")
+            TEXT("say必须与action、target、amount一致。give只把食物交给target，不会让你亲自去母树；只有donate可以承诺自己运粮。cede是移交管理权，不能描述成单纯开放或关闭。\n")
             TEXT("只有走到母树并实际扣粮后才算送达。接受donate时说准备送去，不能声称已经送到。玩家护送你时你送粮仍选donate。荒野生物不能供奉或搬家。\n")
-            TEXT("例（仅在约束允许时）：{\"action\":\"donate\",\"target\":0,\"amount\":5,\"say\":\"我留足自己的口粮后，可以亲自送5份养分去母树。\"}\n")
+            TEXT("以下例子仅示范准确语义，动作仍须在当前合法列表中且符合玩家请求。\n")
+            TEXT("交给玩家的例子：{\"action\":\"give\",\"target\":0,\"amount\":3,\"say\":\"这3份食物给你，由你决定是否带去母树。\"}\n")
+            TEXT("亲自运粮的例子：{\"action\":\"donate\",\"target\":0,\"amount\":5,\"say\":\"我会亲自带5份养分去母树，目前还没送到。\"}\n")
+            TEXT("和平移交的例子：{\"action\":\"cede\",\"target\":0,\"amount\":0,\"say\":\"我把这片果林的管理权交给你，并保持免费开放。\"}\n")
             TEXT("例：{\"action\":\"none\",\"target\":0,\"amount\":0,\"say\":\"我还不能交出果林。先给山谷一些实际帮助，我们再谈。\"}\n");
         // PROBE_RULES_END
     }
 
+}
+
+void UVerdantDialogue::SelectNPC(AVerdantCharacter* NPC)
+{
+    Selected = NPC;
+    Lines.Reset();
+    if (!IsValid(NPC))
+    {
+        Status = TEXT("靠近一位居民后，可以自由交谈。");
+        return;
+    }
+    Lines = Transcripts.FindRef(NPC->AgentId);
+    Status = ConversationStatuses.FindOrAdd(NPC->AgentId, TEXT("可以自由商议；约定以实际执行为准。"));
+}
+
+void UVerdantDialogue::AppendNPCLine(int32 NPCId, const FString& Line)
+{
+    auto& Transcript = Transcripts.FindOrAdd(NPCId);
+    Transcript.Add(Line);
+    while (Transcript.Num() > 20) Transcript.RemoveAt(0);
+    if (Selected.IsValid() && Selected->AgentId == NPCId) Lines = Transcript;
+}
+
+void UVerdantDialogue::SetNPCStatus(int32 NPCId, const FString& Message)
+{
+    ConversationStatuses.Add(NPCId, Message);
+    if (Selected.IsValid() && Selected->AgentId == NPCId) Status = Message;
+}
+
+void UVerdantDialogue::RememberExchange(int32 NPCId, const FString& PlayerText, const FString& NPCResult)
+{
+    auto& Memory = Memories.FindOrAdd(NPCId);
+    Memory.Add(TEXT("玩家说：") + PlayerText);
+    Memory.Add(NPCResult);
+    int32 Characters = 0;
+    for (const FString& Line : Memory) Characters += Line.Len() + 1; // BuildState adds a newline.
+    // Production input/reply limits fit one exchange inside the budget. Keep
+    // that latest pair intact and only discard complete older exchanges.
+    while (Memory.Num() > 2 && (Memory.Num() > 16 || Characters > 2000))
+    {
+        Characters -= Memory[0].Len() + Memory[1].Len() + 2;
+        Memory.RemoveAt(0, 2);
+    }
 }
 
 FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
@@ -109,6 +177,17 @@ FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
     }
     State += TEXT("真实协商条件（实际账本，承诺不能替代）：\n") + W->NegotiationSummary(NPC) + TEXT("\n");
     State += TEXT("条件满足只是可选项，不强迫你答应。以输出约束中的当前合法动作、目标和最大数量为准。\n");
+    State += TEXT("当前真正合法的动作列表（以下每行是一个可选组合；未列出的 action/target 不可执行）：\n");
+    for (const FLegalDecision& Option : LegalDecisions(W, NPC))
+    {
+        if (Option.bResource)
+            State += FString::Printf(TEXT("action=%s; target=%d; amount最小0.01、最大%.9g。\n"),
+                *Option.Action, Option.TargetId, FMath::Max(.01, double(Option.Maximum)));
+        else
+            State += FString::Printf(TEXT("action=%s; target=%d; amount必须为0。\n"),
+                *Option.Action, Option.TargetId);
+    }
+    State += TEXT("即使某动作合法，也不代表玩家请求了它。若玩家所求动作不在列表中，只能用none解释或还价；不得替换为close等无关行动。\n");
     if (const auto* History = Memories.Find(NPC->AgentId))
         for (const auto& Line : *History) State += Line + TEXT("\n");
     return State;
@@ -270,11 +349,14 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     auto* Player = W ? W->FindFolk(0) : nullptr;
     if (bBusy || !IsValid(NPC) || NPC->bDead || !IsValid(Player) || Player->bDead || NPC == Player
         || W->FindFolk(NPC->AgentId) != NPC || PlayerText.TrimStartAndEnd().IsEmpty()) return;
-    if (!CanConverse(NPC)) { Status = TEXT("对方已经走远，靠近后再交谈。"); return; }
-    Selected = NPC; bBusy = true; Status = TEXT("正在思考……");
+    const int32 NPCId = NPC->AgentId;
+    if (!CanConverse(NPC)) { SetNPCStatus(NPCId, TEXT("对方已经走远，靠近后再交谈。")); return; }
+    SelectNPC(NPC);
+    bBusy = true;
+    RequestNPC = NPC;
+    SetNPCStatus(NPCId, NPC->DisplayName + TEXT(" 正在思考……"));
     const FString Input = PlayerText.TrimStartAndEnd().Left(500);
-    Lines.Add(TEXT("你：") + Input);
-    while (Lines.Num() > 20) Lines.RemoveAt(0);
+    AppendNPCLine(NPCId, TEXT("你：") + Input);
     auto Json = MakeShared<FJsonObject>();
     Json->SetStringField(TEXT("model"), TEXT("verdant-local"));
     Json->SetNumberField(TEXT("temperature"), .3);
@@ -310,68 +392,94 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     Http->SetContentAsString(Body); Http->SetTimeout(45.f);
     TWeakObjectPtr<UVerdantDialogue> WeakThis(this);
     TWeakObjectPtr<AVerdantCharacter> WeakNPC(NPC);
-    Http->OnProcessRequestComplete().BindLambda([WeakThis, WeakNPC, Input](FHttpRequestPtr, FHttpResponsePtr Response, bool Success)
+    Http->OnProcessRequestComplete().BindLambda([WeakThis, WeakNPC, Input, NPCId](FHttpRequestPtr, FHttpResponsePtr Response, bool Success)
     {
         if (!WeakThis.IsValid()) return;
-        auto* Self = WeakThis.Get(); Self->bBusy = false;
+        auto* Self = WeakThis.Get(); Self->bBusy = false; Self->RequestNPC.Reset();
         if (!Success || !Response.IsValid() || Response->GetResponseCode() != 200)
-        { Self->Status = TEXT("模型未连接或请求失败。请运行 Start-Game.ps1 启动本地 AI，再重试。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("模型未连接或请求失败。请运行 Start-Game.ps1 启动本地 AI，再重试。")); return; }
         TSharedPtr<FJsonObject> Envelope;
         if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response->GetContentAsString()), Envelope) || !Envelope.IsValid())
-        { Self->Status = TEXT("模型响应格式错误，可重试。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("模型响应格式错误，可重试。")); return; }
         const TArray<TSharedPtr<FJsonValue>>* Choices = nullptr;
         if (!Envelope->TryGetArrayField(TEXT("choices"), Choices) || !Choices || Choices->IsEmpty() || !(*Choices)[0].IsValid())
-        { Self->Status = TEXT("模型没有返回回答。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("模型没有返回回答。")); return; }
         const TSharedPtr<FJsonObject>* Choice = nullptr;
         const TSharedPtr<FJsonObject>* Message = nullptr;
         FString Text;
         if (!(*Choices)[0]->TryGetObject(Choice) || !Choice || !Choice->IsValid()
             || !(*Choice)->TryGetObjectField(TEXT("message"), Message) || !Message || !Message->IsValid()
             || !(*Message)->TryGetStringField(TEXT("content"), Text))
-        { Self->Status = TEXT("模型回答缺少有效文本对象。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("模型回答缺少有效文本对象。")); return; }
         TSharedPtr<FJsonObject> Decision;
         if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text.TrimStartAndEnd()), Decision) || !Decision.IsValid())
-        { Self->Status = TEXT("模型未给出完整JSON回答，请重试。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("模型未给出完整JSON回答，请重试。")); return; }
         if (!WeakNPC.IsValid() || WeakNPC->bDead)
-        { Self->Status = TEXT("对方已经无法回应。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("对方已经无法回应。")); return; }
         if (!Self->CanConverse(WeakNPC.Get()))
-        { Self->Status = TEXT("对方已经走远，本次提议未执行。靠近后可以重试。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("对方已经走远，本次提议未执行。靠近后可以重试。")); return; }
         FString Say, Action;
         double Amount = 0, Target = 0;
         if (!Decision->HasTypedField<EJson::String>(TEXT("say")) || !Decision->HasTypedField<EJson::String>(TEXT("action"))
             || !Decision->HasTypedField<EJson::Number>(TEXT("amount")) || !Decision->HasTypedField<EJson::Number>(TEXT("target"))
             || !Decision->TryGetStringField(TEXT("say"), Say) || !Decision->TryGetStringField(TEXT("action"), Action)
             || !Decision->TryGetNumberField(TEXT("amount"), Amount) || !Decision->TryGetNumberField(TEXT("target"), Target))
-        { Self->Status = TEXT("回答字段缺失或类型错误，请重试。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("回答字段缺失或类型错误，请重试。")); return; }
         Say.TrimStartAndEndInline();
         if (!KnownAction(Action) || Say.IsEmpty() || Say.Len() > 200 || !FMath::IsFinite(Amount) || Amount < 0 || Amount > 20
             || !FMath::IsFinite(Target) || Target < 0 || Target > MAX_int32 || FMath::Fmod(Target, 1.0) != 0.0)
-        { Self->Status = TEXT("行动参数无效，世界状态未改变。"); return; }
+        { Self->SetNPCStatus(NPCId, TEXT("行动参数无效，世界状态未改变。")); return; }
+        const auto* DecisionWorld = AVerdantWorld::Find(Self);
+        const auto* DecisionTarget = DecisionWorld ? DecisionWorld->FindFolk(int32(Target)) : nullptr;
+        const FString TargetName = DecisionTarget ? DecisionTarget->DisplayName : TEXT("对方");
+        const int32 GroveIndex = DecisionWorld ? DecisionWorld->NegotiationGrove(WeakNPC.Get()) : INDEX_NONE;
+        const FString GroveName = DecisionWorld && DecisionWorld->Groves.IsValidIndex(GroveIndex)
+            ? DecisionWorld->Groves[GroveIndex].Name : TEXT("果林");
         const bool Applied = Self->ApplyDecision(WeakNPC.Get(), Action, int32(Target), float(Amount));
         WeakNPC->Say(Say);
         const FString Line = WeakNPC->DisplayName + TEXT("：") + Say;
-        Self->Lines.Add(Line);
-        auto& Memory = Self->Memories.FindOrAdd(WeakNPC->AgentId);
-        Memory.Add(TEXT("玩家说：") + Input);
+        Self->AppendNPCLine(NPCId, Line);
         const TCHAR* Result = !Applied ? TEXT("未执行")
             : Action == TEXT("none") ? TEXT("仅商议，未建立新计划")
             : (Action == TEXT("donate") || Action == TEXT("follow") || Action == TEXT("leave"))
             ? TEXT("已接受计划，尚待实际行动") : TEXT("已执行并验证");
-        Memory.Add(Line + FString::Printf(TEXT(" [动作=%s；%s]"), *Action, Result));
-        while (Memory.Num() > 16) Memory.RemoveAt(0);
-        while (Self->Lines.Num() > 20) Self->Lines.RemoveAt(0);
+        Self->RememberExchange(NPCId, Input,
+            Line + FString::Printf(TEXT(" [动作=%s；%s]"), *Action, Result));
+        FString ResultStatus;
         if (!Applied)
-            Self->Status = Self->LastDecisionReason.IsEmpty()
-                ? TEXT("执行前世界状态已变化，本次未执行。") : Self->LastDecisionReason;
+            ResultStatus = WeakNPC->DisplayName + TEXT("：本次未执行。") + (Self->LastDecisionReason.IsEmpty()
+                ? TEXT("执行前世界状态已变化，请按当前条件重新商议。") : Self->LastDecisionReason);
         else if (Action == TEXT("none"))
-            Self->Status = TEXT("仅商议，未建立新计划，未改变资源或权限。");
-        else if (Action == TEXT("donate") || Action == TEXT("follow") || Action == TEXT("leave"))
-            Self->Status = TEXT("计划已接受，还需在世界中实际行动；尚未算作送达。");
+            ResultStatus = WeakNPC->DisplayName + TEXT("：仅商议，未建立新计划，未改变资源或权限。");
+        else if (Action == TEXT("give"))
+            ResultStatus = FString::Printf(TEXT("%s 已实际交付 %.1f 份食物给%s。"),
+                *WeakNPC->DisplayName, Amount, *TargetName);
+        else if (Action == TEXT("donate"))
+            ResultStatus = FString::Printf(TEXT("%s 承诺亲自送去 %.1f 份养分；尚待到达母树并实际交付。"),
+                *WeakNPC->DisplayName, Amount);
+        else if (Action == TEXT("follow"))
+            ResultStatus = FString::Printf(TEXT("%s 已接受与%s同行，接下来会实际移动。"),
+                *WeakNPC->DisplayName, *TargetName);
+        else if (Action == TEXT("leave"))
+        {
+            const FString DestinationName = DecisionWorld && DecisionWorld->Groves.IsValidIndex(WeakNPC->HomeGrove)
+                ? DecisionWorld->Groves[WeakNPC->HomeGrove].Name : TEXT("另一片果林");
+            ResultStatus = FString::Printf(TEXT("%s 已接受迁往%s，尚待实际到达。"),
+                *WeakNPC->DisplayName, *DestinationName);
+        }
+        else if (Action == TEXT("cede"))
+            ResultStatus = FString::Printf(TEXT("%s 已将%s的管理权移交给你，果林保持免费开放。"),
+                *WeakNPC->DisplayName, *GroveName);
+        else if (Action == TEXT("open"))
+            ResultStatus = FString::Printf(TEXT("%s 已免费开放%s。"), *WeakNPC->DisplayName, *GroveName);
+        else if (Action == TEXT("close"))
+            ResultStatus = FString::Printf(TEXT("%s 已关闭%s，采集权限已改变。"), *WeakNPC->DisplayName, *GroveName);
+        else if (Action == TEXT("share"))
+            ResultStatus = FString::Printf(TEXT("%s 已开放%s，并收取 30%% 分成。"), *WeakNPC->DisplayName, *GroveName);
         else if (Action == TEXT("truce"))
-            Self->Status = TEXT("已实际停战；再次攻击会破坏约定。");
-        else
-            Self->Status = TEXT("转交或果林权限已按实际条件确认执行。");
+            ResultStatus = WeakNPC->DisplayName + TEXT(" 已与你实际停战；再次攻击会破坏约定。");
+        Self->SetNPCStatus(NPCId, ResultStatus);
     });
-    if (!Http->ProcessRequest()) { bBusy = false; Status = TEXT("无法发起本地模型请求。"); }
+    if (!Http->ProcessRequest()) { bBusy = false; RequestNPC.Reset(); SetNPCStatus(NPCId, TEXT("无法发起本地模型请求。")); }
 }
 

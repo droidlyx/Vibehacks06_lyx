@@ -71,7 +71,13 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   for(const auto& Pair:W->HarvestLedger)Harvests->SetNumberField(Pair.Key,Pair.Value);
   Result->SetObjectField(TEXT("net_harvest_ledger"),Harvests);
   TArray<TSharedPtr<FJsonValue>> DialogueLines;
-  if(W->Dialogue)for(const FString& Line:W->Dialogue->Lines)DialogueLines.Add(MakeShared<FJsonValueString>(Line));
+  if(W->Dialogue) {
+   TArray<int32> Speakers;W->Dialogue->Transcripts.GetKeys(Speakers);Speakers.Sort();
+   for(int32 Id:Speakers)for(const FString& Line:W->Dialogue->Transcripts.FindChecked(Id))DialogueLines.Add(MakeShared<FJsonValueString>(Line));
+   auto Memories=MakeShared<FJsonObject>();
+   for(const auto& Pair:W->Dialogue->Memories){TArray<TSharedPtr<FJsonValue>> Entries;for(const auto& Line:Pair.Value)Entries.Add(MakeShared<FJsonValueString>(Line));Memories->SetArrayField(FString::FromInt(Pair.Key),Entries);}
+   Result->SetObjectField(TEXT("authoritative_dialogue_history"),Memories);
+  }
   Result->SetArrayField(TEXT("actual_model_dialogue"),DialogueLines);
   TArray<TSharedPtr<FJsonValue>> RouteNotes;
   for(const FString& Line:JourneyFullNotes)RouteNotes.Add(MakeShared<FJsonValueString>(Line));
@@ -196,19 +202,30 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
  else if(bFullJourney&&SmokeStage==15&&Walk(W->Groves[1].Position,550.f)) {
   JourneyFoodBefore=P->Food;Key(EKeys::E,true);JourneyPhaseAt=SmokeTime;SmokeStage=16;
  }
- else if(bFullJourney&&SmokeStage==16&&P->Food>=10.f) {
+ else if(bFullJourney&&SmokeStage==16&&P->Food>=20.f) {
   Key(EKeys::E,false);JourneyCareBefore=W->TendLedger.FindRef(0);JourneyFertilityBefore=W->Groves[1].Fertility;
   JourneyFoodBefore=P->Food;JourneyCareCount=0;JourneyPhaseAt=SmokeTime;SmokeStage=17;
  }
  else if(bFullJourney&&SmokeStage==17&&SmokeTime-JourneyPhaseAt>.8f) {
-  if(JourneyCareCount<2){Tap(EKeys::B);++JourneyCareCount;JourneyPhaseAt=SmokeTime;}
+  if(JourneyCareCount<3){Tap(EKeys::B);++JourneyCareCount;JourneyPhaseAt=SmokeTime;}
   else {
    const float CarePaid=W->TendLedger.FindRef(0)-JourneyCareBefore;
    Check(CarePaid>.01f&&FMath::IsNearlyEqual(JourneyFoodBefore-P->Food,CarePaid,.01f),TEXT("B input invests actual collected food in grove care"));
    Check(W->Groves[1].Fertility>JourneyFertilityBefore+.1f,TEXT("Paid care improves the actual grove rather than granting dialogue credit alone"));
    JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: invested %.2f actual food in care before negotiating access/control."),SmokeTime,CarePaid));
-   JourneyPhaseAt=SmokeTime;SmokeStage=20;
+   JourneyPhaseAt=SmokeTime;SmokeStage=18;
   }
+ }
+ else if(bFullJourney&&SmokeStage==18&&Walk(W->MotherPosition+FVector(0,-800,0),100.f)) {
+  Key(EKeys::LeftShift,true);JourneyPhaseAt=SmokeTime;SmokeStage=19;
+ }
+ else if(bFullJourney&&SmokeStage==19&&SmokeTime-JourneyPhaseAt>.2f) {
+  Tap(EKeys::F);JourneyPhaseAt=SmokeTime;SmokeStage=23;
+ }
+ else if(bFullJourney&&SmokeStage==23&&SmokeTime-JourneyPhaseAt>.4f) {
+  Key(EKeys::LeftShift,false);
+  JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: actual contribution now %.2f and care %.2f after offering the remaining gathered food."),SmokeTime,W->DonationLedger.FindRef(0),W->TendLedger.FindRef(0)));
+  JourneyPhaseAt=SmokeTime;SmokeStage=20;
  }
  else if(bFullJourney&&SmokeStage==20) {
   if(W->bRestored){JourneyPhaseAt=SmokeTime;SmokeStage=40;return;}

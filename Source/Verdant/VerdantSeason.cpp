@@ -36,6 +36,7 @@ FVerdantSeasonSnapshot AVerdantWorld::CaptureSeasonSnapshot() const
     Snapshot.AtSeconds = Elapsed;
     Snapshot.TreeNutrition = TreeNutrition;
     Snapshot.Donations = DonationLedger;
+    Snapshot.Tending = TendLedger;
     Snapshot.DonorNames = DonationNames;
     for (AVerdantCharacter* Who : Folk)
     {
@@ -122,6 +123,11 @@ void AVerdantWorld::FinalizeSeasonRecord()
     SeasonCoreSummary = FString::Printf(TEXT("复苏时：%s · %02d:%02d\n居民 %s · 野生 %s\n免税开放 %s · 你管理 %s\n亲自送达：%s"),
         *RestoredSeason.StateLabel, Duration / 60, Duration % 60, *ResidentChange, *WildChange,
         *FreeChange, *TerritoryChange, *DeliveredByPerson(RestoredSeason));
+    const FString Ecology = FString::Printf(TEXT("\n土地生机 %.0f%% → %.0f%% · 你投入养护 %.1f"),
+        OpeningSeason.AverageFertility * 100.f, RestoredSeason.AverageFertility * 100.f,
+        RestoredSeason.Tending.FindRef(0));
+    SeasonBannerBody += Ecology;
+    SeasonCoreSummary += Ecology;
     SeasonNoticeUntil = GetWorld()->GetTimeSeconds() + 15.f;
     UE_LOG(LogTemp, Display, TEXT("VERDANT_SEASON_CAPTURED residents=%d wild=%d free=%d/%d player_groves=%d actual_delivered=%.3f"),
         RestoredSeason.ResidentsAlive, RestoredSeason.WildAlive, RestoredSeason.FreeGroves,

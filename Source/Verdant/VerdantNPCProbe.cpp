@@ -45,6 +45,16 @@ namespace
         float DonationDelta = 0;
         float DonationDistance = -1;
         int32 MaxRecovery = 0;
+        bool bBlockedAttack = false;
+        float ReturnStartDistance = 0;
+        float WildAidDamage = 0;
+        float ReturnDistance = 0;
+        float CareFoodBefore = 0;
+        float CareLedgerBefore = 0;
+        float CareFertilityBefore = 0;
+        float CarePaid = 0;
+        float CareCooldown = 0;
+        float HarvestBefore = 0;
         FVector Origin = FVector::ZeroVector;
         FVector ChaseRay = FVector(3200.f, -1100.f, 0.f).GetSafeNormal2D();
         TArray<TWeakObjectPtr<AStaticMeshActor>> Walls;
@@ -102,7 +112,7 @@ void AVerdantGameMode::TickNPCProbe(float Dt)
         Who->AttackTimer = 0; Who->HurtTimer = 0; Who->DodgeTimer = 0; Who->DodgeRecoveryTimer = 0;
         Who->QueuedAttackType = -1; Who->AttackInputBuffer = 0; Who->bHitApplied = true;
         Who->ActionCooldown = 0; Who->FollowId = -1; Who->HostileId = -1; Who->CombatTarget.Reset();
-        Who->BrainClock = 0; Who->ReconsiderAt = 100000.f; Who->Trust.Empty();
+        Who->BrainClock = 0; Who->ReconsiderAt = 100000.f; Who->NextTendAt = 100000.f; Who->Trust.Empty();
         Who->AvoidThreatId = -1; Who->AvoidThreatUntil = 0;
         Who->MoveSampleAt = 0; Who->MoveRecoveryCount = 0; Who->DetourUntil = 0;
         Who->AvoidGrove = -1; Who->AvoidGroveUntil = 0;
@@ -144,6 +154,11 @@ void AVerdantGameMode::TickNPCProbe(float Dt)
         Report->SetNumberField(TEXT("detour_lateral_distance_cm"), F.MaxLateral);
         Report->SetNumberField(TEXT("actual_donation_delta"), F.DonationDelta);
         Report->SetNumberField(TEXT("actual_donation_distance_cm"), F.DonationDistance);
+        Report->SetNumberField(TEXT("travelling_wild_companion_damage"), F.WildAidDamage);
+        Report->SetNumberField(TEXT("companion_return_distance_cm"), F.ReturnDistance);
+        Report->SetNumberField(TEXT("npc_care_food_paid"), F.CarePaid);
+        Report->SetNumberField(TEXT("npc_care_cooldown_seconds"), F.CareCooldown);
+        Report->SetBoolField(TEXT("fixture_economy_frozen_for_care_isolation"), true);
         TArray<TSharedPtr<FJsonValue>> Checks;
         for (const FString& Line : SmokeChecks) Checks.Add(MakeShared<FJsonValueString>(Line));
         Report->SetArrayField(TEXT("checks"), Checks);
@@ -303,6 +318,132 @@ void AVerdantGameMode::TickNPCProbe(float Dt)
         Check(FMath::IsNearlyEqual(F.DonationDelta, 5.f, .01f) && Trader->DonationPledge <= .001f, TEXT("Recovered courier completes its original five-food promise"));
         Check(FMath::IsNearlyEqual(F.FoodBefore - Trader->Food, 5.f, .01f)
             && FMath::IsNearlyEqual(W->DonationLedger.FindRef(Trader->AgentId) - F.LedgerBefore, 5.f, .01f), TEXT("Delivery deducts real inventory and records the same amount in the contribution ledger"));
+        RemoveWalls();
+        ResetAll();
+        // Far from wildlife #4's birthplace: its duty is now its leader.
+        F.Origin = FVector(5000.f, -3000.f, 0.f);
+        Reset(P, 1.2f, F.Origin);
+        Reset(Wild, 1.2f, F.Origin + FVector(-400.f, -80.f, 0.f));
+        Reset(Trader, 1.f, F.Origin + FVector(500.f, 0.f, 0.f));
+        Wild->FollowId = 0; Wild->Trust.Add(0, 12.f);
+        Trader->HostileId = 0; Trader->CombatTarget = P;
+        F.EnemyHealth = Trader->Health;
+        Enable(Wild); Next(9);
+    }
+    else if (SmokeStage == 9)
+    {
+        F.WildAidDamage = F.EnemyHealth - Trader->Health;
+        if (Elapsed < 8.f && F.WildAidDamage < .1f) return;
+        Check(F.WildAidDamage > .1f && Wild->FollowId == 0, TEXT("Wild companion away from its birthplace actually defends its present leader"));
+        // End the threat, then move the leader to make physical regrouping measurable.
+        Trader->ReceiveStrike(P, Trader->Health + 1.f);
+        Place(P, F.Origin - FVector(1200.f, 0.f, 0.f));
+        F.ReturnStartDistance = FVector::Dist2D(Wild->GetActorLocation(), P->GetActorLocation());
+        Next(10);
+    }
+    else if (SmokeStage == 10)
+    {
+        F.ReturnDistance = FVector::Dist2D(Wild->GetActorLocation(), P->GetActorLocation());
+        if (Elapsed < 5.f && F.ReturnDistance > 600.f) return;
+        Check(Wild->HostileId < 0 && Wild->FollowId == 0 && F.ReturnDistance < 650.f
+            && F.ReturnStartDistance - F.ReturnDistance > 300.f, TEXT("After the threat dies, the same companion really travels back to its leader"));
+        ResetAll();
+        Reset(Trader, 1.45f, W->Groves[1].Position + FVector(180.f, 0.f, 0.f));
+        Reset(Keeper, 2.f, W->Groves[1].Position + FVector(-500.f, 0.f, 0.f));
+        W->Groves[1].ControllerId = Trader->AgentId; W->Groves[1].Food = 30.f;
+        Trader->HomeGrove = 1; Trader->FollowId = Keeper->AgentId; Trader->Trust.Add(Keeper->AgentId, 12.f);
+        F.HarvestBefore = W->HarvestLedger.FindRef(TEXT("2:1"));
+        Keeper->ReceiveStrike(P, Keeper->Health + 1.f);
+        Enable(Trader); Next(11);
+    }
+    else if (SmokeStage == 11 && Elapsed > 2.f)
+    {
+        Check(Trader->FollowId < 0 && Trader->HostileId < 0, TEXT("A resident releases a dead leader and leaves escort state"));
+        Check(W->HarvestLedger.FindRef(TEXT("2:1")) > F.HarvestBefore && Trader->Food > 0.f, TEXT("After losing a leader, the resident resumes actual local harvesting"));
+        ResetAll();
+        F.Origin = NPCCombatAnchor;
+        Reset(P, 1.2f, F.Origin - FVector(700.f, 0.f, 0.f));
+        Reset(Trader, 1.45f, F.Origin);
+        Reset(Wild, 1.f, F.Origin + FVector(240.f, 0.f, 0.f));
+        Trader->HomeGrove = 1; Trader->FollowId = 0; Trader->Trust.Add(0, 12.f);
+        Wild->HostileId = 0; Wild->CombatTarget = P;
+        F.EnemyHealth = Wild->Health;
+        auto* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+        const FVector Offsets[] = { FVector(120.f, 0.f, 0.f), FVector(-120.f, 0.f, 0.f), FVector(0.f, 120.f, 0.f), FVector(0.f, -120.f, 0.f) };
+        const FVector Scales[] = { FVector(.4f, 4.f, 4.f), FVector(.4f, 4.f, 4.f), FVector(4.f, .4f, 4.f), FVector(4.f, .4f, 4.f) };
+        for (int32 I = 0; I < 4; ++I)
+        {
+            auto* Wall = GetWorld()->SpawnActor<AStaticMeshActor>();
+            if (!Wall) continue;
+            Wall->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+            Wall->GetStaticMeshComponent()->SetStaticMesh(Cube);
+            Wall->GetStaticMeshComponent()->SetCollisionProfileName(TEXT("BlockAll"));
+            Wall->SetActorScale3D(Scales[I]);
+            Wall->SetActorLocation(W->SurfacePoint(F.Origin + Offsets[I], 200.f));
+            F.Walls.Add(Wall);
+        }
+        Check(Cube && F.Walls.Num() == 4, TEXT("Combat obstruction encloses a resident with a close enemy beyond its wall"));
+        Enable(Trader); Next(12);
+    }
+    else if (SmokeStage == 12)
+    {
+        F.bBlockedAttack |= Trader->AttackTimer > 0.f;
+        if (Elapsed < 9.f && Trader->AvoidThreatId != Wild->AgentId) return;
+        Check(!F.bBlockedAttack && FMath::IsNearlyEqual(Wild->Health, F.EnemyHealth), TEXT("A close but occluded enemy does not cause endless attacks through a wall"));
+        Check(Trader->HostileId < 0 && Trader->AvoidThreatId == Wild->AgentId && Trader->FollowId == 0, TEXT("Unreachable combat is abandoned within a bounded time while the escort plan survives"));
+        Check(Trader->AvoidGrove < 0, TEXT("A failed combat route never marks the resident's fruit grove as blocked"));
+        RemoveWalls();
+        ResetAll();
+        // Freeze natural regeneration only in these accounting fixtures. NPC decisions,
+        // game time, terrain, movement and the real World::Tend transaction keep running.
+        W->SetActorTickEnabled(false);
+        Reset(Trader, 1.45f, W->Groves[1].Position);
+        Trader->HomeGrove = 1; Trader->Food = 20.f; Trader->NextTendAt = 0.f;
+        W->Groves[1].ControllerId = Trader->AgentId;
+        W->Groves[1].Food = 10.f; W->Groves[1].Fertility = .3f;
+        F.CareFoodBefore = Trader->Food; F.CareFertilityBefore = W->Groves[1].Fertility;
+        F.CareLedgerBefore = W->TendLedger.FindRef(Trader->AgentId);
+        Enable(Trader); Next(13);
+    }
+    else if (SmokeStage == 13)
+    {
+        F.CarePaid = W->TendLedger.FindRef(Trader->AgentId) - F.CareLedgerBefore;
+        if (Elapsed < 3.f && F.CarePaid < .1f) return;
+        Check(FMath::IsNearlyEqual(F.CarePaid, 5.f, .01f)
+            && FMath::IsNearlyEqual(F.CareFoodBefore - Trader->Food, F.CarePaid, .01f)
+            && FMath::IsNearlyEqual(W->Groves[1].Fertility - F.CareFertilityBefore, .15f, .002f), TEXT("Autonomous care pays five actual food, records it and restores fifteen fertility points"));
+        F.CareCooldown = Trader->NextTendAt - GetWorld()->GetTimeSeconds();
+        Check(Trader->Food >= W->NegotiationReserve(Trader) - .01f && F.CareCooldown > 59.f, TEXT("Care preserves personal rations and schedules a separate sixty-second cooldown"));
+        // Low fertility and enough food remain eligible; only the independent timer should prevent repeat care.
+        Trader->Food = 30.f; W->Groves[1].Fertility = .3f;
+        Trader->ActionCooldown = 0.f; Trader->BrainClock = 0.f;
+        F.CareLedgerBefore = W->TendLedger.FindRef(Trader->AgentId);
+        Next(14);
+    }
+    else if (SmokeStage == 14 && Elapsed > 3.f)
+    {
+        Check(FMath::IsNearlyEqual(W->TendLedger.FindRef(Trader->AgentId), F.CareLedgerBefore)
+            && FMath::IsNearlyEqual(Trader->Food, 30.f), TEXT("Eligible low-fertility grove cannot consume care food again early in the sixty-second cooldown"));
+        Reset(Trader, 1.45f, W->Groves[1].Position);
+        Trader->HomeGrove = 1; Trader->Food = W->NegotiationReserve(Trader) + 4.f; Trader->NextTendAt = 0.f;
+        F.CareFoodBefore = Trader->Food;
+        F.HarvestBefore = W->HarvestLedger.FindRef(TEXT("2:1"));
+        Enable(Trader); Next(15);
+    }
+    else if (SmokeStage == 15 && Elapsed > .3f)
+    {
+        Check(FMath::IsNearlyEqual(W->TendLedger.FindRef(Trader->AgentId), F.CareLedgerBefore)
+            && FMath::IsNearlyEqual(Trader->Food, F.CareFoodBefore + W->HarvestLedger.FindRef(TEXT("2:1")) - F.HarvestBefore, .01f),
+            TEXT("A resident with insufficient surplus harvests instead of spending its reserved rations on care"));
+        Reset(Trader, 1.45f, W->Groves[1].Position);
+        Trader->HomeGrove = 1; Trader->Food = 20.f; Trader->DonationPledge = 5.f; Trader->NextTendAt = 0.f;
+        Enable(Trader); Next(16);
+    }
+    else if (SmokeStage == 16 && Elapsed > 1.2f)
+    {
+        Check(FMath::IsNearlyEqual(W->TendLedger.FindRef(Trader->AgentId), F.CareLedgerBefore)
+            && FMath::IsNearlyEqual(Trader->Food, 20.f) && FMath::IsNearlyEqual(Trader->DonationPledge, 5.f), TEXT("A pending delivery keeps its real food and is not diverted into autonomous care"));
+        W->SetActorTickEnabled(true);
         Finish();
     }
 }

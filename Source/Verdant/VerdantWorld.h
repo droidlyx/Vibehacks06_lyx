@@ -64,6 +64,7 @@ struct FVerdantSeasonSnapshot {
  UPROPERTY() TArray<FVerdantSeasonPerson> People;
  UPROPERTY() TArray<FVerdantSeasonGrove> Groves;
  UPROPERTY() TMap<int32,float> Donations;
+ UPROPERTY() TMap<int32,float> Tending;
  UPROPERTY() TMap<int32,FString> DonorNames;
 };
 UCLASS()

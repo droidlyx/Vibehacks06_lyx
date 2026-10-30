@@ -44,6 +44,7 @@ namespace
         TArray<FString> Shots;
         TArray<TSharedPtr<FJsonValue>> Framing;
         bool bAttackSeen = false;
+        bool bImpactCaptured = false;
         bool bDodgeAttempted = false;
         bool bRestartRequested = false;
         bool bRestartObserved = false;
@@ -197,6 +198,7 @@ void AVerdantGameMode::TickCombatProbe(float Dt)
             NPC->GetCharacterMovement()->StopMovementImmediately();
             NPC->GetCharacterMovement()->DisableMovement();
         }
+        Check(H->HasCanvasFont(),TEXT("Canvas labels have a live runtime Chinese font object"));
         ResetFixture(); F.Origin = P->GetActorLocation(); Key(EKeys::A, true); Next(1);
     }
     else if (SmokeStage == 1 && Phase > .22f)
@@ -367,12 +369,13 @@ void AVerdantGameMode::TickCombatProbe(float Dt)
     else if (SmokeStage == 28)
     {
         Place(Target,CombatAnchor+FVector(170,0,0));
-        if(P->bHeavyAttack&&P->AttackTimer>.55f){Check(true,TEXT("A late right-click starts one heavy follow-up after the light attack"));Next(29);}
+        if(P->bHeavyAttack&&P->AttackTimer>.55f){Check(true,TEXT("A late right-click starts one heavy follow-up after the light attack"));Capture(TEXT("combat-windup.png"));F.bImpactCaptured=false;Next(29);}
         else if(Phase>.65f){Check(false,TEXT("A late right-click starts one heavy follow-up after the light attack"));Next(29);}
     }
     else if (SmokeStage == 29)
     {
         Place(Target,CombatAnchor+FVector(170,0,0));
+        if(Phase>.58f&&!F.bImpactCaptured){Capture(TEXT("combat-impact.png"));F.bImpactCaptured=true;}
         if(Phase>1.2f){
             Check(F.TargetHealth-Target->Health>=P->Strength()*2.7f,TEXT("Buffered light-to-heavy sequence causes two real hits"));
             Check(P->AttackTimer<=0&&P->QueuedAttackType<0,TEXT("One buffered click does not auto-repeat further attacks"));
@@ -417,7 +420,7 @@ void AVerdantGameMode::TickCombatProbe(float Dt)
         Place(Target, FrameAnchor + FVector(450, 0, 0));
         Target->DonationPledge = 5.f; Target->Food = 10.f; Target->LastDonationTime = -1.f;
         Target->SetActorTickEnabled(false); Target->GetCharacterMovement()->DisableMovement();
-        W->Dialogue->Selected = Target;
+        W->Dialogue->SelectNPC(Target);
         P->GetCharacterMovement()->SetMovementMode(MOVE_Walking); P->Health = P->MaxHealth();
         P->SetActorRotation(FRotator(0, 78, 0)); PC->SetControlRotation(FRotator(-10, 78, 0));
         Check(FMath::IsNearlyEqual(P->BodySize, Sizes[F.CameraIndex], .001f), FString::Printf(TEXT("Open framing fixture permits body size %.2f"), Sizes[F.CameraIndex]));

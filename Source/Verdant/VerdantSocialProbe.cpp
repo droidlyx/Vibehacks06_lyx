@@ -184,12 +184,89 @@ void AVerdantGameMode::TickSocialProbe(float Dt)
     P->SetSize(1.f);
     Check(W->CanNegotiateFollow(Wild, P), TEXT("A clear real size advantage can support wilderness following"));
 
+    Reset();
+    P->SetActorLocation(W->MotherPosition + FVector(400.f, 0.f, 100.f), false);
+    const bool FollowHelp = W->Donate(P, 20.f);
+    Near(Miya);
+    const bool FirstLink = W->Dialogue->ApplyDecision(Miya, TEXT("follow"), 2, 0.f);
+    Near(Trader);
+    Check(FollowHelp && FirstLink && !W->Dialogue->ApplyDecision(Trader, TEXT("follow"), 1, 0.f) &&
+        Miya->FollowId == 2 && Trader->FollowId == -1,
+        TEXT("Actual follow agreements reject a two-person cycle without changing the rejected leader"));
+
+    const bool SecondLink = W->Dialogue->ApplyDecision(Trader, TEXT("follow"), 3, 0.f);
+    Near(Keeper);
+    const bool RejectLongCycle = !W->Dialogue->ApplyDecision(Keeper, TEXT("follow"), 1, 0.f);
+    Trader->FollowId = 1; // Deliberately inject an existing dirty cycle for this boundary fixture.
+    const bool RejectDirtyCycle = !W->CanNegotiateFollow(Keeper, Miya);
+    Check(SecondLink && RejectLongCycle && RejectDirtyCycle && Keeper->FollowId == -1,
+        TEXT("Following rejects both a multi-layer cycle and an already-corrupt target chain"));
+
+    Miya->FollowId = -1; Trader->FollowId = 3; Keeper->FollowId = -1;
+    Near(Miya);
+    const bool Acyclic = W->Dialogue->ApplyDecision(Miya, TEXT("follow"), 2, 0.f);
+    Keeper->bDead = true;
+    const bool DeadEnd = W->CanNegotiateFollow(Miya, Trader);
+    Keeper->bDead = false;
+    Trader->FollowId = 9999;
+    const bool MissingEnd = W->CanNegotiateFollow(Miya, Trader);
+    Check(Acyclic && DeadEnd && MissingEnd && Miya->FollowId == 2,
+        TEXT("A normal acyclic chain is allowed and dead or missing downstream leaders terminate the chain"));
+
+    auto* Dialogue = W->Dialogue.Get();
+    Dialogue->SelectNPC(Miya);
+    Dialogue->AppendNPCLine(1, TEXT("Visible conversation history is independent of model memory."));
+    const TArray<FString> VisibleBefore = Dialogue->Lines;
+    const TArray<FString> TranscriptBefore = Dialogue->Transcripts.FindRef(1);
+    const float ActualDonationBeforeMemory = W->DonationLedger.FindRef(0);
+    const float ActualTendingBeforeMemory = W->TendLedger.FindRef(0);
+    Dialogue->Memories.Remove(1);
+    for (int32 Round = 0; Round < 24; ++Round)
+        Dialogue->RememberExchange(1, FString::Printf(TEXT("Short question %d"), Round),
+            FString::Printf(TEXT("Short reply %d [action=none; verified]"), Round));
+    Check(Dialogue->Memories.FindRef(1).Num() == 16,
+        TEXT("Many short exchanges retain at most sixteen complete memory lines"));
+
+    bool BoundedEveryRound = true;
+    FString LatestPlayer, LatestNPC;
+    for (int32 Round = 0; Round < 24; ++Round)
+    {
+        LatestPlayer = FString::ChrN(480, TCHAR(0x8bdd)) + FString::Printf(TEXT(" [round=%d]"), Round);
+        LatestNPC = Miya->DisplayName + TEXT("：") + FString::ChrN(180, TCHAR(0x7b54)) +
+            FString::Printf(TEXT(" [round=%d] [动作=none；仅商议，未建立新计划]"), Round);
+        Dialogue->RememberExchange(1, LatestPlayer, LatestNPC);
+        const auto& CurrentMemory = Dialogue->Memories.FindChecked(1);
+        int32 CurrentCharacters = 0;
+        for (const FString& Line : CurrentMemory) CurrentCharacters += Line.Len() + 1;
+        BoundedEveryRound &= CurrentMemory.Num() <= 16 && CurrentMemory.Num() % 2 == 0 &&
+            CurrentCharacters <= 2000;
+    }
+    const auto& FinalMemory = Dialogue->Memories.FindChecked(1);
+    int32 MemoryCharacters = 0;
+    for (const FString& Line : FinalMemory) MemoryCharacters += Line.Len() + 1;
+    Check(BoundedEveryRound, TEXT("Every long exchange remains within 2000 characters and sixteen paired lines"));
+    Check(FinalMemory.Num() >= 2 && FinalMemory[FinalMemory.Num() - 2] == TEXT("玩家说：") + LatestPlayer &&
+        FinalMemory.Last() == LatestNPC &&
+        FinalMemory.Last().EndsWith(TEXT("[动作=none；仅商议，未建立新计划]")),
+        TEXT("The latest complete player/NPC exchange and authoritative action result survive truncation"));
+    const FString BoundedState = Dialogue->BuildState(Miya);
+    Check(BoundedState.Contains(W->NegotiationSummary(Miya)) &&
+        BoundedState.Contains(TEXT("当前真正合法的动作列表")) &&
+        W->DonationLedger.FindRef(0) == ActualDonationBeforeMemory &&
+        W->TendLedger.FindRef(0) == ActualTendingBeforeMemory &&
+        Dialogue->Lines == VisibleBefore && Dialogue->Transcripts.FindRef(1) == TranscriptBefore,
+        TEXT("Memory trimming preserves real world conditions, payment ledgers and visible conversation history"));
+
     IFileManager::Get().MakeDirectory(*(FPaths::ProjectSavedDir() / TEXT("Validation")), true);
     auto Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("kind"), TEXT("synthetic-authoritative-social-fixtures"));
     Result->SetBoolField(TEXT("normal_playthrough"), false);
     Result->SetBoolField(TEXT("runtime_model_called"), false);
     Result->SetNumberField(TEXT("failures"), SmokeFailures);
+    Result->SetNumberField(TEXT("conversation_memory_chars"), MemoryCharacters);
+    Result->SetNumberField(TEXT("conversation_memory_lines"), FinalMemory.Num());
+    Result->SetNumberField(TEXT("world_state_chars_after_long_conversation"), BoundedState.Len());
+    Result->SetNumberField(TEXT("long_conversation_fixture_rounds"), 24);
     TArray<TSharedPtr<FJsonValue>> Checks;
     for (const FString& Line : SmokeChecks) Checks.Add(MakeShared<FJsonValueString>(Line));
     Result->SetArrayField(TEXT("checks"), Checks);

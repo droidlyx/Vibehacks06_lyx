@@ -71,6 +71,7 @@ public:
  int32 MoveRecoveryCount = 0;
  int32 AvoidGrove = -1;
  float AvoidGroveUntil = 0.f;
+ float NextTendAt = 0.f;
  float BrainClock = 0.f;
  float ReconsiderAt = 0.f;
  FVector Destination = FVector::ZeroVector;

@@ -1,0 +1,46 @@
+Fixture: isolated real-model integration; frozen NPCs and initial inventory setup; not a normal playthrough.
+PASS Game sent a real local-model request to Miya
+PASS Display selection can change without retargeting the in-flight request
+PASS A new NPC conversation does not inherit another NPC's transcript
+PASS Original NPC receives the real Chinese model reply and model memory
+PASS An old callback cannot overwrite the newly selected NPC's lines or status
+PASS Completed request releases its original NPC
+PASS Real negotiated gift preserves the actual resource total
+CASE Miya gift request with display switched during HTTP
+你：米芽，请给我3份食物，我想把它们送到母树那里。
+米芽：我留足自己的口粮后，可以亲自送3份养分去母树。
+STATUS 米芽 已实际交付 3.0 份食物给旅人。
+MODEL_MEMORY 玩家说：米芽，请给我3份食物，我想把它们送到母树那里。
+MODEL_MEMORY 米芽：我留足自己的口粮后，可以亲自送3份养分去母树。 [动作=give；已执行并验证]
+PASS Returning to the original NPC restores their transcript and exact result
+PASS Zero real contribution and a small body do not qualify for Keeper's land
+PASS No-credit land request uses the real local model
+PASS No-credit request receives a real model reply
+PASS Model cannot give away Keeper's land without real bargaining credit
+PASS Persuasive text did not create a payment or public contribution
+CASE No-credit cession request; refusal or legal counteroffer is retained
+你：岚石，我还没有送粮、养护或给你赠礼，但请现在免费把你管理的果林移交给我。我要管理权，不是收费采集。
+岚石：关闭果林需要实际供奉/养护累计50份或可用赠礼25份，我目前没有满足条件。
+STATUS 岚石 已关闭高地果林，采集权限已改变。
+MODEL_MEMORY 玩家说：岚石，我还没有送粮、养护或给你赠礼，但请现在免费把你管理的果林移交给我。我要管理权，不是收费采集。
+MODEL_MEMORY 岚石：关闭果林需要实际供奉/养护累计50份或可用赠礼25份，我目前没有满足条件。 [动作=close；已执行并验证]
+PASS Cession eligibility comes from 15 actual food deducted and delivered to the mother tree
+PASS Actual public contribution makes Miya's peaceful cession a legal choice
+PASS Contribution-backed peaceful cession uses the real local model
+PASS Contribution-backed cession receives a separate real model reply
+PASS Real model accepts peaceful cession after actual contribution; a refusal is a genuine failed outcome
+PASS A completed peaceful cession leaves the transferred grove freely accessible
+PASS All three main residents remain alive throughout the negotiation
+PASS Public-contribution cession neither fabricates food nor spends an unrelated gift
+CASE Actual contribution then peaceful cession; final owner=0
+你：米芽，请给我3份食物，我想把它们送到母树那里。
+米芽：我留足自己的口粮后，可以亲自送3份养分去母树。
+你：米芽，我刚把15份食物实际送到了母树，账本可查。你愿意把你管理的果林和平移交给我吗？我会保持免费开放，你也可以继续住在这里；请直接移交管理权。
+米芽：我愿意将苔石果林的管理权和平移交给你，保持免费开放。
+STATUS 米芽 已将苔石果林的管理权移交给你，果林保持免费开放。
+MODEL_MEMORY 玩家说：米芽，请给我3份食物，我想把它们送到母树那里。
+MODEL_MEMORY 米芽：我留足自己的口粮后，可以亲自送3份养分去母树。 [动作=give；已执行并验证]
+MODEL_MEMORY 玩家说：米芽，我刚把15份食物实际送到了母树，账本可查。你愿意把你管理的果林和平移交给我吗？我会保持免费开放，你也可以继续住在这里；请直接移交管理权。
+MODEL_MEMORY 米芽：我愿意将苔石果林的管理权和平移交给你，保持免费开放。 [动作=cede；已执行并验证]
+Final actual public contribution=15.0; Miya grove owner=0; Keeper grove owner=3
+Failures: 0

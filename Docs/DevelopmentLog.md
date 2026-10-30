@@ -99,3 +99,13 @@ Next: verify normal-resource completion, make the resulting world state easier t
 - Added one-shot late-click attack buffering, cancelled by stagger/dialogue/dodge, and targeted input checks.
 - First editor integration compiles. Social/world/NPC/combat/real-AI probes all exited0. These are fixtures/integration cases, not yet the v0.3 normal-resource full route.
 - Render review found Canvas text missing despite valid Slate text: a file-backed Slate font has no UFont object required by this engine's Canvas path. Also found over-wrapped footer context. Both are explicitly pending the next visual fix; not claimed visually complete.
+
+## v0.3 second integration / feature freeze
+
+- Fixed Canvas labels with a GC-held runtime UFont, widened footer text slots, and verified actual Chinese labels/height ruler/damage arcs in hidden720p captures. Offset overlapping damage numbers and omit place labels over the player or corner HUD.
+- Separated per-NPC transcripts/status from the in-flight RequestNPC; real-model callback-switch tests pass. Explicitly provided production-validated legal actions to the model after retaining a case that confused blocked cede with close; the tightened real-model refusal check now passes.
+- Added complete-exchange bounded memory and rejected cyclic follow chains. NPCs now use their leader's area when escorted away from their birthplace, avoid endless attacks through walls and can perform bounded, paid soil care.
+- Improved the validator to require a fresh report with zero reported failures as well as a zero process exit. A first steward route reported a failed ownership assertion despite editor exit0; it was retained, then the route earned more real help instead of weakening the game rule.
+- Complete public and peaceful-steward routes now both pass, preserving all3 main residents and creating distinct ownership/access outcomes.
+- Closed/open600-second natural simulations each checked36007 frames, with no invariant failures or reported stationary-travel suspects. Both eventually settle with sufficient stock; this does not demonstrate endlessly escalating autonomous stories.
+- No generated models or paid API tasks were added. Preparing a separate native v0.3 package; v0.2 remains intact.
