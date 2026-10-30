@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "assets": [],
+  "planned": {
+    "humanoid_base": 1,
+    "optional_humanoid_variant": 1,
+    "mother_tree": 1,
+    "nutrient_family": 1,
+    "generated_buildings": 0
+  },
+  "notes": "Local assets must be inspected before generation. All shipped sources require provenance."
+}

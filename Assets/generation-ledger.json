@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "budgets": {
+    "tripo": {
+      "user_limit": 3000,
+      "round_cap": 600
+    },
+    "v2fun": {
+      "user_limit": 5100,
+      "round_cap": 300
+    },
+    "hyper3d": {
+      "user_limit": 223,
+      "round_cap": 10
+    }
+  },
+  "requests": []
+}

@@ -1,0 +1,16 @@
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+.vs/
+.idea/
+*.sln
+*.suo
+Builds/
+Local/
+.env
+.env.*
+*api_keys*
+*.pem
+*.key
+Tools/__pycache__/
