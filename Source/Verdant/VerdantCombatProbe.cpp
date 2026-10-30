@@ -33,6 +33,8 @@ namespace
         FVector StrafeOrigin = FVector::ZeroVector;
         float TargetHealth = 0;
         float PlayerHealth = 0;
+        float BoundaryFood = 0;
+        float BoundaryHealth = 0;
         float MaxYawError = 0;
         float MaxAttackPoseError = 0;
         int32 AttackPoseSamples = 0;
@@ -408,9 +410,40 @@ void AVerdantGameMode::TickCombatProbe(float Dt)
         if (F.CameraIndex < 3) Next(19);
         else
         {
-            W->TreeNutrition = 37.f; W->bRestored = false;
-            P->ReceiveStrike(Target, P->MaxHealth() + 100.f); Next(22);
+            // Independent boundary fixture starts only after all original framing shots.
+            P->SetSize(2.495f); P->Nutrition = 0; P->Food = 10.f; P->Health = P->MaxHealth() - 30.f;
+            F.BoundaryFood = P->Food;
+            const bool Ate = P->Eat(5.f);
+            F.BoundaryHealth = P->Health;
+            Check(Ate && FMath::IsNearlyEqual(P->Food, F.BoundaryFood - 5.f, .001f), TEXT("Near-limit growth consumes five actual food units"));
+            Next(24);
         }
+    }
+    else if (SmokeStage == 24 && Phase > 2.8f)
+    {
+        Check(FMath::IsNearlyEqual(P->BodySize, 2.5f, .00001f) && P->Nutrition <= .001f && P->Health > F.BoundaryHealth,
+            TEXT("Growth crosses the old 2.49 boundary and finishes digesting at the 2.5 cap"));
+        // Test capped healing separately so a failed crossing cannot hide its failure.
+        P->SetSize(2.5f); P->Nutrition = 0; P->Food = 10.f; P->Health = P->MaxHealth() - 20.f;
+        F.BoundaryFood = P->Food; F.BoundaryHealth = P->Health;
+        const bool Ate = P->Eat(5.f);
+        Check(Ate && FMath::IsNearlyEqual(P->Food, F.BoundaryFood - 5.f, .001f) && P->Health > F.BoundaryHealth,
+            TEXT("An injured full-size player can spend carried food to restore health"));
+        F.BoundaryHealth = P->Health;
+        Next(25);
+    }
+    else if (SmokeStage == 25 && Phase > 2.8f)
+    {
+        Check(FMath::IsNearlyEqual(P->BodySize, 2.5f, .00001f) && P->Nutrition <= .001f && P->Health > F.BoundaryHealth,
+            TEXT("At-cap nutrition empties through real-time digestion without additional growth"));
+        P->Health = P->MaxHealth();
+        F.BoundaryFood = P->Food;
+        const float BeforeNutrition = P->Nutrition;
+        const bool Ate = P->Eat(5.f);
+        Check(!Ate && FMath::IsNearlyEqual(P->Food, F.BoundaryFood, .001f) && FMath::IsNearlyEqual(P->Nutrition, BeforeNutrition, .001f),
+            TEXT("A healthy full-size player refuses extra food without consuming inventory"));
+        W->TreeNutrition = 37.f; W->bRestored = false;
+        P->ReceiveStrike(Target, P->MaxHealth() + 100.f); Next(22);
     }
     else if (SmokeStage == 22 && Phase > .35f)
     {

@@ -57,8 +57,8 @@ namespace {
  FString DeliveryHint(AVerdantWorld* W) {
   if(!W||!W->Dialogue||!W->Dialogue->Selected.IsValid())return TEXT("");
   auto* N=W->Dialogue->Selected.Get();
-  if(N->bDead&&N->DonationPledge>0)return N->DisplayName+TEXT("已倒下，未完成的运送已中断。");
-  if(N->DonationPledge>0) {
+  if(N->bDead&&N->DonationPledge>.001f)return N->DisplayName+TEXT("已倒下，未完成的运送已中断。");
+  if(N->DonationPledge>.001f) {
    const float Dist=FVector::Dist2D(N->GetActorLocation(),W->MotherPosition)/100.f;
    return FString::Printf(TEXT("%s → 母树 · 正在运送 %.0f 份 · 距目的地 %.0f 米"),*N->DisplayName,N->DonationPledge,Dist);
   }
@@ -97,7 +97,19 @@ void AVerdantHUD::BeginPlay() {
    +SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(Font(19)).ColorAndOpacity(Gold).Text_Lambda([World](){auto* W=World();return FText::FromString(W&&W->bRestored?TEXT("母树复苏 · 世界仍在继续"):TEXT("让母树重新结果"));})]
    +SVerticalBox::Slot().AutoHeight().Padding(0,8)[SNew(SProgressBar).FillColorAndOpacity(Gold).Percent_Lambda([World](){auto* W=World();return W?FMath::Clamp(W->TreeNutrition/FMath::Max(1.f,W->TreeGoal),0.f,1.f):0.f;})]
    +SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(Font(14)).ColorAndOpacity(Ink).Text_Lambda([World](){auto* W=World();return FText::FromString(W?FString::Printf(TEXT("已供奉 %.0f / %.0f 份养分"),W->TreeNutrition,W->TreeGoal):TEXT(""));})]
+   +SVerticalBox::Slot().AutoHeight().Padding(0,10,0,0)
+   [SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.07f,.14f,.09f,.95f)).Padding(8)
+    .Visibility_Lambda([World](){auto* W=World();return W&&W->IsSeasonRecordVisible()?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
+    [SNew(SVerticalBox)
+     +SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(Font(15)).ColorAndOpacity(Gold).Text_Lambda([World](){auto* W=World();return FText::FromString(W?W->SeasonBannerTitle:TEXT(""));})]
+     +SVerticalBox::Slot().AutoHeight().Padding(0,5,0,0)[SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Ink).AutoWrapText(true).Text_Lambda([World](){auto* W=World();return FText::FromString(W?W->SeasonBannerBody:TEXT(""));})]
+    ]]
    +SVerticalBox::Slot().AutoHeight().Padding(0,12,0,0)[SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Muted).AutoWrapText(true).Text_Lambda([World](){auto* W=World();return FText::FromString(W?W->WorldSummary():TEXT(""));})]
+   +SVerticalBox::Slot().AutoHeight().Padding(0,10,0,0)
+   [SNew(STextBlock).Font(Font(12)).ColorAndOpacity(Gold).AutoWrapText(true)
+    .Visibility_Lambda([World](){auto* W=World();return W&&W->RestoredSeason.bCaptured&&!W->IsSeasonRecordVisible()?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
+    .Text_Lambda([World](){auto* W=World();return FText::FromString(W?W->SeasonCoreSummary:TEXT(""));})]
+
   ]]]
  +SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Bottom).Padding(24,24,24,110)
  [SNew(SBox).WidthOverride(450)[SNew(STextBlock).Font(Font(13)).ColorAndOpacity(Ink).ShadowOffset(FVector2D(1,1)).AutoWrapText(true).Text_Lambda([World](){auto* W=World();FString T;if(W){int32 Start=FMath::Max(0,W->Events.Num()-4);for(int32 I=Start;I<W->Events.Num();++I)T+=W->Events[I]+TEXT("\n");}return FText::FromString(T);})]]
@@ -141,8 +153,10 @@ void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason) {
  RootWidget.Reset();InputBox.Reset();Super::EndPlay(Reason);
 }
 void AVerdantHUD::OpenConversation(AVerdantCharacter* NPC) {
- auto* W=AVerdantWorld::Find(this);if(!W||!W->Dialogue||!IsValid(NPC)||NPC->bDead)return;
- W->Dialogue->Selected=NPC;bConversationOpen=true;
+ auto* W=AVerdantWorld::Find(this);if(!W||!W->Dialogue||!IsValid(NPC)||NPC->bDead||!W->Dialogue->CanConverse(NPC))return;
+ W->Dialogue->Selected=NPC;
+ if(bConversationOpen){if(InputBox.IsValid())FSlateApplication::Get().SetKeyboardFocus(InputBox);return;}
+ bConversationOpen=true;
  if(auto* P=Cast<AVerdantCharacter>(GetOwningPawn()))P->CancelForConversation();
  if(auto* PC=GetOwningPlayerController()) {
   PC->StopMovement();PC->SetIgnoreMoveInput(true);PC->SetIgnoreLookInput(true);PC->bShowMouseCursor=true;
@@ -159,6 +173,7 @@ void AVerdantHUD::DrawHUD() {
  auto* W=AVerdantWorld::Find(this);auto* P=Cast<AVerdantCharacter>(GetOwningPawn());auto* PC=GetOwningPlayerController();
  if(!W||!P||!PC)return;
  if(bConversationOpen && (P->bDead || !W->Dialogue || !W->Dialogue->Selected.IsValid() || W->Dialogue->Selected->bDead)) CloseConversation();
+ else if(bConversationOpen && !W->Dialogue->CanConverse(W->Dialogue->Selected.Get())) {CloseConversation();W->Notify(TEXT("对方已经走远，靠近后再交谈。"));}
  auto Label=[this,PC](FVector Position,const FString& Text,FLinearColor Color,int32 Size){
   FVector2D At;if(!PC->ProjectWorldLocationToScreen(Position,At))return;
   if(At.X<20||At.X>Canvas->SizeX-20||At.Y<20||At.Y>Canvas->SizeY-100)return;

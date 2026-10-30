@@ -13,6 +13,7 @@ public:
  TArray<FString> Lines;
  TMap<int32,TArray<FString>> Memories;
  TWeakObjectPtr<AVerdantCharacter> Selected;
+ bool CanConverse(const AVerdantCharacter* NPC) const;
  void Request(AVerdantCharacter* NPC, const FString& PlayerText);
  FString BuildState(AVerdantCharacter* NPC) const;
  bool ApplyDecision(AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount);

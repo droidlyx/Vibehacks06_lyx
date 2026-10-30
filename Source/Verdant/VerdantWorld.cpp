@@ -69,6 +69,7 @@ void AVerdantWorld::BeginPlay()
         Player->AgentId = 0;
         Player->UpdateAppearance();
     }
+    BeginSeasonRecord();
     Record(TEXT("生长季开始。三片果林由不同居民管理，母树等待 100 份养分。"));
     Record(TEXT("米芽开放采集；陶恩收取两成分成；岚石暂不允许外人进入高地果林。"));
     Notify(TEXT("WASD 移动 · E 采集 · Q 吸收养分 · T 交谈 · F 分享或供奉"));
@@ -315,6 +316,8 @@ bool AVerdantWorld::Donate(AVerdantCharacter* Who, float Amount)
     }
     Who->Food -= Paid;
     TreeNutrition += Paid;
+    DonationLedger.FindOrAdd(Who->AgentId) += Paid;
+    DonationNames.Add(Who->AgentId, Who->DisplayName);
     Who->LastDonationTime = GetWorld()->GetTimeSeconds();
     Who->LastDonatedAmount = Paid;
     Record(FString::Printf(TEXT("%s 向母树供奉 %.1f 份养分（%.0f / %.0f）。"),
@@ -325,8 +328,9 @@ bool AVerdantWorld::Donate(AVerdantCharacter* Who, float Amount)
     {
         TreeNutrition = TreeGoal;
         bRestored = true;
+        FinalizeSeasonRecord();
         Record(TEXT("母树重新结果，新的生长季开始。世界将继续保留居民、领地和资源的真实状态。"));
-        Record(WorldSummary());
+        Record(SeasonCoreSummary.Replace(TEXT("\n"), TEXT("；")));
         Notify(TEXT("母树复苏！观察三片果林：你们的行动已经改变了山谷。"));
     }
     PlayCue(bRestored?TEXT("Restore"):TEXT("Offer"),MotherPosition,1.f);
@@ -395,36 +399,17 @@ bool AVerdantWorld::SetAccess(int32 GroveIndex, AVerdantCharacter* Who, bool bOp
 
 FString AVerdantWorld::WorldSummary() const
 {
-    int32 ResidentsAlive = 0;
-    int32 PlayerGroves = 0;
-    int32 OpenGroves = 0;
-    float Fertility = 0.f;
-    for (AVerdantCharacter* Who : Folk)
-        if (IsLiving(Who) && Who->AgentId != 0 && !Who->bWild)
-            ++ResidentsAlive;
-    for (const FVerdantGrove& Grove : Groves)
+    const FVerdantSeasonSnapshot Current = CaptureSeasonSnapshot();
+    FString Summary = FString::Printf(TEXT("当前：%s · 居民 %d/%d · 野生 %d/%d\n免税开放 %d/%d · 你管理 %d处 · 生机 %.0f%%"),
+        *Current.StateLabel, Current.ResidentsAlive, Current.ResidentsTotal,
+        Current.WildAlive, Current.WildTotal, Current.FreeGroves, Current.Groves.Num(),
+        Current.PlayerGroves, Current.AverageFertility * 100.f);
+    for (const FVerdantSeasonGrove& Grove : Current.Groves)
     {
-        PlayerGroves += Grove.ControllerId == 0 ? 1 : 0;
-        OpenGroves += Grove.bOpen || !IsLiving(FindFolk(Grove.ControllerId)) ? 1 : 0;
-        Fertility += Grove.Fertility;
-    }
-    FString State = TEXT("分立的山谷");
-    if (ResidentsAlive == 0)
-        State = TEXT("寂静的山谷");
-    else if (PlayerGroves >= 2)
-        State = TEXT("旅人的领地");
-    else if (OpenGroves >= 2 && ResidentsAlive >= 2)
-        State = TEXT("开放的山谷");
-
-    FString Summary = FString::Printf(TEXT("%s · 居民存活 %d/3 · 开放果林 %d/%d · 平均生机 %.0f%%"),
-        *State, ResidentsAlive, OpenGroves, Groves.Num(),
-        Groves.IsEmpty() ? 0.f : Fertility * 100.f / Groves.Num());
-    for (const FVerdantGrove& Grove : Groves)
-    {
-        const auto* GroveOwner = FindFolk(Grove.ControllerId);
-        Summary += FString::Printf(TEXT("\n%s：%s，储粮 %.0f，%s"),
-            *Grove.Name, IsLiving(GroveOwner) ? *GroveOwner->DisplayName : TEXT("无人管理"),
-            Grove.Food, Grove.bOpen || !IsLiving(GroveOwner) ? TEXT("开放") : TEXT("受限"));
+        const FString Access = !Grove.bOpen ? TEXT("限采") : Grove.Share > .001f
+            ? FString::Printf(TEXT("开放/分成%.0f%%"), Grove.Share * 100.f) : TEXT("免费开放");
+        Summary += FString::Printf(TEXT("\n%s：%s · %s · 粮%.0f"),
+            *Grove.Name, *Grove.ControllerName, *Access, Grove.Food);
     }
     return Summary;
 }

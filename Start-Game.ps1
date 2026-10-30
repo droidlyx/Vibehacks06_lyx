@@ -17,7 +17,20 @@ if (-not $NoAI) {
     }
 }
 $packaged=Join-Path $projectRoot 'Verdant.exe'
-if(-not(Test-Path -LiteralPath $packaged)){$packaged=Join-Path $projectRoot 'Builds\Windows\Verdant.exe'}
+if(-not(Test-Path -LiteralPath $packaged)){
+    $buildRoot=Join-Path $projectRoot 'Builds'
+    $activeFile=Join-Path $buildRoot 'ActiveBuild.txt'
+    if(Test-Path -LiteralPath $activeFile){
+        $relative=(Get-Content -LiteralPath $activeFile -Raw).Trim()
+        $candidate=[IO.Path]::GetFullPath((Join-Path $buildRoot $relative))
+        $prefix=[IO.Path]::GetFullPath($buildRoot)+[IO.Path]::DirectorySeparatorChar
+        if($candidate.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){
+            $activeExe=Join-Path $candidate 'Verdant.exe'
+            if(Test-Path -LiteralPath $activeExe){$packaged=$activeExe}
+        }
+    }
+    if(-not(Test-Path -LiteralPath $packaged)){$packaged=Join-Path $projectRoot 'Builds\Windows\Verdant.exe'}
+}
 if ((Test-Path -LiteralPath $packaged) -and -not $Editor) {
     $exe=$packaged
     $arguments=@('-windowed','-ResX=1600','-ResY=900','-log')

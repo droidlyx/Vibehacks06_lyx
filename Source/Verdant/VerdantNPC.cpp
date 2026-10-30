@@ -183,7 +183,7 @@ void AVerdantCharacter::TickNPC(float Dt)
         return;
     }
 
-    if (DonationPledge > .01f && !bWild)
+    if (DonationPledge > .001f && !bWild)
     {
         if (W->bRestored)
         {
@@ -204,7 +204,7 @@ void AVerdantCharacter::TickNPC(float Dt)
                     if (W->Donate(this, FMath::Min(DonationPledge, Food)))
                     {
                         DonationPledge = FMath::Max(0.f, DonationPledge - (Before - Food));
-                        Say(DonationPledge <= .01f
+                        Say(DonationPledge <= .001f
                             ? TEXT("答应的养分已经送到了。")
                             : TEXT("这一份先交给母树，剩下的我继续寻找。"));
                     }
@@ -218,7 +218,7 @@ void AVerdantCharacter::TickNPC(float Dt)
         // Insufficient carried food: keep the remaining promise and gather actual stock.
     }
 
-    if (FollowId >= 0 && DonationPledge <= .01f)
+    if (FollowId >= 0 && DonationPledge <= .001f)
     {
         auto* Leader = W->FindFolk(FollowId);
         if (!Alive(Leader) || Leader == this)
@@ -286,7 +286,7 @@ void AVerdantCharacter::TickNPC(float Dt)
     }
 
     // Miya voluntarily offers small surpluses. Negotiated pledges use the same executor.
-    if (AgentId == 1 && Food >= 24.f && DonationPledge <= .01f && !W->bRestored && Now >= ReconsiderAt)
+    if (AgentId == 1 && Food >= 24.f && DonationPledge <= .001f && !W->bRestored && Now >= ReconsiderAt)
     {
         DonationPledge = 3.f;
         ReconsiderAt = Now + 35.f;
@@ -351,7 +351,7 @@ void AVerdantCharacter::TickNPC(float Dt)
     const float Angle = AgentId * 2.2f;
     Destination = Grove.Position + FVector(FMath::Cos(Angle) * 230.f, FMath::Sin(Angle) * 230.f, 0.f);
     const float Distance = FVector::Dist2D(GetActorLocation(), Grove.Position);
-    ActionLabel = DonationPledge > .01f ? TEXT("为履行供奉承诺采集") : TEXT("前往 ") + Grove.Name;
+    ActionLabel = DonationPledge > .001f ? TEXT("为履行供奉承诺采集") : TEXT("前往 ") + Grove.Name;
 
     if (Distance < 620.f)
     {

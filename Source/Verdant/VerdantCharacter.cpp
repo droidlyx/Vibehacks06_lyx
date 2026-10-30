@@ -152,11 +152,19 @@ void AVerdantCharacter::Tick(float Dt) {
   if (!bHitApplied && Prior > StrikeAt && AttackTimer <= StrikeAt) ApplyStrike();
  }
  if (!bDead) {
-  if (Nutrition > 0 && BodySize < 2.49f) {
+  if (Nutrition > 0) {
    const float Used = FMath::Min(Nutrition,2.2f*Dt);
    const float Prior = BodySize;
-   SetSize(BodySize+Used*.013f/FMath::Max(.6f,BodySize*.7f));
-   if (BodySize > Prior) { Nutrition -= Used; Health = FMath::Min(MaxHealth(),Health+Used*.5f); }
+   const bool AtGrowthLimit = BodySize >= 2.5f;
+   if (!AtGrowthLimit) SetSize(BodySize+Used*.013f/FMath::Max(.6f,BodySize*.7f));
+   // Below the cap, a blocked growth attempt keeps its nutrition. At the cap,
+   // already-eaten nutrition still digests at the same rate and restores health.
+   if (AtGrowthLimit || BodySize > Prior) {
+    Nutrition = FMath::Max(0.f,Nutrition-Used);
+    Health = FMath::Min(MaxHealth(),Health+Used*.5f);
+    if (AgentId==0 && Prior<2.5f && BodySize>=2.5f)
+     if(auto* W=Valley())W->Notify(TEXT("已达到最大体型，剩余养分继续吸收并恢复生命。"));
+   }
   }
   GetCharacterMovement()->MaxWalkSpeed = (bSprinting?640.f:430.f)*FMath::Pow(BodySize,.32f)*(AttackTimer>0?.35f:1.f);
   if (AgentId != 0 && DodgeTimer<=0 && (HurtTimer<=0 || AttackTimer>0)) TickNPC(Dt);
@@ -172,7 +180,7 @@ void AVerdantCharacter::Tick(float Dt) {
  }
  GetCharacterMovement()->bOrientRotationToMovement = !bDead && AttackTimer<=0 && DodgeTimer<=0 && HurtTimer<=0;
  if (AttackTimer>0 || DodgeTimer>0) SetActorRotation(FRotator(0,LockedActionYaw,0));
- CarriedNutrition->SetVisibility(!bDead && DonationPledge>.01f && Food>.01f);
+ CarriedNutrition->SetVisibility(!bDead && DonationPledge>.001f && Food>.001f);
  UpdateCameraFraming(Dt);
  UpdateAnimation();
 }
@@ -306,12 +314,20 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From,float Damage) {
  UpdateAnimation();
 }
 bool AVerdantCharacter::Eat(float Amount) {
- if(bDead || Food<=0 || Nutrition>=30.f || BodySize>=2.49f) return false;
+ if(bDead || Food<=0 || Nutrition>=30.f) return false;
+ const bool AtGrowthLimit=BodySize>=2.5f;
+ if(AtGrowthLimit && Health>=MaxHealth()-.001f) {
+  if(AgentId==0)if(auto* W=Valley())W->Notify(TEXT("体型已达上限且生命充足，可以把食物分享或供奉。"));
+  return false;
+ }
  Amount=FMath::Min3(Amount,Food,30.f-Nutrition);
  if(Amount<=0) return false;
  Food-=Amount; Nutrition+=Amount;
  Health=FMath::Min(MaxHealth(),Health+Amount*1.4f);
- if(AgentId==0) if(auto* W=Valley()) {W->Notify(TEXT("养分开始吸收，身体会逐渐长大。"));W->PlayCue(TEXT("Grow"),GetActorLocation(),BodySize);}
+ if(AgentId==0) if(auto* W=Valley()) {
+  W->Notify(AtGrowthLimit?TEXT("养分用于恢复生命，剩余部分会继续吸收。"):TEXT("养分开始吸收，身体会逐渐长大。"));
+  W->PlayCue(TEXT("Grow"),GetActorLocation(),BodySize);
+ }
  return true;
 }
 bool AVerdantCharacter::IsDodgeInvulnerable() const {
@@ -378,7 +394,16 @@ void AVerdantCharacter::Contribute() {
   const bool Bulk=PC&&(PC->IsInputKeyDown(EKeys::LeftShift)||PC->IsInputKeyDown(EKeys::RightShift));
   W->Donate(this,Bulk?Food:5.f);
  }
- else if(auto* Other=NearestFolk(400.f*FMath::Max(1.f,BodySize))) { if(W->Transfer(this,Other,5.f)) {Other->Trust.FindOrAdd(AgentId)+=12;Other->Say(TEXT("这份食物我会记得。"));} }
+ else if(auto* Other=NearestFolk(400.f*FMath::Max(1.f,BodySize))) {
+  const float Before=Food;
+  if(W->Transfer(this,Other,5.f)) {
+   const float Paid=Before-Food;
+   float& Goodwill=Other->Trust.FindOrAdd(AgentId);
+   // A fractional gift earns fractional trust; gifts alone cannot buy unbounded loyalty.
+   if(Goodwill<12.f)Goodwill=FMath::Min(12.f,Goodwill+Paid*2.4f);
+   Other->Say(TEXT("这份食物我会记得。"));
+  }
+ }
  else W->Notify(TEXT("靠近母树按 F 供奉；靠近居民按 F 分享 5 份食物。"));
  ActionCooldown=.4f;
 }

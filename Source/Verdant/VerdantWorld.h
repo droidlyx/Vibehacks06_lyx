@@ -25,6 +25,47 @@ struct FVerdantGrove {
  UPROPERTY() TObjectPtr<UStaticMeshComponent> Marker;
  UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> FruitVisuals;
 };
+// Value-only records capture what existed at the start and at restoration.
+// They never hold mutable character or grove references.
+USTRUCT()
+struct FVerdantSeasonPerson {
+ GENERATED_BODY()
+ UPROPERTY() int32 AgentId = -1;
+ UPROPERTY() FString Name;
+ UPROPERTY() bool bWild = false;
+ UPROPERTY() bool bAlive = false;
+};
+USTRUCT()
+struct FVerdantSeasonGrove {
+ GENERATED_BODY()
+ UPROPERTY() FString Name;
+ UPROPERTY() int32 ControllerId = -1;
+ UPROPERTY() FString ControllerName;
+ UPROPERTY() bool bOpen = true;
+ UPROPERTY() float Share = 0.f;
+ UPROPERTY() float Food = 0.f;
+ UPROPERTY() float Fertility = 0.f;
+};
+USTRUCT()
+struct FVerdantSeasonSnapshot {
+ GENERATED_BODY()
+ UPROPERTY() bool bCaptured = false;
+ UPROPERTY() float AtSeconds = 0.f;
+ UPROPERTY() float TreeNutrition = 0.f;
+ UPROPERTY() int32 ResidentsAlive = 0;
+ UPROPERTY() int32 ResidentsTotal = 0;
+ UPROPERTY() int32 WildAlive = 0;
+ UPROPERTY() int32 WildTotal = 0;
+ UPROPERTY() int32 OpenGroves = 0;
+ UPROPERTY() int32 FreeGroves = 0;
+ UPROPERTY() int32 PlayerGroves = 0;
+ UPROPERTY() float AverageFertility = 0.f;
+ UPROPERTY() FString StateLabel;
+ UPROPERTY() TArray<FVerdantSeasonPerson> People;
+ UPROPERTY() TArray<FVerdantSeasonGrove> Groves;
+ UPROPERTY() TMap<int32,float> Donations;
+ UPROPERTY() TMap<int32,FString> DonorNames;
+};
 UCLASS()
 class VERDANT_API AVerdantWorld : public AActor {
  GENERATED_BODY()
@@ -54,6 +95,18 @@ public:
  void TickEconomy(float Dt);
  void TickPolicyProbe(float Dt);
  TMap<FString,float> HarvestLedger;
+ UPROPERTY() TMap<int32,float> DonationLedger;
+ UPROPERTY() TMap<int32,FString> DonationNames;
+ UPROPERTY() FVerdantSeasonSnapshot OpeningSeason;
+ UPROPERTY() FVerdantSeasonSnapshot RestoredSeason;
+ FString SeasonBannerTitle;
+ FString SeasonBannerBody;
+ FString SeasonCoreSummary;
+ float SeasonNoticeUntil = -1.f;
+ FVerdantSeasonSnapshot CaptureSeasonSnapshot() const;
+ void BeginSeasonRecord();
+ void FinalizeSeasonRecord();
+ bool IsSeasonRecordVisible() const;
  void Record(const FString& Message);
  void Notify(const FString& Message);
  void PlayCue(FName Cue, FVector Position, float BodySize = 1.f);

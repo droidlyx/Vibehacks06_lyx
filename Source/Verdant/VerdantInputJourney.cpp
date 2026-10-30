@@ -10,6 +10,8 @@
 #include "Engine/World.h"
 #include "UnrealClient.h"
 #include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Components/CapsuleComponent.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
@@ -21,6 +23,14 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
  auto* W=AVerdantWorld::Find(this);auto* P=Cast<AVerdantCharacter>(UGameplayStatics::GetPlayerCharacter(this,0));
  auto* PC=P?Cast<APlayerController>(P->GetController()):nullptr;
  if(!W||!P||!PC)return;
+ const bool bFullJourney=FParse::Param(FCommandLine::Get(),TEXT("VerdantFullJourney"));
+ if(!bJourneyHasPosition){JourneyLastPosition=P->GetActorLocation();bJourneyHasPosition=true;}
+ JourneyTravelDistance+=FVector::Dist2D(JourneyLastPosition,P->GetActorLocation());JourneyLastPosition=P->GetActorLocation();
+ if(SmokeTime>=JourneyNextPathSample) {
+  const FVector Point=P->GetActorLocation();JourneyPath.Add(FVector4(Point.X,Point.Y,Point.Z,SmokeTime));
+  JourneyNextPathSample=SmokeTime+1.f;
+ }
+
  auto Key=[PC](FKey K,bool Down){PC->InputKey(FInputKeyParams(K,Down?IE_Pressed:IE_Released,Down?1.0:0.0,false));};
  auto Tap=[&Key](FKey K){Key(K,true);Key(K,false);};
  auto Stop=[this,&Key](){Key(EKeys::W,false);Key(EKeys::LeftShift,false);bJourneyWalking=false;};
@@ -34,6 +44,7 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
  auto Check=[this](bool Pass,const FString& Label){const FString Line=(Pass?TEXT("PASS "):TEXT("FAIL "))+Label;SmokeChecks.Add(Line);if(!Pass)++SmokeFailures;UE_LOG(LogTemp,Display,TEXT("VERDANT_JOURNEY %s"),*Line);};
  const FString Dir=FPaths::ProjectSavedDir()/TEXT("Validation");
  auto Finish=[&](){
+  if(auto* H=Cast<AVerdantHUD>(PC->GetHUD()))if(H->bConversationOpen)H->CloseConversation();
   Stop();Key(EKeys::E,false);IFileManager::Get().MakeDirectory(*Dir,true);
   auto Result=MakeShared<FJsonObject>();Result->SetStringField(TEXT("kind"),TEXT("normal-game-engine-input-replay"));
   Result->SetBoolField(TEXT("physical_desktop_input"),false);Result->SetBoolField(TEXT("resource_or_size_grants"),false);
@@ -42,12 +53,56 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
   Result->SetNumberField(TEXT("player_food"),P->Food);Result->SetNumberField(TEXT("tree_nutrition"),W->TreeNutrition);
   Result->SetNumberField(TEXT("failures"),SmokeFailures);Result->SetStringField(TEXT("world"),W->WorldSummary());
   TArray<TSharedPtr<FJsonValue>> Notes;for(auto& S:SmokeChecks)Notes.Add(MakeShared<FJsonValueString>(S));Result->SetArrayField(TEXT("checks"),Notes);
+
+  Result->SetBoolField(TEXT("full_journey"),bFullJourney);
+  Result->SetBoolField(TEXT("completed_full_goal"),W->bRestored);
+  Result->SetNumberField(TEXT("restored_at_seconds"),W->RestoredSeason.bCaptured?W->RestoredSeason.AtSeconds:-1.f);
+  Result->SetNumberField(TEXT("travel_distance_m"),JourneyTravelDistance/100.f);
+  Result->SetNumberField(TEXT("extra_negotiations_attempted"),JourneyNegotiationsAttempted);
+  Result->SetNumberField(TEXT("extra_negotiations_replied"),JourneyNegotiationsReplied);
+  auto Contributions=MakeShared<FJsonObject>();
+  for(const auto& Pair:W->DonationLedger)Contributions->SetNumberField(FString::FromInt(Pair.Key),Pair.Value);
+  Result->SetObjectField(TEXT("actual_donations_by_actor_id"),Contributions);
+  auto Harvests=MakeShared<FJsonObject>();
+  for(const auto& Pair:W->HarvestLedger)Harvests->SetNumberField(Pair.Key,Pair.Value);
+  Result->SetObjectField(TEXT("net_harvest_ledger"),Harvests);
+  TArray<TSharedPtr<FJsonValue>> DialogueLines;
+  if(W->Dialogue)for(const FString& Line:W->Dialogue->Lines)DialogueLines.Add(MakeShared<FJsonValueString>(Line));
+  Result->SetArrayField(TEXT("actual_model_dialogue"),DialogueLines);
+  TArray<TSharedPtr<FJsonValue>> RouteNotes;
+  for(const FString& Line:JourneyFullNotes)RouteNotes.Add(MakeShared<FJsonValueString>(Line));
+  Result->SetArrayField(TEXT("route_events"),RouteNotes);
+  TArray<TSharedPtr<FJsonValue>> PathSamples;
+  for(const FVector4& Point:JourneyPath) {
+   auto Sample=MakeShared<FJsonObject>();Sample->SetNumberField(TEXT("time"),Point.W);
+   Sample->SetNumberField(TEXT("x"),Point.X);Sample->SetNumberField(TEXT("y"),Point.Y);Sample->SetNumberField(TEXT("z"),Point.Z);
+   PathSamples.Add(MakeShared<FJsonValueObject>(Sample));
+  }
+  Result->SetArrayField(TEXT("actual_path_cm"),PathSamples);
+  TArray<TSharedPtr<FJsonValue>> FinalResidents;
+  for(AVerdantCharacter* N:W->Folk)if(IsValid(N)) {
+   auto R=MakeShared<FJsonObject>();R->SetNumberField(TEXT("id"),N->AgentId);R->SetStringField(TEXT("name"),N->DisplayName);
+   R->SetBoolField(TEXT("dead"),N->bDead);R->SetNumberField(TEXT("food"),N->Food);R->SetNumberField(TEXT("size"),N->BodySize);
+   R->SetNumberField(TEXT("home_grove"),N->HomeGrove);R->SetNumberField(TEXT("pending_donation"),N->DonationPledge);
+   FinalResidents.Add(MakeShared<FJsonValueObject>(R));
+  }
+  Result->SetArrayField(TEXT("final_residents"),FinalResidents);
+  TArray<TSharedPtr<FJsonValue>> FinalGroves;
+  for(int32 I=0;I<W->Groves.Num();++I) {
+   const auto& G=W->Groves[I];auto R=MakeShared<FJsonObject>();R->SetNumberField(TEXT("index"),I);
+   R->SetStringField(TEXT("name"),G.Name);R->SetNumberField(TEXT("controller_id"),G.ControllerId);
+   R->SetBoolField(TEXT("open"),G.bOpen);R->SetNumberField(TEXT("share"),G.Share);
+   R->SetNumberField(TEXT("food"),G.Food);R->SetNumberField(TEXT("fertility"),G.Fertility);
+   FinalGroves.Add(MakeShared<FJsonValueObject>(R));
+  }
+  Result->SetArrayField(TEXT("final_groves"),FinalGroves);
+
   FString Json;auto Writer=TJsonWriterFactory<>::Create(&Json);FJsonSerializer::Serialize(Result,Writer);
-  FFileHelper::SaveStringToFile(Json,*(Dir/TEXT("input-journey.json")),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+  FFileHelper::SaveStringToFile(Json,*(Dir/(bFullJourney?TEXT("full-journey.json"):TEXT("input-journey.json"))),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
   UE_LOG(LogTemp,Display,TEXT("VERDANT_JOURNEY_COMPLETE failures=%d seconds=%.1f"),SmokeFailures,SmokeTime);
   SmokeStage=99;FPlatformMisc::RequestExitWithStatus(false,SmokeFailures?1:0);
  };
- if(P->bDead||SmokeTime>180.f){Check(false,P->bDead?TEXT("Player died during normal progression loop"):TEXT("Normal input journey timed out"));Finish();return;}
+ if(P->bDead||SmokeTime>(bFullJourney?300.f:180.f)){Check(false,P->bDead?TEXT("Player died during normal progression loop"):TEXT("Normal input journey timed out"));Finish();return;}
  if(SmokeStage==0&&SmokeTime>3) {
   IFileManager::Get().MakeDirectory(*Dir,true);
   JourneyOrigin=P->GetActorLocation();JourneyStartSize=P->BodySize;SmokeStage=1;JourneyPhaseAt=SmokeTime;
@@ -127,5 +182,143 @@ void AVerdantGameMode::TickInputJourney(float Dt) {
  else if(SmokeStage==13&&SmokeTime-JourneyPhaseAt>2.f) {
   FScreenshotRequest::RequestScreenshot(Dir/TEXT("journey-world.png"),true,false);JourneyPhaseAt=SmokeTime;SmokeStage=14;
  }
- else if(SmokeStage==14&&SmokeTime-JourneyPhaseAt>2.f)Finish();
+ else if(SmokeStage==14&&SmokeTime-JourneyPhaseAt>2.f) {
+  if(bFullJourney) {
+   Stop();Key(EKeys::E,false);
+   JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: original growth/combat/first-offering loop complete; continuing with named negotiations."),SmokeTime));
+   JourneyVisitIndex=0;JourneyPhaseAt=SmokeTime;SmokeStage=20;
+  } else Finish();
+ }
+ else if(bFullJourney&&SmokeStage==20) {
+  if(W->bRestored){JourneyPhaseAt=SmokeTime;SmokeStage=40;return;}
+  if(JourneyVisitIndex>=4){JourneyPhaseAt=SmokeTime;SmokeStage=30;return;}
+  const int32 VisitId=JourneyVisitIndex<2?3:2;
+  auto* N=W->FindFolk(VisitId);
+  if(!N||N->bDead) {
+   JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: resident %d unavailable; retained the real outcome and moved on."),SmokeTime,VisitId));
+   ++JourneyVisitIndex;return;
+  }
+  const float Range=P->GetCapsuleComponent()->GetScaledCapsuleRadius()+N->GetCapsuleComponent()->GetScaledCapsuleRadius()+35.f;
+  if(Walk(N->GetActorLocation(),FMath::Max(125.f,Range))) {
+   Tap(EKeys::T);JourneyPhaseAt=SmokeTime;SmokeStage=21;
+  }
+ }
+ else if(bFullJourney&&SmokeStage==21&&SmokeTime-JourneyPhaseAt>.25f) {
+  const int32 VisitId=JourneyVisitIndex<2?3:2;
+  auto* H=Cast<AVerdantHUD>(PC->GetHUD());
+  const bool Correct=H&&H->bConversationOpen&&W->Dialogue&&W->Dialogue->Selected.IsValid()
+   &&W->Dialogue->Selected->AgentId==VisitId;
+  if(!Correct) {
+   if(H&&H->bConversationOpen)H->CloseConversation();
+   JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: face-to-face conversation with %d unavailable; no remote request was made."),SmokeTime,VisitId));
+   ++JourneyVisitIndex;JourneyPhaseAt=SmokeTime;SmokeStage=20;return;
+  }
+  JourneyDialogueStart=W->Dialogue->Lines.Num();
+  ++JourneyNegotiationsAttempted;
+  const FString Prompt=JourneyVisitIndex%2==0
+   ?TEXT("我想复苏母树。你愿意亲自把20份自己的食物送到母树吗？如果不愿意或食物不够，可以拒绝或说明你愿意承担多少。")
+   :TEXT("请免费开放你管理的果林，取消采集分成，让大家都能采集。你可以拒绝；我想知道你的真实打算。");
+  JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: requested %s from resident %d through the real dialogue service."),
+   SmokeTime,JourneyVisitIndex%2==0?TEXT("a 20-food physical delivery"):TEXT("free access"),VisitId));
+  W->Dialogue->Request(W->Dialogue->Selected.Get(),Prompt);
+  JourneyPhaseAt=SmokeTime;SmokeStage=22;
+ }
+ else if(bFullJourney&&SmokeStage==22&&!W->Dialogue->bBusy&&SmokeTime-JourneyPhaseAt>.2f) {
+  const bool Replied=W->Dialogue->Lines.Num()>JourneyDialogueStart+1;
+  if(Replied)++JourneyNegotiationsReplied;
+  JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: negotiation %d reply=%s; %s"),SmokeTime,JourneyVisitIndex+1,
+   Replied?TEXT("received"):TEXT("unavailable/interrupted"),*W->Dialogue->Status));
+  // A refusal, counteroffer or failed proximity check stays a real outcome.
+  // Do not manufacture acceptance or call the world executor from this probe.
+  if(auto* H=Cast<AVerdantHUD>(PC->GetHUD()))if(H->bConversationOpen)H->CloseConversation();
+  ++JourneyVisitIndex;JourneyPhaseAt=SmokeTime;SmokeStage=20;
+ }
+ else if(bFullJourney&&SmokeStage==30) {
+  Stop();Key(EKeys::E,false);
+  if(W->bRestored){JourneyPhaseAt=SmokeTime;SmokeStage=40;return;}
+  const float Remaining=FMath::Max(0.f,W->TreeGoal-W->TreeNutrition);
+  if(P->Food>=Remaining-.01f&&P->Food>.01f){JourneyPhaseAt=SmokeTime;SmokeStage=33;return;}
+  int32 Best=INDEX_NONE;float BestScore=-BIG_NUMBER;
+  for(int32 I=0;I<W->Groves.Num();++I) {
+   if(!W->CanHarvest(I,P))continue;
+   const auto& G=W->Groves[I];
+   const float Net=G.Food*(G.ControllerId==P->AgentId?1.f:1.f-G.Share);
+   const float Score=Net*2.f-FVector::Dist2D(P->GetActorLocation(),G.Position)*.002f;
+   if(Score>BestScore){Best=I;BestScore=Score;}
+  }
+  if(Best==INDEX_NONE) {
+   if(P->Food>.01f){JourneyPhaseAt=SmokeTime;SmokeStage=33;return;}
+   if(SmokeTime-JourneyPhaseAt>8.f) {
+    Check(false,TEXT("Full journey has no legally accessible food source after the actual negotiations"));Finish();
+   }
+   return;
+  }
+  JourneyCollectionGrove=Best;
+  JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: walking to grove %d; player food %.2f, tree %.2f, grove stock %.2f."),
+   SmokeTime,Best,P->Food,W->TreeNutrition,W->Groves[Best].Food));
+  JourneyPhaseAt=SmokeTime;SmokeStage=31;
+ }
+ else if(bFullJourney&&SmokeStage==31) {
+  if(W->bRestored){Stop();JourneyPhaseAt=SmokeTime;SmokeStage=40;return;}
+  if(!W->Groves.IsValidIndex(JourneyCollectionGrove)||!W->CanHarvest(JourneyCollectionGrove,P)) {
+   Stop();JourneyFullNotes.Add(TEXT("Collection access changed before arrival; reselecting without overriding policy."));
+   JourneyPhaseAt=SmokeTime;SmokeStage=30;return;
+  }
+  if(Walk(W->Groves[JourneyCollectionGrove].Position,550.f)) {
+   JourneyFoodBefore=P->Food;Key(EKeys::E,true);JourneyPhaseAt=SmokeTime;SmokeStage=32;
+  }
+ }
+ else if(bFullJourney&&SmokeStage==32) {
+  const bool Enough=P->Food+W->TreeNutrition>=W->TreeGoal-.01f;
+  const bool Accessible=W->Groves.IsValidIndex(JourneyCollectionGrove)&&W->CanHarvest(JourneyCollectionGrove,P);
+  const bool Empty=Accessible&&W->Groves[JourneyCollectionGrove].Food<.5f;
+  if(W->bRestored||Enough||!Accessible||(Empty&&SmokeTime-JourneyPhaseAt>2.f)||SmokeTime-JourneyPhaseAt>10.f) {
+   Key(EKeys::E,false);
+   JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: collected %.2f net food at grove %d using held E."),
+    SmokeTime,P->Food-JourneyFoodBefore,JourneyCollectionGrove));
+   JourneyPhaseAt=SmokeTime;
+   if(W->bRestored)SmokeStage=40;
+   else if(Enough||(P->Food>=10.f&&Empty))SmokeStage=33;
+   else SmokeStage=30;
+  }
+ }
+ else if(bFullJourney&&SmokeStage==33) {
+  if(W->bRestored){Stop();JourneyPhaseAt=SmokeTime;SmokeStage=40;return;}
+  if(Walk(W->MotherPosition+FVector(0,-800,0),100.f)) {
+   JourneyFoodBefore=P->Food;ProbeTreeBefore=W->TreeNutrition;
+   Key(EKeys::LeftShift,true);JourneyPhaseAt=SmokeTime;SmokeStage=34;
+  }
+ }
+ else if(bFullJourney&&SmokeStage==34&&SmokeTime-JourneyPhaseAt>.2f) {
+  Tap(EKeys::F);JourneyPhaseAt=SmokeTime;SmokeStage=35;
+ }
+ else if(bFullJourney&&SmokeStage==35&&SmokeTime-JourneyPhaseAt>.4f) {
+  Key(EKeys::LeftShift,false);
+  const float Paid=JourneyFoodBefore-P->Food;
+  JourneyFullNotes.Add(FString::Printf(TEXT("%.1fs: Shift+F offered %.2f actual player food; tree now %.2f/%.2f."),
+   SmokeTime,Paid,W->TreeNutrition,W->TreeGoal));
+  if(Paid<=.001f&&!W->bRestored&&JourneyFoodBefore>.01f) {
+   Check(false,TEXT("Full-journey bulk-offering input did not transfer the available inventory"));Finish();return;
+  }
+  JourneyPhaseAt=SmokeTime;SmokeStage=W->bRestored?40:30;
+ }
+ else if(bFullJourney&&SmokeStage==40&&SmokeTime-JourneyPhaseAt>1.f) {
+  Key(EKeys::E,false);
+  // Walk back through ordinary movement to frame the restored tree, rather than teleporting the camera.
+  if(!Walk(W->MotherPosition+FVector(-350,-2200,0),100.f))return;
+  Stop();
+  Check(W->bRestored&&FMath::IsNearlyEqual(W->TreeNutrition,W->TreeGoal,.01f),
+   TEXT("Complete 100-food restoration reached using ordinary resources and production interactions"));
+  float RecordedDonations=0.f;for(const auto& Pair:W->DonationLedger)RecordedDonations+=Pair.Value;
+  Check(FMath::IsNearlyEqual(RecordedDonations,W->TreeNutrition,.02f),
+   TEXT("Each resident's actual contribution ledger sums to the restored tree"));
+  PC->SetControlRotation(FRotator(12.f,(W->MotherPosition-P->GetActorLocation()).Rotation().Yaw,0));
+  JourneyPhaseAt=SmokeTime;SmokeStage=41;
+ }
+ else if(bFullJourney&&SmokeStage==41&&SmokeTime-JourneyPhaseAt>1.f) {
+  FScreenshotRequest::RequestScreenshot(Dir/TEXT("full-journey-world.png"),true,false);
+  JourneyPhaseAt=SmokeTime;SmokeStage=42;
+ }
+ else if(bFullJourney&&SmokeStage==42&&SmokeTime-JourneyPhaseAt>2.f)Finish();
+
 }

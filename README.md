@@ -15,7 +15,9 @@ powershell -ExecutionPolicy Bypass -File Tools/Build.ps1
 powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 ```
 
-独立构建：`powershell -ExecutionPolicy Bypass -File Tools/Build.ps1 -Package`。
+独立构建：`powershell -ExecutionPolicy Bypass -File Tools/Build.ps1 -Package -Version my-build`。每个版本保存到独立目录，避免覆盖已有可玩版本。
+
+打包后运行 `Tools/Stage-Portable.ps1 -Version my-build` 补齐本地模型和许可；`Tools/Validate-Build.ps1 -Version my-build -FullJourney` 可重跑独立构建检查。
 
 本地模型权重和推理二进制不进入 Git。安装见 [LocalAI.md](Docs/LocalAI.md)。缺少模型时，移动、成长、战斗和 NPC 日常行为仍可运行，交谈会明确提示服务不可用。
 
@@ -38,7 +40,7 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 
 米芽允许自由采集，陶恩要求分成，岚石控制的高地果林起初受限。你可以协商开放、请求分享或运送，也可以通过战斗改变控制关系。NPC承诺供奉后必须实际走到树边；死亡会中断行动，食物不会隔空到账。
 
-母树复苏后世界继续运行。右侧面板显示真实的控制者、库存、开放程度、生机和主要居民存活情况；没有隐藏的结局选项按钮。
+母树复苏后世界继续运行。右侧“本季记录”比较开局与复苏时的居民/野生生物存活、免税开放与领地归属，并记录每人实际送达的养分；同时保留当前世界状态。之后发生的变化不会改写这一季的记录，没有隐藏的结局选项按钮。
 
 建议现场先展示一次逐渐长大，再向居民提出协商，最后展示果林政策和人物行动的变化。
 

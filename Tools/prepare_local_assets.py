@@ -3,7 +3,7 @@ Run with Python to stage sources, then Blender runs this same file for fresh exp
 No existing Ember code, maps or imported Unreal packages are copied.
 """
 from pathlib import Path
-import argparse, hashlib, json, shutil, subprocess, sys, zipfile
+import argparse, hashlib, json, posixpath, shutil, subprocess, sys, zipfile
 
 REPO = Path(__file__).resolve().parents[1]
 LIBRARY = Path(r'D:\Workspace\vscode_workspace\EMBER_GENERATIONS_LOCAL_SOURCE_20260829')
@@ -20,6 +20,20 @@ NATURE = [('SM_Tree01','CommonTree_1'),('SM_Tree02','TwistedTree_1'),('SM_Rock01
 CLIPS = [('A_Idle','Idle_Loop',1),('A_Walk','Walk_Loop',1),('A_Run','Jog_Fwd_Loop',1),('A_Attack','Punch_Cross',1),('A_Hit','Hit_Chest',1),('A_Death','Death01',1),('A_Dodge','Roll',1),('A_Consume','Consume',2),('A_Carry','Walk_Carry_Loop',2)]
 
 def digest(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+
+def merge_provenance(existing, records):
+ """Refresh this tool's source subtree without owning other producers' metadata."""
+ def owned(record):
+  # Only this tool's known archive summaries omit the source path.
+  if 'path' not in record and record.get('pack') not in PACKS:
+   return False
+  path = record.get('path', record.get('license_path', ''))
+  return isinstance(path, str) and posixpath.normpath(path.replace('\\', '/')).casefold().startswith('assets/source/quaternius/')
+ if not all(owned(record) for record in records):
+  raise ValueError('Asset staging produced a provenance record outside its Quaternius subtree')
+ merged = dict(existing)
+ merged['assets'] = [record for record in existing.get('assets', []) if not owned(record)] + list(records)
+ return merged
 def stage():
  RAW.mkdir(parents=True,exist_ok=True); OUT.mkdir(parents=True,exist_ok=True)
  records=[]
@@ -59,7 +73,9 @@ def stage():
   dst=RAW/f'UAL{index}_Standard.glb';shutil.copy2(src,dst)
   lic=RAW/f'UAL{index}_LICENSE.txt';shutil.copy2(slice_root/f'licenses/UAL{index}_LICENSE.txt',lic)
   records.append({'path':dst.relative_to(REPO).as_posix(),'sha256':digest(dst),'license':'CC0-1.0','license_path':lic.relative_to(REPO).as_posix(),'source_url':f'https://quaternius.com/packs/universalanimationlibrary{str(index) if index==2 else ""}.html','note':'Original engine-neutral animation library, not legacy game animation exports.'})
- (REPO/'Assets/provenance.json').write_text(json.dumps({'assets':records,'generated_models':0,'paid_api_credits_spent':0},ensure_ascii=False,indent=2),encoding='utf-8')
+ provenance_path = REPO/'Assets/provenance.json'
+ existing = json.loads(provenance_path.read_text(encoding='utf-8-sig')) if provenance_path.exists() else {}
+ provenance_path.write_text(json.dumps(merge_provenance(existing, records),ensure_ascii=False,indent=2),encoding='utf-8')
  print('Staged',len(records),'source records')
 
 

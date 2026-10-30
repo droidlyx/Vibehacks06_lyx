@@ -22,6 +22,14 @@ private:
  bool bJourneyWalking=false;
  int32 JourneyEatCount=0;
  FVector JourneyOrigin=FVector::ZeroVector;
+ int32 JourneyVisitIndex=0, JourneyCollectionGrove=-1, JourneyDialogueStart=0;
+ int32 JourneyNegotiationsAttempted=0, JourneyNegotiationsReplied=0;
+ float JourneyTravelDistance=0.f, JourneyNextPathSample=0.f;
+ bool bJourneyHasPosition=false;
+ FVector JourneyLastPosition=FVector::ZeroVector;
+ TArray<FVector4> JourneyPath;
+ TArray<FString> JourneyFullNotes;
+
  float ProbeNPCFoodBefore = 0.f;
  float CaptureAt = 0.f;
  float ProbeTreeBefore = 0.f;

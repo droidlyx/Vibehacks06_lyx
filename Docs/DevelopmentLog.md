@@ -69,3 +69,15 @@ Validation: repository clone succeeded. Engine compilation and gameplay validati
 - Native desktop-control helper was unavailable after retry/reinitialization. Validation uses engine-input replay, not physical desktop automation or a human fun rating.
 
 Next: verify normal-resource completion, make the resulting world state easier to compare, then package separately from v0.1.
+
+## v0.2 world-outcome and full-route checkpoint
+
+- Added an immutable restoration-season record with the opening/restoration population, per-grove control/access/tax and actual per-person donation ledger. A later death or policy change affects the live world without rewriting the earlier record. Fully free/open groves are now distinct from the initial divided/taxed state.
+- Reviewed and fixed three concrete boundaries: a legal0.01-food pledge no longer stalls; gifts earn trust proportional to the actual transfer and cap gift-only goodwill at12; dialogue requests, execution and asynchronous replies revalidate physical conversation distance. Leaving range also releases the dialogue UI/input.
+- All25 world-rule checks passed, including the new fractional-transfer, distance, accounting and season-snapshot cases.
+- A complete normal-resource engine-input route restored100 food at about101s and exited at104s. Contributions were player55, Miya5, Lanshi20 and Taoen20. Four additional real-model requests received replies; two actual policies became free access. The resulting state was3 living main residents,1 living wilderness NPC and3 free groves. Logs show Lanshi independently defeated the red-backed raider during the route. This is an observed run, not a claim that every model response or route has the same result.
+- The same route travelled396m, without teleporting, granting resources/size or freezing residents. The photographed end-state UI was readable at1280x720. The next capture route walks back physically for a wider view and reports restoration time separately from capture time.
+- A brief early-scene Unreal CSV profile at1600x900 on RTX5060 Laptop measured mean frame5.15ms / GPU5.14ms, game2.01ms, draw3.44ms. The initial apparent low-FPS concern was a log-counter wrap, not a measured rendering bottleneck. No speculative graphics downgrade was made. A native-package sample follows.
+- Build tooling now archives each version separately and stages model/visual licenses. It does not switch the launcher until validation succeeds. Source provenance refresh preserves audio and nonzero spend fields from other asset producers.
+
+- Fixed the2.49 growth-stop boundary: the player can reach2.5, digest remaining nutrition, and spend food on healing at maximum size. Full-size/full-health eating preserves inventory. All45 combat/input checks and16 core smoke checks pass after this change.

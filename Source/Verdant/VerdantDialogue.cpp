@@ -118,8 +118,8 @@ FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
             I, *G.Name, G.ControllerId, G.bOpen ? TEXT("是") : TEXT("否"), G.Food, G.Fertility, G.Share * 100);
     }
     State += TEXT("你当前可以考虑的动作：none,follow,truce");
-    if (NPC->Food > .001f) State += TEXT(",give");
-    if (!NPC->bWild && NPC->Food > .001f && !W->bRestored) State += TEXT(",donate");
+    if (NPC->Food >= .01f) State += TEXT(",give");
+    if (!NPC->bWild && NPC->Food >= .01f && !W->bRestored) State += TEXT(",donate");
     if (bOwnsGrove) State += TEXT(",open,close,share");
     if (bCanLeave) State += TEXT(",leave");
     State += TEXT("。最终还会重新验证目标、距离和库存。\n");
@@ -128,10 +128,20 @@ FString UVerdantDialogue::BuildState(AVerdantCharacter* NPC) const
     return State;
 }
 
+bool UVerdantDialogue::CanConverse(const AVerdantCharacter* NPC) const
+{
+    const auto* W = AVerdantWorld::Find(this);
+    const auto* Player = W ? W->FindFolk(0) : nullptr;
+    return IsValid(NPC) && !NPC->bDead && IsValid(Player) && !Player->bDead && NPC != Player
+        && W->FindFolk(NPC->AgentId) == NPC
+        && FVector::Dist2D(NPC->GetActorLocation(), Player->GetActorLocation())
+            <= 750.f * FMath::Max(1.f, Player->BodySize);
+}
+
 bool UVerdantDialogue::ApplyDecision(AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount)
 {
     auto* W = AVerdantWorld::Find(this);
-    if (!W || !IsValid(NPC) || NPC->bDead || NPC->AgentId == 0 || W->FindFolk(NPC->AgentId) != NPC
+    if (!W || !CanConverse(NPC) || NPC->AgentId == 0 || W->FindFolk(NPC->AgentId) != NPC
         || !KnownAction(Action) || !FMath::IsFinite(Amount) || Amount < 0.f || Amount > 20.f || TargetId < 0)
         return false;
     auto* Target = W->FindFolk(TargetId);
@@ -234,6 +244,7 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     auto* Player = W ? W->FindFolk(0) : nullptr;
     if (bBusy || !IsValid(NPC) || NPC->bDead || !IsValid(Player) || Player->bDead || NPC == Player
         || W->FindFolk(NPC->AgentId) != NPC || PlayerText.TrimStartAndEnd().IsEmpty()) return;
+    if (!CanConverse(NPC)) { Status = TEXT("对方已经走远，靠近后再交谈。"); return; }
     Selected = NPC; bBusy = true; Status = TEXT("正在思考……");
     const FString Input = PlayerText.TrimStartAndEnd().Left(500);
     Lines.Add(TEXT("你：") + Input);
@@ -297,6 +308,8 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
         { Self->Status = TEXT("模型未给出完整JSON回答，请重试。"); return; }
         if (!WeakNPC.IsValid() || WeakNPC->bDead)
         { Self->Status = TEXT("对方已经无法回应。"); return; }
+        if (!Self->CanConverse(WeakNPC.Get()))
+        { Self->Status = TEXT("对方已经走远，本次提议未执行。靠近后可以重试。"); return; }
         FString Say, Action;
         double Amount = 0, Target = 0;
         if (!Decision->HasTypedField<EJson::String>(TEXT("say")) || !Decision->HasTypedField<EJson::String>(TEXT("action"))
