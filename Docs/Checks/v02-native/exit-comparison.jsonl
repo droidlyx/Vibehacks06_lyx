@@ -1,0 +1,4 @@
+﻿{"case":"smoke-csv","arguments":["-VerdantSmoke","-csvCaptureFrames=2000","-csvGpuStats"],"exit":777003}
+{"case":"full-no-profiler","arguments":["-VerdantInputJourney","-VerdantFullJourney"],"exit":0}
+{"case":"smoke-csv-cpu","arguments":["-VerdantSmoke","-csvCaptureFrames=2000"],"exit":777003}
+{"case":"smoke-gpu-stats-only","arguments":["-VerdantSmoke","-csvGpuStats"],"exit":0}

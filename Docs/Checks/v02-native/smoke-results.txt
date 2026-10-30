@@ -1,0 +1,17 @@
+PASS Three independent resource groves
+PASS Player and six distinct residents spawned
+PASS Procedural terrain has live collision beneath player
+PASS Player stands on generated landscape
+PASS Harvest and actual controller share conserve food
+PASS Closed grove rejects unauthorized harvest
+PASS Eating transfers food into nutrition reserve
+PASS Continuous growth occurs over simulated time
+PASS Growth preserves ground contact
+PASS Growth test area permits the requested body size
+PASS Larger body directly increases combat strength
+PASS Player starts a melee attack
+PASS Timed melee hit damages another creature
+PASS Sharing is a real conserving transfer
+PASS Mother Tree restoration consumes actual nutrition
+PASS Outcome changes when actual grove access changes
+Failures: 0

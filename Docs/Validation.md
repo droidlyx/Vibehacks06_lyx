@@ -23,3 +23,17 @@ This is a playable prototype, not exhaustive QA. Animation timing across all mov
 Windows Development BuildCookRun completed successfully. The actual packaged executable (not UnrealEditor) passed all 16 smoke, 13 world-behaviour and 3 real-AI integration checks, with zero failures. Packaged 1600x900 screenshots confirm Chinese text, character materials and runtime terrain/plant geometry render correctly.
 
 The portable folder includes the verified Qwen model, llama.cpp binaries/licenses and Play.cmd. The copied model SHA-256 matches official metadata. This verifies the build on this workstation; it is not a claim of testing every GPU or clean Windows installation.
+
+## v0.2 independent Windows build
+
+Built from gameplay commit fc601b7. The native executable passed100 checks:16 core smoke,25 world rules,45 combat/growth/camera/restart,3 real AI integration and11 normal-resource full-journey checks. All five formal process exits were0.
+
+The final full journey restored the tree at99.75s, with no teleports, size/resource grants or frozen NPCs. It physically travelled409.2m, made four additional real-model requests, changed access policies and completed100 actual food contributions. Exact final actors, resources, dialogue and donations are in Checks/v02-native/full-journey.json. These known-route replays do not estimate a first-time human player's completion time.
+
+1280x720 framing at0.45/1.4/2.5 body scales and the expanded HUD passed. The maximum-size nutrition boundary, fractional gifting, minimum legal delivery, distance revalidation, immutable season history and non-duplicating donation ledger were exercised. Native screenshots were inspected at720p and900p.
+
+The portable package's own llama-server and copied model were cold-started after stopping only the earlier task-owned source service; the native AI test passed again. The model hash matches its recorded source. Physical listening/mix judgement, human fun judgement, gamepad support and clean installations on other PCs remain unverified.
+
+Native boot CSV capture reproducibly triggers a shutdown exit777003 on this installed toolchain. It is separate from normal play; ordinary full-journey controls exit0. This was not silently counted as passing or suppressed by disabling crash handling. See [NativeProfilingExit.md](NativeProfilingExit.md) for evidence and the unresolved engine-symbol limitation.
+
+The stable v0.1 executable hash remains unchanged. Versions are archived separately, and the active launcher is promoted only after formal checks.

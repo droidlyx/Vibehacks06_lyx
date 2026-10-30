@@ -81,3 +81,11 @@ Next: verify normal-resource completion, make the resulting world state easier t
 - Build tooling now archives each version separately and stages model/visual licenses. It does not switch the launcher until validation succeeds. Source provenance refresh preserves audio and nonzero spend fields from other asset producers.
 
 - Fixed the2.49 growth-stop boundary: the player can reach2.5, digest remaining nutrition, and spend food on healing at maximum size. Full-size/full-health eating preserves inventory. All45 combat/input checks and16 core smoke checks pass after this change.
+
+## v0.2 native-package verification
+
+- Versioned Windows BuildCookRun succeeded.100 native checks passed, including a full-resource route restoring at99.75s; all five ordinary validation processes exited0.
+- Retained a native boot-CSV shutdown failure (777003), attempted native debugging, documented the unbound engine-source breakpoint, and performed matched option comparisons. CSV-only and CSV+GPU-stat smoke failed on exit; GPU-stats-only and ordinary full journeys exited0. No engine/crash handler was patched. Formal gameplay tests are independent of optional instrumentation.
+- Re-tested portable AI from a cold start using its copied runtime, model and DLLs; real native dialogue passed.
+- Fixed the PowerShell5 report-merging array wrapper and verified five latest actual case records survive JSON round-trip, with earlier failed cases retained separately.
+- Verified the original v0.1 executable hash is unchanged; prepared v0.2 launcher promotion and packaged controls/licenses/demo instructions.

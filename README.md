@@ -2,11 +2,11 @@
 
 一个原创 UE 5.8 原型：在不同体型居民共同生活的山谷中连续成长，用战斗或 AI 协商取得养分，让母树复苏，并改变果林的开放程度、控制者和居民生存状态。
 
-![原型游戏画面](Docs/Images/valley-start.png)
+![原型游戏画面](Docs/Images/v02/valley-start.png)
 
 ## 开始试玩
 
-本机直接运行 **Play.cmd**。启动器优先使用 `Builds/Windows/Verdant.exe`，并在后台启动独立本地 AI 服务。首次模型加载需要几秒。
+本机直接运行 **Play.cmd**，默认启动已验证的 **v0.2**，并在后台启动独立本地 AI 服务。首次模型加载需要几秒。完整便携包位于 `Builds/v0.2/Windows`；v0.1保留在 `Builds/Windows`。
 
 源码启动要求 Unreal Engine 5.8.3；可通过环境变量 `UE_ROOT` 指定引擎目录。仓库使用 Git LFS，克隆后执行 `git lfs pull`。
 
@@ -55,7 +55,7 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 
 ## 验证与来源
 
-已完成的验证与剩余限制见 [Validation.md](Docs/Validation.md)。美术来源、许可和处理过程见 [Assets/README.md](Assets/README.md)。
+v0.2独立构建通过100项运行检查，并完成正常资源的一整局。已完成的验证与剩余限制见 [Validation.md](Docs/Validation.md)，现场展示参考 [DemoGuide.md](Docs/DemoGuide.md)。美术来源、许可和处理过程见 [Assets/README.md](Assets/README.md)。
 
 三个3D服务的官方接口、价格和预算记录见 [GenerationAPIs.md](Docs/GenerationAPIs.md)。本轮3D生成花费为0：本地许可明确且风格合适的素材已满足原型。初次只读余额为Tripo 3000、V2fun 5100、Hyper3D 223。
 

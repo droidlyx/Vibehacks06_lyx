@@ -41,4 +41,5 @@ if ((Test-Path -LiteralPath $packaged) -and -not $Editor) {
 }
 if($Smoke){$arguments+=@('-VerdantSmoke','-RenderOffscreen','-unattended')}
 if(-not(Test-Path -LiteralPath $exe)){throw 'Build missing. Set UE_ROOT or create the packaged Windows build.'}
-Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $projectRoot
+if($Smoke){Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $projectRoot -WindowStyle Hidden}
+else{Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $projectRoot}
