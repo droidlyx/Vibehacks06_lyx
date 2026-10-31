@@ -1,4 +1,4 @@
-# 长大以后 · Verdant Accord — Windows 游戏包
+# 快快长大（Grow up）— Windows 游戏包
 
 请完整解压文件夹后双击 `Play.cmd`。保留 `Verdant.exe`、`Verdant/`、`Engine/` 和其他随包文件的相对位置，不要只复制一个
 EXE。无需安装 Unreal 编辑器、Python、Qwen 或 StartLux。
@@ -7,8 +7,9 @@ EXE。无需安装 Unreal 编辑器、Python、Qwen 或 StartLux。
 
 ## 对话服务
 
-当前游戏使用七牛兼容接口 `https://api.qnaigc.com/v1` 的 `deepseek/deepseek-v4.1-flash-1017`
-，同一次请求判断相关性并生成回应。联网对话需要接收者自己的该服务 API 密钥，调用费用由接收者的服务账户承担；本包不含开发者密钥或本地推理模型。
+当前游戏使用七牛兼容接口 `https://api.qnaigc.com/v1` 的 `deepseek/deepseek-v4.1-flash-1017`。
+先生成初步意愿，由游戏检查行动可行性，再生成最终对白并在发布时复验；相关回应可能使用两次顺序请求，无关内容可提前结束。
+联网对话需要接收者自己的该服务 API 密钥，调用费用由接收者的服务账户承担；本包不含开发者密钥或本地推理模型。
 
 在启动环境中设置 `DEEPSEEK_API_KEY`，或自行创建 `Local/Secrets/deepseek.key`，文件中只放密钥，然后通过 `Play.cmd`
 启动。密钥只留在自己的电脑上；转交游戏包前不要带上自行创建的 `Local/` 目录。详细配置见 [Docs/LocalAI.md](Docs/LocalAI.md)。
