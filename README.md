@@ -1,6 +1,6 @@
 # 长大以后 · Verdant Accord
 
-当前编辑器工作副本已切换至 DeepSeek V4.1-Flash：通过 `https://api.qnaigc.com/v1` 调用 `deepseek/deepseek-v4.1-flash-1017`，负责自由对话和协商内容。使用 `Open-Editor.cmd` 打开本工程；启动器不再自动加载 Qwen。StartLux 仅保留按需启动入口，用于未来的次要选择，当前 NPC 日常行为仍由游戏规则驱动。密钥和启动说明见 [AI 配置](Docs/LocalAI.md)。
+当前编辑器工作副本的对话先由本地 StartLux（`http://127.0.0.1:8090/v1/systemone`）筛选，再将通过筛选的请求加入 DeepSeek 队列，通过 `https://api.qnaigc.com/v1` 调用 `deepseek/deepseek-v4.1-flash-1017` 生成回应。通过 `Open-Editor.cmd` 打开编辑器或通过 `Start-Game.ps1` 启动游戏时，若 DeepSeek 密钥有效且引导工具存在，会在后台检查并按需启动 StartLux；模型就绪前对话暂不可用。直接打开项目或执行验证时，请先显式运行 `Start-SecondaryAI.ps1`。启动器不再加载 Qwen。本地筛选服务不可用或响应无效时，不会跳过筛选直接调用云端。NPC 日常行动仍由游戏规则驱动。密钥和启动说明见 [AI 配置](Docs/LocalAI.md)。
 
 当前源码包含 DeepSeek 对话、生物角色与界面更新；下文的 v0.3 可玩包及历史验证记录属于原始交付版本，尚未按当前源码重新打包，不能作为这些更新的试玩验收结果。
 
@@ -11,7 +11,7 @@
 
 ## 开始试玩
 
-本机直接运行 **Play.cmd**，默认启动已验证的 **v0.3**，并在后台启动独立本地 AI 服务。首次模型加载需要几秒。完整便携包位于 `Builds/v0.3/Windows`；v0.1保留在 `Builds/Windows`。
+历史 **v0.3** 便携包通过包内 **Play.cmd** 启动，使用原版独立本地 AI 服务；首次模型加载需要几秒。完整便携包位于 `Builds/v0.3/Windows`；v0.1保留在 `Builds/Windows`。这与当前源码的 StartLux 筛选→DeepSeek 对话链路不同，新链路仍待用户手动试玩验收。
 
 源码启动要求 Unreal Engine 5.8.3；可通过环境变量 `UE_ROOT` 指定引擎目录。仓库使用 Git LFS，克隆后执行 `git lfs pull`。
 

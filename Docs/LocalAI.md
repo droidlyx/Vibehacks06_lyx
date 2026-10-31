@@ -1,7 +1,8 @@
-﻿# AI providers
+# AI providers
 
-The current source project uses **DeepSeek V4.1 Flash 1017 through Qiniu's compatible API** for NPC dialogue and
-consequential negotiation. Qwen3 is no longer automatically started or used as a fallback.
+The current source project sends nearby speech through **local StartLux relevance screening**, then queues accepted
+responses for **DeepSeek V4.1 Flash 1017 through Qiniu's compatible API**. StartLux must be running for this dialogue
+path. Qwen3 is no longer automatically started or used as a fallback.
 
 ## Cloud dialogue configuration
 
@@ -26,23 +27,40 @@ launcher to inherit an environment key, or use the private file in this project.
 requests show an explicit dialogue status; the game never silently falls back to Qwen. Movement, combat and rule-based
 NPC behavior remain available.
 
-## Optional local secondary decisions
+## Required local relevance screening
 
-StartLux-Decision-2B-Q4_K_M is reserved for occasional bounded secondary choices. It does not generate dialogue or
-replace DeepSeek's main negotiation path. Existing routine NPC behavior remains game rules; no recurring StartLux
-requests are made by default.
+StartLux-Decision-2B-Q4_K_M screens nearby speech at `http://127.0.0.1:8090/v1/systemone`. Only speech accepted by this
+screening enters the DeepSeek queue. If the service is unavailable or returns an invalid response, the game reports
+that status and characters continue their existing actions; it does not bypass screening and call the cloud directly.
+Routine movement and resource behavior remain driven by game rules.
 
-Run `Start-SecondaryAI.ps1` explicitly when needed, and `Stop-SecondaryAI.ps1` to stop the processes owned by that
-launcher. The scripts use the existing vendor llama.cpp runtime and original StartLux model package, with local-only
-endpoints. `Start-LocalAI.ps1` is a compatibility notice and starts no model.
+`Open-Editor.cmd` imports the DeepSeek credential and opens the editor; `Start-Game.ps1` launches the selected game
+build or the editor-backed game. With a valid credential and `Tools/Ensure-DialogueGate.ps1` present, both entry points
+start that helper in the background. It reuses a healthy StartLux service or invokes `Start-SecondaryAI.ps1` to start
+one. `Start-Game.ps1 -NoAI` skips this bootstrap. The game can open before the local model is ready; dialogue remains
+gated until the service responds correctly. Bootstrap output is in `Saved/AI/gate-bootstrap.out.log` and
+`Saved/AI/gate-bootstrap.err.log`.
+
+When opening `Verdant.uproject` directly or running the validation launcher, explicitly start StartLux first. Manual
+startup is also useful when overriding the local model paths:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Start-SecondaryAI.ps1
+.\Open-Editor.cmd
+```
+
+Use `Stop-SecondaryAI.ps1` when finished to stop the processes owned by its launcher. The scripts use the existing
+vendor llama.cpp runtime and original StartLux model package, with local-only endpoints. `Start-LocalAI.ps1` is a
+compatibility notice and starts no model.
 
 The secondary launcher's default model and Python paths describe the original development machine. On another machine,
 pass `-ModelDirectory`, `-Python` and, if needed, `-Server` for your installed model package, Python environment and
-llama.cpp executable. These optional local dependencies are not required for DeepSeek dialogue.
+llama.cpp executable. These local dependencies and the DeepSeek credential are both required for the current dialogue
+path. The integrated flow still awaits the user's manual gameplay review.
 
 ## Validation and existing builds
 
-Rebuild the current editor project, then run:
+Rebuild the current editor project and explicitly start StartLux as above before running AI validation:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File Tools/Validate-Build.ps1 -Editor -Only AI

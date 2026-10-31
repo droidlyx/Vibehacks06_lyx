@@ -1,0 +1,35 @@
+{
+  "status": "runtime_subset_implemented_pending_manual_validation",
+  "implementation_scope": [
+    "Nearby hearing, local relevance gating, queued cloud responses and proactive dialogue are present in current source.",
+    "The runtime selects 20 of the 53 catalog character types; the full relationship and interaction specification is not claimed complete.",
+    "The parameters below remain the original design specification; gameplay and performance acceptance are pending."
+  ],
+  "architecture": "rules_execute_continuously__startlux_filters_events__deepseek_changes_intent",
+  "spec": "../ConversationRuntime.zh-CN.md",
+  "required_relevance_gate": "StartLux",
+  "dialogue_provider": "DeepSeek",
+  "hearing_radius_cm": 2000,
+  "proactive_active_radius_cm": 5000,
+  "npc_response_gap_seconds": 3,
+  "npc_to_player_initiative_cooldown_seconds": [60, 120],
+  "npc_pair_initiative_cooldown_seconds": [120, 240],
+  "global_initiative_gap_seconds": 20,
+  "local_inference_concurrency": 1,
+  "cloud_inference_concurrency": 1,
+  "max_pending_reply_per_npc": 1,
+  "max_npc_replies_per_player_utterance": 2,
+  "max_automatic_npc_lines_per_thread": 2,
+  "event_ttl_seconds": 20,
+  "keep_rule_behavior_while_inference_pending": true,
+  "none_preserves_current_intent": true,
+  "deduplicate_by": ["message_id", "listener_instance_id"],
+  "validate_before_apply": ["alive", "distance", "target_exists", "permission", "resource", "relevant_intent_version", "not_already_applied"],
+  "local_gate_failure": "no_cloud_fallback; retain_current_behavior",
+  "notes": [
+    "Values are untested starting points, not measured performance guarantees.",
+    "Relevant listeners may wait or expire under the response budget; do not label unserved events irrelevant.",
+    "Do not infer age or identity from size.",
+    "Do not maintain follow, protection or combat by repeated model calls."
+  ]
+}

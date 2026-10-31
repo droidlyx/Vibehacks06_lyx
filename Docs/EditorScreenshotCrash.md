@@ -79,3 +79,22 @@ The 02:10 UTC crash was a different failure: legacy Hot Reload began while a fai
 Live Coding reload remained active, triggering `GActiveReloadInterface == nullptr`.
 Do not conflate it with this screenshot readback crash, and do not switch reload modes
 mid-failure as a recovery mechanism.
+
+## Separate ecology texture-import failure — 2026-10-31 05:20 UTC
+
+While running `Tools/import_ecology_assets.py` through the live Rider Python callback,
+the first mesh saved successfully, then the default PNG texture import entered
+Interchange's synchronous wait. The editor asserted
+`++Queue(QueueIndex).RecursionGuard == 1` in `FNamedTaskThread::ProcessTasksUntilIdle`.
+The stack includes `FInterchangeTaskSystem::WaitUntilTasksComplete`,
+`ImportAssetTasks`, and Rider's `ExecuteOnGameThread`; this is a separate import/task
+re-entry failure, not the screenshot crash above. No screenshot request was made.
+
+The live log is retained at `Saved/Environment/ecology-import-live-crash.log`.
+The import was completed successfully in an isolated `-run=pythonscript -NullRHI`
+commandlet with `-ExecCmds="Interchange.FeatureFlags.Import.Enable 0"`, explicit
+`FbxFactory` and `TextureFactory`, and no PIE. All six meshes, materials and textures
+were saved and verified; see `Saved/Environment/ecology-import.json` and
+`ecology-import-commandlet.log`. The command-line setting affects that import process
+only. Do not retry this default Interchange texture-import workflow from a live MCP
+task-graph callback. This workaround is not an engine-level fix.
