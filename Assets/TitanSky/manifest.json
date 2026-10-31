@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "copied_at_utc": "2026-10-31T04:24:08.747874+00:00",
+  "source_project": "E:\\UE_projects\\ProjectTitan",
+  "purpose": "Selected Titan soft stylized volumetric clouds for Verdant's woodland sky trial",
+  "rights": "Applicable Epic / Project Titan terms retained; not CC0. No external service upload.",
+  "method": "Explicit reviewed six-package set, original /Game paths, source unchanged, SHA-256 verified",
+  "entry_material": "/Game/Environment/_Global/Materials/Sky/M_Clouds_Soft",
+  "files": [
+    {
+      "path": "Environment/_Global/Materials/Sky/M_Clouds.uasset",
+      "bytes": 79290,
+      "sha256": "9469efd9477599a072469bd6240a7bbd2caa9f6aadf95d10b86fbf48cbce22ba"
+    },
+    {
+      "path": "Environment/_Global/Materials/Sky/M_Clouds_Soft.uasset",
+      "bytes": 10314,
+      "sha256": "9be6159dc2dab2672d2f2d11e89f9c403695742dc2b870c1681fb01976a93cbb"
+    },
+    {
+      "path": "Environment/_Global/Materials/Sky/T_Clouds_Profile.uasset",
+      "bytes": 40023,
+      "sha256": "f8be0bb96df6ad8bc2e75544ca797b9605f30d109020d1f28f5c96a2a44c85b7"
+    },
+    {
+      "path": "Environment/_Global/Materials/Sky/T_StylizedClouds_Voronoi.uasset",
+      "bytes": 902728,
+      "sha256": "4b0435483b39b1cbc4884ed4fa0396c842fa42b9bf241298002131d50b94fac5"
+    },
+    {
+      "path": "Environment/_Global/Materials/Sky/T_StylizedClouds_Weather.uasset",
+      "bytes": 989468,
+      "sha256": "9ac06e1450d6a01b8889b462618fed5c7d14b6d74697098fc543caf9f8f52cd5"
+    },
+    {
+      "path": "Environment/_Global/Materials/Sky/VT_StylizedClouds_Voronoi.uasset",
+      "bytes": 12630756,
+      "sha256": "d402eb9ad19722e41bf5d818b0dbe97c66dc28df1ed26bb3a9df0659dee40e37"
+    }
+  ],
+  "raw_package_references": {
+    "/Game/Environment/_Global/Materials/Sky/M_Clouds_Soft": [
+      "/Game/Environment/_Global/Materials/Sky/M_Clouds",
+      "/Game/Environment/_Global/Materials/Sky/M_Clouds_Soft",
+      "/Script/CoreUObject",
+      "/Script/Engine",
+      "/Script/UnrealEd"
+    ],
+    "/Game/Environment/_Global/Materials/Sky/M_Clouds": [
+      "/Engine/Functions/Engine_MaterialFunctions02/Utility/AppendMany",
+      "/Engine/Functions/Engine_MaterialFunctions03/Math/RemapValueRange",
+      "/Game/Environment/_Global/Materials/Sky/M_Clouds",
+      "/Game/Environment/_Global/Materials/Sky/T_Clouds_Profile",
+      "/Game/Environment/_Global/Materials/Sky/T_StylizedClouds_Weather",
+      "/Game/Environment/_Global/Materials/Sky/VT_StylizedClouds_Voronoi",
+      "/Script/CoreUObject",
+      "/Script/Engine",
+      "/Script/UnrealEd"
+    ],
+    "/Game/Environment/_Global/Materials/Sky/T_Clouds_Profile": [
+      "/Engine/Transient",
+      "/Game/Environment/_Global/Materials/Sky/T_Clouds_Profile",
+      "/Script/CoreUObject",
+      "/Script/Engine",
+      "/Script/InterchangeCore",
+      "/Script/InterchangeEngine",
+      "/Script/InterchangeFactoryNodes",
+      "/Script/InterchangePipelines"
+    ],
+    "/Game/Environment/_Global/Materials/Sky/T_StylizedClouds_Weather": [
+      "/Engine/Transient",
+      "/Game/Environment/_Global/Materials/Sky/T_StylizedClouds_Weather",
+      "/Script/CoreUObject",
+      "/Script/Engine",
+      "/Script/InterchangeCore",
+      "/Script/InterchangeEngine",
+      "/Script/InterchangeFactoryNodes",
+      "/Script/InterchangePipelines"
+    ],
+    "/Game/Environment/_Global/Materials/Sky/T_StylizedClouds_Voronoi": [
+      "/Engine/Transient",
+      "/Game/Environment/_Global/Materials/Sky/T_StylizedClouds_Voronoi",
+      "/Script/CoreUObject",
+      "/Script/Engine",
+      "/Script/InterchangeCore",
+      "/Script/InterchangeEngine",
+      "/Script/InterchangeFactoryNodes",
+      "/Script/InterchangePipelines"
+    ],
+    "/Game/Environment/_Global/Materials/Sky/VT_StylizedClouds_Voronoi": [
+      "/Game/Environment/_Global/Materials/Sky/T_StylizedClouds_Voronoi",
+      "/Game/Environment/_Global/Materials/Sky/VT_StylizedClouds_Voronoi",
+      "/Script/CoreUObject",
+      "/Script/Engine"
+    ]
+  },
+  "material_parameter_name_candidates": {
+    "/Game/Environment/_Global/Materials/Sky/M_Clouds_Soft": [
+      "BottomCloudHeightVariance",
+      "CloudThickness",
+      "M_Clouds",
+      "M_Clouds_Soft",
+      "M_Clouds_SoftEditorOnlyData",
+      "M_Clouds_TestEditorOnlyData"
+    ],
+    "/Game/Environment/_Global/Materials/Sky/M_Clouds": [
+      "Albedo",
+      "BottomCloudHeightVariance",
+      "Cloud Erosion",
+      "CloudHeight",
+      "CloudSpeed",
+      "CloudThickness",
+      "CloudType",
+      "ConservativeDensity",
+      "ErosionExp",
+      "ErosionMax",
+      "ErosionNewMin",
+      "ErosionNoiseScale",
+      "ErosionScale",
+      "ErosionSpeed",
+      "ErosionStength",
+      "Extinction",
+      "ExtinctionScale",
+      "M_Clouds",
+      "M_CloudsEditorOnlyData",
+      "MaterialExpressionCloudSampleAttribute",
+      "MultiScatteringApproximationOctaveCount",
+      "MultiScatteringContribution",
+      "MultiScatteringEccentricity",
+      "MultiScatteringOcclusion",
+      "Smoke Density",
+      "SmokeHeight",
+      "SurfaceThickness",
+      "T_Clouds_Profile",
+      "T_StylizedClouds_Weather",
+      "VT_StylizedClouds_Voronoi",
+      "WeatherSpeed",
+      "bUsedWithVolumetricCloud"
+    ]
+  },
+  "parameter_note": "Raw package strings are discovery hints, not confirmed editable parameters. Inspect through Unreal MaterialEditingLibrary before setting values.",
+  "validation": "File integrity and bounded source dependency scan only. Shader compilation, cloud appearance and performance await editor/user inspection."
+}

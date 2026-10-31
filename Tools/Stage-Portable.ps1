@@ -5,6 +5,9 @@ $root=Split-Path $PSScriptRoot
 $dest=Join-Path $root ('Builds\'+$Version+'\Windows')
 if(-not(Test-Path -LiteralPath (Join-Path $dest 'Verdant.exe'))){throw 'Package the version before staging the portable files.'}
 foreach($file in @('Play.cmd','Start-Game.ps1','README.md')){Copy-Item -LiteralPath (Join-Path $root $file) -Destination $dest -Force}
+foreach($file in @('Start-SecondaryAI.ps1','Stop-SecondaryAI.ps1')){Copy-Item -LiteralPath (Join-Path $root $file) -Destination $dest -Force}
+$portableTools=Join-Path $dest 'Tools'; New-Item -ItemType Directory -Path $portableTools -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $root 'Tools\Ensure-DialogueGate.ps1') -Destination $portableTools -Force
 Copy-Item -LiteralPath (Join-Path $root 'Docs') -Destination $dest -Recurse -Force
 $assets=Join-Path $dest 'Assets'; New-Item -ItemType Directory -Path $assets -Force | Out-Null
 foreach($file in @('README.md','manifest.json','provenance.json','generation-ledger.json')){Copy-Item -LiteralPath (Join-Path $root ('Assets\'+$file)) -Destination $assets -Force}
