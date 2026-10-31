@@ -115,3 +115,7 @@ Next: verify normal-resource completion, make the resulting world state easier t
 All eight hidden native cases completed successfully at 2026-10-31 07:14 Shanghai. Final handoff resumed after an interrupted session; no claim of continuous work during the interruption. Gameplay source: 2d7ba41. Stable v0.2 preserved. Added reproducible independent editor-project export, including source, uncooked content, configuration, editor module and local AI; excluded old build output, git history and caches.
 
 Independent editor export verified at E:/UE_projects/VerdantAccord_v03: clean editor-module compilation succeeded; Source/Content/Config files hash-match the repository; hidden Smoke and real-model AI checks both returned 0 with fresh zero-failure reports. Git delivery remains on iteration/living-world-v0.3; automatic approval declined the optional main/tag publication, so neither was performed.
+
+## Project summary and release authorization
+
+Added Docs/ProjectOverview.zh-CN.md covering verified design, finite-scale boundaries, actual CC0/procedural assets, zero generation spend, native route evidence and editor handoff. The user subsequently explicitly authorized merging into main and publishing the version tag; this supersedes the earlier missing-authorization block.

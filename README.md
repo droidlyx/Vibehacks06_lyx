@@ -1,5 +1,6 @@
 # 长大以后 · Verdant Accord
 
+设计、素材、生成预算与当前进展：[中文项目总览](Docs/ProjectOverview.zh-CN.md)。
 一个原创 UE 5.8 原型：在不同体型居民共同生活的山谷中连续成长，用战斗或 AI 协商取得养分，让母树复苏，并改变果林的开放程度、控制者和居民生存状态。
 
 ![原型游戏画面](Docs/Images/v03/valley-start.png)
