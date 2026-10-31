@@ -1,5 +1,10 @@
 # Validation record
 
+## v0.3 independent package
+
+All eight native cases passed: Smoke, World, NPC, Social, Combat, AI, FullJourney and StewardJourney. Each exited normally and produced a fresh zero-failure report. The v0.3 packaged AI server was separately cold-started and its real-model AI case passed again. Reports and build hash: [v03-native](Checks/v03-native). Ordinary-resource public and peaceful-steward routes both restored the tree, retaining different access and ownership outcomes. All tests were hidden engine replays, not physical desktop input. The existing native boot-CSV exit limitation remains documented and was not enabled.
+
+
 ## Engine/runtime
 
 - Unreal Engine 5.8.3, Windows, Development configuration.

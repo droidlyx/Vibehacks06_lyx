@@ -2,11 +2,11 @@
 
 一个原创 UE 5.8 原型：在不同体型居民共同生活的山谷中连续成长，用战斗或 AI 协商取得养分，让母树复苏，并改变果林的开放程度、控制者和居民生存状态。
 
-![原型游戏画面](Docs/Images/v02/valley-start.png)
+![原型游戏画面](Docs/Images/v03/valley-start.png)
 
 ## 开始试玩
 
-本机直接运行 **Play.cmd**，默认启动已验证的 **v0.2**，并在后台启动独立本地 AI 服务。首次模型加载需要几秒。完整便携包位于 `Builds/v0.2/Windows`；v0.1保留在 `Builds/Windows`。
+本机直接运行 **Play.cmd**，默认启动已验证的 **v0.3**，并在后台启动独立本地 AI 服务。首次模型加载需要几秒。完整便携包位于 `Builds/v0.3/Windows`；v0.1保留在 `Builds/Windows`。
 
 源码启动要求 Unreal Engine 5.8.3；可通过环境变量 `UE_ROOT` 指定引擎目录。仓库使用 Git LFS，克隆后执行 `git lfs pull`。
 
@@ -31,7 +31,8 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 | Q | 食用5份食物，逐渐吸收并长大 |
 | F / Shift+F | F在母树附近供奉5份、居民附近分享5份；Shift+F在母树附近批量供奉 |
 | T | 与附近居民自由交谈；Enter发送，Esc退出 |
-| G | 接管无主果林；已管理时切换开放或关闭 |
+| B | 在允许采集的果林花费食物养护土壤 |
+| G | 接管无主果林；已管理时切换免费、30%分成、限制采集 |
 | R | 重新开始这一局 |
 
 ## 一局可以怎样玩
@@ -55,8 +56,10 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 
 ## 验证与来源
 
-v0.2独立构建通过100项运行检查，并完成正常资源的一整局。已完成的验证与剩余限制见 [Validation.md](Docs/Validation.md)，现场展示参考 [DemoGuide.md](Docs/DemoGuide.md)。美术来源、许可和处理过程见 [Assets/README.md](Assets/README.md)。
+v0.3独立构建通过八类后台验证，包括正常资源下的公共开放与和平接管两条完整路线。已完成的验证与剩余限制见 [Validation.md](Docs/Validation.md)，现场展示参考 [DemoGuide.md](Docs/DemoGuide.md)。美术来源、许可和处理过程见 [Assets/README.md](Assets/README.md)。
 
 三个3D服务的官方接口、价格和预算记录见 [GenerationAPIs.md](Docs/GenerationAPIs.md)。本轮3D生成花费为0：本地许可明确且风格合适的素材已满足原型。初次只读余额为Tripo 3000、V2fun 5100、Hyper3D 223。
 
 这是独立新项目、新代码和新地图。Ember仅作为设计参考，没有迁入它的项目历史、游戏代码、地图或已制作UE资产。[DevelopmentLog.md](Docs/DevelopmentLog.md)记录阶段开发和实际发现的问题。
+
+编辑器项目导出：`Tools/Export-EditorProject.ps1`。本机独立副本位于 `E:/UE_projects/VerdantAccord_v03/Verdant.uproject`，使用 UE 5.8.3 打开；不是打包后的 exe。

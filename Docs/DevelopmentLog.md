@@ -109,3 +109,7 @@ Next: verify normal-resource completion, make the resulting world state easier t
 - Complete public and peaceful-steward routes now both pass, preserving all3 main residents and creating distinct ownership/access outcomes.
 - Closed/open600-second natural simulations each checked36007 frames, with no invariant failures or reported stationary-travel suspects. Both eventually settle with sufficient stock; this does not demonstrate endlessly escalating autonomous stories.
 - No generated models or paid API tasks were added. Preparing a separate native v0.3 package; v0.2 remains intact.
+
+## v0.3 native validation and editor handoff
+
+All eight hidden native cases completed successfully at 2026-10-31 07:14 Shanghai. Final handoff resumed after an interrupted session; no claim of continuous work during the interruption. Gameplay source: 2d7ba41. Stable v0.2 preserved. Added reproducible independent editor-project export, including source, uncooked content, configuration, editor module and local AI; excluded old build output, git history and caches.

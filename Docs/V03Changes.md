@@ -15,7 +15,7 @@
 - Conversations have separate visible histories and statuses. A delayed response cannot appear as a different resident's reply. Model-visible history is bounded by complete exchanges and a2000-character budget.
 - The model sees the same legal action/target/amount list as the executor. Refusal cannot be silently substituted with closing a grove. Action status states what actually occurred, separately from NPC speech.
 
-## Observed routes (editor, before native verification)
+## Observed routes (editor and native verification)
 
 Both ordinary-resource routes use actual movement, collection, tending and real local-model decisions. No teleports, free food/size or frozen residents are used.
 
@@ -26,4 +26,4 @@ An earlier steward attempt obtained only one grove because the actual help was b
 
 Two independent600-second natural simulations checked72014 frames in total, with zero numeric-invariant failures and zero stationary-travel suspects. With no player pressure both worlds eventually settle into stocked, mostly waiting residents; this is stability evidence, not a claim of endless self-generated drama. The open variant changes one owner policy at2 seconds and is identified as an intervention.
 
-All tools and game/editor validation remain hidden and muted for this user-requested two-hour iteration. Native validation and portable staging follow before promotion.
+All tools and game/editor validation remain hidden and muted for this user-requested two-hour iteration. The native v0.3 package passed all eight validation cases, each with exit code 0 and a fresh zero-failure report. Evidence: Docs/Checks/v03-native. Public and steward routes both reached 100 nutrition through normal resources.
