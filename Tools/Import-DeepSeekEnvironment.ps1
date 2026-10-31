@@ -18,6 +18,12 @@ if (-not $keyReady) {
     Write-Host 'DeepSeek API key is missing or invalid. See Docs/LocalAI.md; gameplay remains available.'
 }
 if ($OpenEditor) {
+    $gateLog=Join-Path $ProjectRoot 'Saved\AI'
+    New-Item -ItemType Directory -Path $gateLog -Force | Out-Null
+    $gateBootstrap=Join-Path $PSScriptRoot 'Ensure-DialogueGate.ps1'
+    if($keyReady -and (Test-Path -LiteralPath $gateBootstrap)) {
+        Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$gateBootstrap+'"'),'-ProjectRoot',('"'+$ProjectRoot+'"')) -WindowStyle Hidden -RedirectStandardOutput (Join-Path $gateLog 'gate-bootstrap.out.log') -RedirectStandardError (Join-Path $gateLog 'gate-bootstrap.err.log')
+    }
     $engineRoot=if($env:UE_ROOT){$env:UE_ROOT}else{'E:\UE_5.8'}
     $editorExe=Join-Path $engineRoot 'Engine\Binaries\Win64\UnrealEditor.exe'
     if (-not (Test-Path -LiteralPath $editorExe)) { throw 'Unreal Editor is missing. Set UE_ROOT to the engine directory.' }

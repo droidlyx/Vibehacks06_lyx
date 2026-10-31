@@ -16,6 +16,13 @@ if ($NoAI) {
         Write-Host 'DeepSeek API key is missing or invalid. See Docs/LocalAI.md; gameplay remains available.'
     }
 }
+if (-not $NoAI -and -not [string]::IsNullOrWhiteSpace($env:DEEPSEEK_API_KEY)) {
+    $gateBootstrap=Join-Path $projectRoot 'Tools\Ensure-DialogueGate.ps1'
+    if(Test-Path -LiteralPath $gateBootstrap) {
+        $gateLog=Join-Path $projectRoot 'Saved\AI';New-Item -ItemType Directory -Path $gateLog -Force | Out-Null
+        Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$gateBootstrap+'"'),'-ProjectRoot',('"'+$projectRoot+'"')) -WindowStyle Hidden -RedirectStandardOutput (Join-Path $gateLog 'gate-bootstrap.out.log') -RedirectStandardError (Join-Path $gateLog 'gate-bootstrap.err.log')
+    } else {Write-Host 'StartLux gate bootstrap is missing; model dialogue will stay unavailable.'}
+}
 $packaged=Join-Path $projectRoot 'Verdant.exe'
 if(-not(Test-Path -LiteralPath $packaged)){
     $buildRoot=Join-Path $projectRoot 'Builds'

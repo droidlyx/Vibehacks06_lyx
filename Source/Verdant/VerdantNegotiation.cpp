@@ -74,7 +74,8 @@ float AVerdantWorld::MaxNegotiatedGive(const AVerdantCharacter* NPC, const AVerd
         NPC->AgentId == 0 || !PeacefulWithPlayer(this, NPC))
         return 0.f;
     const FSocialTerms T = Terms(NPC);
-    float Allowed = FMath::Min(20.f, FMath::Max(0.f, NPC->Food - T.Reserve - NPC->DonationPledge));
+    if (Target->FoodTier() < NPC->FoodTier()) return 0.f;
+    float Allowed = FMath::Min3(20.f, Target->FreeFoodCapacity(), FMath::Max(0.f, NPC->Food - T.Reserve - NPC->DonationPledge));
     if (Target->AgentId == 0)
     {
         // Initial charity is a lifetime NET allowance. A returned gift restores

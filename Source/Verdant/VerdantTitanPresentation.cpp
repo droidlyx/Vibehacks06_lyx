@@ -23,17 +23,47 @@ namespace VerdantTitanPresentation
 			return LoadObject<T>(nullptr, *(Package + TEXT(".") + Name));
 		}
 
-		bool IsPenguin(const AVerdantCharacter* C) { return C->AgentId == 1 || C->AgentId == 3; }
-		bool IsFerret(const AVerdantCharacter* C) { return C->AgentId == 4 || C->AgentId == 6; }
+		bool IsPenguin(const AVerdantCharacter* C)
+		{
+			return !C->ModelPath.IsEmpty()
+				       ? C->ModelPath.Contains(TEXT("Penguin"))
+				       : C->AgentId == 1 || C->AgentId == 3;
+		}
+
+		bool IsFerret(const AVerdantCharacter* C)
+		{
+			return !C->ModelPath.IsEmpty()
+				       ? (C->ModelPath.Contains(TEXT("Ferret")) || C->ModelPath.Contains(TEXT("Ferrret")))
+				       : C->AgentId == 4 || C->AgentId == 6;
+		}
 	}
 
 	float BaseHeight(const AVerdantCharacter* C)
 	{
+		// Population model bounds are normalized to the same physical height basis.
+		if (!C->ModelPath.IsEmpty()) return 180.f;
 		return IsFerret(C) && C->BodyParts.IsEmpty() ? 110.f : 180.f;
 	}
 
 	bool Load(AVerdantCharacter* C)
 	{
+		if (!C->ModelPath.IsEmpty())
+		{
+			auto* Mesh = Asset<USkeletalMesh>(C->ModelPath);
+			if (!Mesh)
+			{
+				UE_LOG(LogTemp, Error, TEXT("VERDANT_RESIDENT_MESH_MISSING type=%s path=%s"), *C->CharacterTypeId,
+				       *C->ModelPath);
+				return false;
+			}
+			C->GetMesh()->SetSkeletalMeshAsset(Mesh);
+			C->IdleAnimation = C->IdlePath.IsEmpty() ? nullptr : Asset<UAnimSequence>(C->IdlePath);
+			C->WalkAnimation = C->WalkPath.IsEmpty() ? nullptr : Asset<UAnimSequence>(C->WalkPath);
+			C->RunAnimation = C->WalkAnimation;
+			C->GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+			C->GetMesh()->SetVisibility(true);
+			return true;
+		}
 		auto* Mesh = Asset<USkeletalMesh>(IsPenguin(C)
 			                                  ? Penguin + TEXT("T-Pose_weight_color")
 			                                  : IsFerret(C)
@@ -60,6 +90,8 @@ namespace VerdantTitanPresentation
 
 	void Paint(AVerdantCharacter* C)
 	{
+		// Preserve the twenty authored Titan materials; role identity is not a recolour.
+		if (!C->ModelPath.IsEmpty()) return;
 		if (auto* W = C->Valley())
 		{
 			// Jellybean's original glossy body is replaced by matte role colour.

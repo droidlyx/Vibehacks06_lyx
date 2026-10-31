@@ -1,4 +1,6 @@
 #include "VerdantCharacter.h"
+#include "VerdantPlayerScale.h"
+#include "VerdantEconomyRules.h"
 #include "VerdantCreaturePresentation.h"
 #include "VerdantTitanPresentation.h"
 #include "VerdantWorld.h"
@@ -24,9 +26,9 @@
 
 namespace VerdantScaleTest
 {
-	constexpr float MinimumSize = .1f;
+	constexpr float MinimumSize = VerdantPlayerScale::StartingBodySize;
 	constexpr float MaximumSize = 20.f;
-	constexpr float ResetSize = .45f;
+	constexpr float ResetSize = VerdantPlayerScale::StartingBodySize;
 
 	bool IsActive(const AVerdantCharacter* Player)
 	{
@@ -79,7 +81,9 @@ namespace VerdantScaleTest
 		if (auto* World = Player->Valley())
 		{
 			if (!Applied) World->Notify(TEXT("缩放受阻：附近地形或物体没有足够空间，请移到开阔处。"));
-			else if (Reset) World->Notify(TEXT("已恢复出发体型 0.81 米，退出缩放测试。"));
+			else if (Reset)
+				World->Notify(FString::Printf(TEXT("已恢复出发体型 %.2f 米，退出缩放测试。"),
+				                              VerdantPlayerScale::StartingHeightCm / 100.f));
 			else
 				World->Notify(
 					FString::Printf(TEXT("尺度测试：%.2f 米 · [ 缩小 / ] 放大 / 反斜杠恢复 · 范围 0.18–36 米"), Player->BodySize * 1.8f));
@@ -126,6 +130,7 @@ namespace VerdantScaleTest
 
 AVerdantCharacter::AVerdantCharacter()
 {
+	BodySize = VerdantPlayerScale::StartingBodySize;
 	PrimaryActorTick.bCanEverTick = true;
 	GetCapsuleComponent()->InitCapsuleSize(32.f, 90.f);
 	bUseControllerRotationYaw = false;
@@ -136,7 +141,7 @@ AVerdantCharacter::AVerdantCharacter()
 	Move->MaxAcceleration = 1800;
 	Move->BrakingDecelerationWalking = 1800;
 	Move->bRunPhysicsWithNoController = true;
-	Move->SetWalkableFloorAngle(48.f);
+	Move->SetWalkableFloorAngle(75.f);
 	CameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Orbit"));
 	CameraArm->SetupAttachment(RootComponent);
 	CameraArm->TargetArmLength = 340;
@@ -166,6 +171,8 @@ AVerdantCharacter::AVerdantCharacter()
 void AVerdantCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	// Reapply at spawn: Live Coding does not rerun existing component CDO constructors.
+	GetCharacterMovement()->SetWalkableFloorAngle(75.f);
 	GetMesh()->SetSkeletalMeshAsset(nullptr);
 	if (AgentId == 0 || !VerdantTitanPresentation::Load(this))
 	{
@@ -174,6 +181,9 @@ void AVerdantCharacter::BeginPlay()
 	}
 	CarriedNutrition->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere")));
 	AppliedSize = 0;
+	// NPCs receive their own size before FinishSpawning; only the player starts tiny.
+	// Also overrides an old component/CDO default after a Live Coding update.
+	if (AgentId == 0) BodySize = VerdantPlayerScale::StartingBodySize;
 	SetSize(BodySize);
 	Health = MaxHealth();
 	if (AgentId == 0)
@@ -203,6 +213,148 @@ void AVerdantCharacter::BuildFallbackBody()
 float AVerdantCharacter::MaxHealth() const { return 100.f * FMath::Pow(FMath::Max(.3f, BodySize), 1.35f); }
 float AVerdantCharacter::Strength() const { return 22.f * FMath::Pow(FMath::Max(.3f, BodySize), 1.3f); }
 float AVerdantCharacter::Reach() const { return FMath::Max(95.f, 170.f * BodySize); }
+
+float AVerdantCharacter::HeightCm() const
+{
+	return VerdantTitanPresentation::BaseHeight(this) * BodySize;
+}
+
+int32 AVerdantCharacter::FoodTier() const { return VerdantEconomy::Tier(HeightCm()); }
+
+float AVerdantCharacter::FoodCapacity() const
+{
+	return AgentId == 0 ? VerdantEconomy::Capacity(HeightCm()) : MAX_flt;
+}
+
+float AVerdantCharacter::FreeFoodCapacity() const
+{
+	return FMath::Max(0.f, FoodCapacity() - FMath::Max(0.f, Food));
+}
+
+float AVerdantCharacter::GrowthSecondsRemaining() const
+{
+	return FMath::Max(0.f, VerdantEconomy::GrowthInterval - GrowthClock);
+}
+
+float AVerdantCharacter::RespawnSecondsRemaining() const { return FMath::Max(0.f, RespawnClock); }
+bool AVerdantCharacter::IsRespawnProtected() const { return RespawnProtectionRemaining > 0.f; }
+
+void AVerdantCharacter::TickAutomaticGrowth(float Dt)
+{
+	// Food is one numeric inventory. NPCs and the explicit scale preview never digest growth food.
+	Nutrition = 0.f;
+	if (AgentId != 0 || bDead || !FMath::IsFinite(Dt) || VerdantScaleTest::IsActive(this)) return;
+	GrowthClock += FMath::Max(0.f, Dt);
+	if (GrowthClock < VerdantEconomy::GrowthInterval) return;
+	const float Cycles = FMath::FloorToFloat(GrowthClock / VerdantEconomy::GrowthInterval);
+	GrowthClock = FMath::Fmod(GrowthClock, VerdantEconomy::GrowthInterval);
+	if (!FMath::IsFinite(Food) || Food <= .0001f) return;
+	// Account for a long frame without losing elapsed intervals or running an unbounded loop.
+	const float Consumed = Food * (1.f - FMath::Pow(1.f - VerdantEconomy::GrowthFraction, Cycles));
+	const float PreviousHeight = HeightCm();
+	const float TargetHeight = VerdantEconomy::GrownHeight(PreviousHeight, Consumed);
+	if (TargetHeight > PreviousHeight + .001f)
+	{
+		SetSize(TargetHeight / VerdantTitanPresentation::BaseHeight(this));
+		// A blocked capsule expansion consumes nothing; retry at the next interval in open space.
+		if (HeightCm() <= PreviousHeight + .001f)
+		{
+			if (auto* W = Valley()) W->Notify(TEXT("周围空间不足，本次成长未消耗食物。"));
+			return;
+		}
+	}
+	Food = FMath::Max(0.f, Food - Consumed);
+	Health = FMath::Min(MaxHealth(), Health + Consumed * 1.9f);
+	if (auto* W = Valley())
+	{
+		W->PlayCue(TEXT("Grow"), GetActorLocation(), BodySize);
+		W->Notify(FString::Printf(TEXT("自动吸收 %.1f 份食物 · 身高 %.2f 米 · 第%d档"),
+		                          Consumed, HeightCm() / 100.f, FoodTier()));
+	}
+}
+
+void AVerdantCharacter::RespawnPlayer()
+{
+	auto* W = Valley();
+	if (AgentId != 0 || !bDead || !W) return;
+	const float TargetHeight = VerdantEconomy::RespawnHeight(DeathHeightCm, VerdantPlayerScale::StartingHeightCm);
+	Tags.Remove(TEXT("VerdantScaleTest"));
+	AppliedSize = 0.f;
+	SetSize(TargetHeight / VerdantTitanPresentation::BaseHeight(this));
+	const float Overflow = FMath::Max(0.f, Food - FoodCapacity());
+	if (Overflow > .0001f)
+	{
+		// The same inventory cannot remain on the corpse and return on the player.
+		// The world owns this drop, which keeps the pre-death source tier.
+		if (!W->SpawnFoodDrop(DeathPosition, Overflow, DeathFoodTier))
+		{
+			RespawnClock = 1.f;
+			return;
+		}
+		Food -= Overflow;
+	}
+	const FVector Arrival(-1000.f, -5800.f, 0.f);
+	const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	FVector Spawn = W->SurfacePoint(Arrival, HalfHeight + 8.f);
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(VerdantRespawn), false, this);
+	for (int32 I = 0; I < 16; ++I)
+	{
+		const float Angle = I * 2.399963f;
+		const float Radius = I == 0 ? 0.f : 120.f + 85.f * I;
+		const FVector Candidate = W->SurfacePoint(Arrival + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * Radius,
+		                                          HalfHeight + 8.f);
+		if (!GetWorld()->OverlapBlockingTestByChannel(Candidate, FQuat::Identity, ECC_Pawn,
+		                                              FCollisionShape::MakeCapsule(
+			                                              GetCapsuleComponent()->GetScaledCapsuleRadius(),
+			                                              HalfHeight - 1.f), Params))
+		{
+			Spawn = Candidate;
+			break;
+		}
+	}
+	auto* Move = GetCharacterMovement();
+	Move->StopMovementImmediately();
+	ConsumeMovementInputVector();
+	SetActorLocation(Spawn, false, nullptr, ETeleportType::TeleportPhysics);
+	SetActorRotation(FRotator(0.f, 78.f, 0.f));
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	Move->SetMovementMode(MOVE_Walking);
+	Move->bForceNextFloorCheck = true;
+	bDead = false;
+	++LifeRevision;
+	++IntentRevision;
+	Health = MaxHealth();
+	Nutrition = 0.f;
+	GrowthClock = RespawnClock = 0.f;
+	RespawnProtectionRemaining = VerdantEconomy::RespawnProtection;
+	AttackTimer = DodgeTimer = HurtTimer = DodgeRecoveryTimer = AttackInputBuffer = 0.f;
+	QueuedAttackType = -1;
+	bHitApplied = true;
+	bSprinting = bHarvestHeld = bProtectLeader = false;
+	HarvestRepeatTimer = 0.f;
+	FollowId = HostileId = -1;
+	DonationPledge = 0.f;
+	CombatTarget.Reset();
+	ActionCooldown = .3f;
+	SocialActionCooldown = 3.f;
+	if (auto* PC = Cast<APlayerController>(GetController()))
+	{
+		if (auto* HUD = Cast<AVerdantHUD>(PC->GetHUD())) HUD->CloseConversation();
+		PC->FlushPressedKeys();
+		PC->SetControlRotation(FRotator(-14.f, 78.f, 0.f));
+		PC->SetInputMode(FInputModeGameOnly());
+		PC->bShowMouseCursor = false;
+	}
+	AnimationState = -1;
+	UpdateAppearance();
+	UpdateAnimation();
+	UpdateCameraFraming(0.f, true);
+	W->Record(FString::Printf(TEXT("%s 缩小后复苏：身高 %.2f 米，世界与居民经历仍然保留。"),
+	                          *DisplayName, HeightCm() / 100.f));
+	W->Notify(FString::Printf(TEXT("已复活 · 第%d档 · %.2f米 · 3秒保护"), FoodTier(), HeightCm() / 100.f));
+}
+
 AVerdantWorld* AVerdantCharacter::Valley() const { return AVerdantWorld::Find(this); }
 
 void AVerdantCharacter::SetSize(float NewSize)
@@ -211,7 +363,7 @@ void AVerdantCharacter::SetSize(float NewSize)
 	const bool ScaleTest = VerdantScaleTest::IsActive(this);
 	NewSize = ScaleTest
 		          ? FMath::Clamp(NewSize, VerdantScaleTest::MinimumSize, VerdantScaleTest::MaximumSize)
-		          : FMath::Clamp(NewSize, .35f, 2.5f);
+		          : FMath::Clamp(NewSize, AgentId == 0 ? VerdantPlayerScale::StartingBodySize : .35f, 2.5f);
 	// Preserve the world-space foot position. Initial spawns use the constructor
 	// capsule height; all later growth adjusts height without lifting the feet.
 	const float ShapeScale = GetCapsuleComponent()->GetShapeScale();
@@ -240,9 +392,14 @@ void AVerdantCharacter::SetSize(float NewSize)
 	CarriedNutrition->SetRelativeLocation(FVector(43.f, 0, 20.f) * BodySize);
 	CarriedNutrition->SetRelativeScale3D(FVector(.32f * BodySize));
 	GetCharacterMovement()->MaxStepHeight = FMath::Min(ScaleTest ? 900.f : 90.f, 42.f * BodySize);
-	const float MotionScale = ScaleTest ? FMath::Clamp(FMath::Pow(BodySize, .75f), .15f, 8.f) : 1.f;
+	const float MotionScale = AgentId == 0
+		                          ? VerdantPlayerScale::SpeedMultiplier * BodySize /
+		                          VerdantPlayerScale::ReferenceBodySize
+		                          : 1.f;
 	GetCharacterMovement()->MaxAcceleration = 1800.f * MotionScale;
 	GetCharacterMovement()->BrakingDecelerationWalking = 1800.f * MotionScale;
+	if (AgentId == 0)
+		GetCharacterMovement()->MaxWalkSpeed = VerdantPlayerScale::MovementSpeed(BodySize, bSprinting ? 640.f : 430.f);
 	GetCharacterMovement()->JumpZVelocity = 400.f * FMath::Sqrt(BodySize);
 	AppliedSize = BodySize;
 }
@@ -250,6 +407,16 @@ void AVerdantCharacter::SetSize(float NewSize)
 void AVerdantCharacter::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	SocialActionCooldown = FMath::Max(0.f, SocialActionCooldown - Dt);
+	RespawnProtectionRemaining = FMath::Max(0.f, RespawnProtectionRemaining - Dt);
+	if (bDead && AgentId == 0)
+	{
+		RespawnClock = FMath::Max(0.f, RespawnClock - FMath::Max(0.f, Dt));
+		if (RespawnClock <= 0.f) RespawnPlayer();
+		UpdateCameraFraming(Dt);
+		UpdateAnimation();
+		return;
+	}
 	ActionCooldown = FMath::Max(0.f, ActionCooldown - Dt);
 	HarvestRepeatTimer = FMath::Max(0.f, HarvestRepeatTimer - Dt);
 	if (bHarvestHeld && !bDead && AttackTimer <= 0 && DodgeTimer <= 0 && HurtTimer <= 0 && HarvestRepeatTimer <= 0)
@@ -280,30 +447,19 @@ void AVerdantCharacter::Tick(float Dt)
 			AttackInputBuffer = 0;
 			Attack(Heavy);
 		}
-		// Manual scale exploration preserves stored nutrition and does not drift in size.
-		if (Nutrition > 0 && !VerdantScaleTest::IsActive(this))
-		{
-			const float Used = FMath::Min(Nutrition, 2.2f * Dt);
-			const float Prior = BodySize;
-			const bool AtGrowthLimit = BodySize >= 2.5f;
-			if (!AtGrowthLimit) SetSize(BodySize + Used * .013f / FMath::Max(.6f, BodySize * .7f));
-			// Below the cap, a blocked growth attempt keeps its nutrition. At the cap,
-			// already-eaten nutrition still digests at the same rate and restores health.
-			if (AtGrowthLimit || BodySize > Prior)
-			{
-				Nutrition = FMath::Max(0.f, Nutrition - Used);
-				Health = FMath::Min(MaxHealth(), Health + Used * .5f);
-				if (AgentId == 0 && Prior < 2.5f && BodySize >= 2.5f)
-					if (auto* W = Valley())W->Notify(TEXT("已达到最大体型，剩余养分继续吸收并恢复生命。"));
-			}
-		}
-		GetCharacterMovement()->MaxWalkSpeed = (bSprinting ? 640.f : 430.f) * FMath::Pow(
-			BodySize, VerdantScaleTest::IsActive(this) ? .75f : .32f) * (AttackTimer > 0 ? .35f : 1.f);
+		TickAutomaticGrowth(Dt);
+		const float MovementSpeed = AgentId == 0
+			                            ? VerdantPlayerScale::MovementSpeed(BodySize, bSprinting ? 640.f : 430.f)
+			                            : (bSprinting ? 640.f : 430.f) * FMath::Pow(BodySize, .32f);
+		GetCharacterMovement()->MaxWalkSpeed = MovementSpeed * (AttackTimer > 0 ? .35f : 1.f);
 		if (AgentId != 0 && DodgeTimer <= 0 && (HurtTimer <= 0 || AttackTimer > 0)) TickNPC(Dt);
 		if (DodgeTimer > 0)
 		{
 			const float Phase = 1.f - DodgeTimer / DodgeActiveDuration;
-			const float Speed = 630.f * FMath::Pow(BodySize, .35f) * FMath::Lerp(1.f, .25f, Phase);
+			const float BaseDodgeSpeed = AgentId == 0
+				                             ? VerdantPlayerScale::MovementSpeed(BodySize, 630.f, .35f)
+				                             : 630.f * FMath::Pow(BodySize, .35f);
+			const float Speed = BaseDodgeSpeed * FMath::Lerp(1.f, .25f, Phase);
 			auto* Move = GetCharacterMovement();
 			Move->MaxWalkSpeed = Speed;
 			// CharacterMovement resolves collision and slopes; no transform teleport during the roll.
@@ -357,11 +513,14 @@ void AVerdantCharacter::UpdateCameraFraming(float Dt, bool bSnap)
 	const float HeadDistance = (BodyHeight - Chest) * CosPitch / (TanVerticalHalf * TopNDC) - (BodyHeight - Chest) *
 		SinPitch;
 	const bool ScaleTest = VerdantScaleTest::IsActive(this);
-	const float SmallScale = ScaleTest ? FMath::Min(1.f, BodySize / .45f) : 1.f;
+	const bool AdaptSmallBody = ScaleTest || AgentId == 0;
+	const float SmallScale = AdaptSmallBody ? FMath::Min(1.f, BodySize / VerdantPlayerScale::ReferenceBodySize) : 1.f;
 	const float FramingMinimum = FMath::Max(FeetDistance, HeadDistance) + 18.f * SmallScale;
 	const float Desired = FMath::Max3(280.f * SmallScale, 320.f * FMath::Pow(BodySize, .65f), FramingMinimum);
 	CameraArm->TargetArmLength = FMath::Max(FramingMinimum, FMath::Lerp(CameraArm->TargetArmLength, Desired, Blend));
-	CameraArm->ProbeSize = ScaleTest ? FMath::Clamp(12.f * BodySize / .45f, 2.f, 35.f) : 12.f;
+	CameraArm->ProbeSize = AdaptSmallBody
+		                       ? FMath::Clamp(12.f * BodySize / VerdantPlayerScale::ReferenceBodySize, 2.f, 35.f)
+		                       : 12.f;
 	CameraArm->CameraLagMaxDistance = FMath::Clamp(30.f + 20.f * BodySize, 35.f, 80.f) * SmallScale;
 }
 
@@ -449,7 +608,8 @@ void AVerdantCharacter::ApplyStrike()
 void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 {
 	StopHarvest();
-	if (bDead || !IsValid(From) || From == this || !FMath::IsFinite(Damage) || Damage <= 0)return;
+	if (bDead || RespawnProtectionRemaining > 0.f || !IsValid(From) || From == this || !FMath::IsFinite(Damage) ||
+		Damage <= 0)return;
 	if (IsDodgeInvulnerable())
 	{
 		SetCombatFeedback(TEXT("闪避成功"));
@@ -470,11 +630,16 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 	if (auto* W = Valley())W->PlayCue(TEXT("Hit"), GetActorLocation(), From->BodySize);
 	Health = FMath::Max(0.f, Health - Damage);
 	HurtTimer = .3f;
+	++IntentRevision;
 	HostileId = From->AgentId;
 	CombatTarget = From;
 	Trust.FindOrAdd(From->AgentId) -= 25;
 	// Outside danger interrupts escorting; betrayal by the leader ends the agreement.
-	if (FollowId == From->AgentId)FollowId = -1;
+	if (FollowId == From->AgentId)
+	{
+		FollowId = -1;
+		bProtectLeader = false;
+	}
 	const bool HeavyCommitted = bHeavyAttack && AttackTimer > 0;
 	if (!HeavyCommitted)
 	{
@@ -491,6 +656,11 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 	                                  ConversationInterrupted ? TEXT(" · 交谈被打断") : TEXT("")));
 	if (Health <= 0)
 	{
+		DeathPosition = GetActorLocation();
+		DeathHeightCm = HeightCm();
+		DeathFoodTier = FoodTier();
+		++LifeRevision;
+		++IntentRevision;
 		bDead = true;
 		AttackTimer = 0;
 		bHitApplied = true;
@@ -498,11 +668,20 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 		bSprinting = false;
 		GetCharacterMovement()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-		Food += FMath::Min(12.f, Nutrition * .35f);
-		Nutrition = 0;
+		Nutrition = 0.f;
+		GrowthClock = 0.f;
+		bHarvestHeld = false;
+		if (AgentId == 0)
+		{
+			RespawnClock = VerdantEconomy::RespawnDelay;
+			GetCharacterMovement()->DisableMovement();
+		}
 		if (auto* W = Valley())
 			W->Record(
-				FString::Printf(TEXT("%s 击败了 %s，留下 %.0f 份养分。"), *From->DisplayName, *DisplayName, Food));
+				AgentId == 0
+					? FString::Printf(TEXT("%s 被 %s 击倒，正在缩小后复苏。"), *DisplayName, *From->DisplayName)
+					: FString::Printf(TEXT("%s 击败了 %s，留下 %.0f 份第%d档食物。"), *From->DisplayName, *DisplayName, Food,
+					                  FoodTier()));
 		AnimationState = -1;
 	}
 	UpdateAnimation();
@@ -510,25 +689,20 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 
 bool AVerdantCharacter::Eat(float Amount)
 {
-	if (bDead || Food <= 0 || Nutrition >= 30.f) return false;
-	const bool AtGrowthLimit = BodySize >= 2.5f;
-	if (AtGrowthLimit && Health >= MaxHealth() - .001f)
+	if (AgentId == 0)
 	{
-		if (AgentId == 0)if (auto* W = Valley())W->Notify(TEXT("体型已达上限且生命充足，可以把食物分享或供奉。"));
+		if (auto* W = Valley()) W->
+			Notify(FString::Printf(TEXT("食物每10秒自动转化成长，距离下一次 %.0f 秒。"), GrowthSecondsRemaining()));
 		return false;
 	}
-	Amount = FMath::Min3(Amount, Food, 30.f - Nutrition);
-	if (Amount <= 0) return false;
-	Food -= Amount;
-	Nutrition += Amount;
-	Health = FMath::Min(MaxHealth(), Health + Amount * 1.4f);
-	if (AgentId == 0)
-		if (auto* W = Valley())
-		{
-			W->Notify(AtGrowthLimit ? TEXT("养分用于恢复生命，剩余部分会继续吸收。") : TEXT("养分开始吸收，身体会逐渐长大。"));
-			W->PlayCue(TEXT("Grow"), GetActorLocation(), BodySize);
-		}
-	return true;
+	// NPCs keep their spawn size. Eating is only a paid emergency recovery action.
+	if (bDead || !FMath::IsFinite(Amount) || Amount <= 0.f || Food <= 0.f || Health >= MaxHealth() - .001f) return
+		false;
+	const float Paid = FMath::Min3(Amount, Food, (MaxHealth() - Health) / 1.9f);
+	Food -= Paid;
+	Health = FMath::Min(MaxHealth(), Health + Paid * 1.9f);
+	Nutrition = 0.f;
+	return Paid > .001f;
 }
 
 bool AVerdantCharacter::IsDodgeInvulnerable() const
@@ -560,9 +734,12 @@ void AVerdantCharacter::Dodge()
 	LockedActionYaw = DodgeDirection.Rotation().Yaw;
 	SetActorRotation(FRotator(0, LockedActionYaw, 0));
 	GetCharacterMovement()->bOrientRotationToMovement = false;
-	const float Speed = 630.f * FMath::Pow(BodySize, .35f);
+	const float Speed = AgentId == 0
+		                    ? VerdantPlayerScale::MovementSpeed(BodySize, 630.f, .35f)
+		                    : 630.f * FMath::Pow(BodySize, .35f);
 	GetCharacterMovement()->Velocity = DodgeDirection * Speed;
 	SetCombatFeedback(TEXT("翻滚 · 留意收势空隙"), .65f);
+	if (auto* W = Valley()) W->PlayCue(TEXT("ClothDodge"), GetActorLocation(), BodySize);
 	UpdateAnimation();
 }
 
@@ -603,28 +780,32 @@ AVerdantCharacter* AVerdantCharacter::NearestFolk(float Radius) const
 
 void AVerdantCharacter::Interact()
 {
-	if (bDead || AttackTimer > 0 || DodgeTimer > 0 || HurtTimer > 0 || ActionCooldown > 0) return;
+	if (bDead || AttackTimer > 0.f || DodgeTimer > 0.f || HurtTimer > 0.f || ActionCooldown > 0.f) return;
 	auto* W = Valley();
-	if (!W)return;
+	if (!W) return;
+	if (FreeFoodCapacity() <= .001f)
+	{
+		W->Notify(TEXT("食物已装满，等待自动成长腾出容量。"));
+		return;
+	}
 	for (AVerdantCharacter* Other : W->Folk)
-		if (IsValid(Other) && Other->bDead && Other->Food > 0 && FVector::Dist2D(
-			GetActorLocation(), Other->GetActorLocation()) < 220.f * FMath::Max(1.f, BodySize))
+	{
+		if (!IsValid(Other) || Other == this || Other->AgentId == 0 || !Other->bDead || Other->Food <= .001f) continue;
+		if (FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) > 220.f * FMath::Max(1.f, BodySize)) continue
+			;
+		if (FoodTier() < Other->FoodTier())
 		{
-			const float Taken = Other->Food;
-			Food += Taken;
-			Other->Food = 0;
-			W->PlayCue(TEXT("Pickup"), GetActorLocation(), BodySize);
-			W->Record(FString::Printf(TEXT("%s 取走战利品：%.0f 份养分。"), *DisplayName, Taken));
+			W->Notify(FString::Printf(TEXT("这是第%d档掉落，需要至少 %.2f 米身高。"), Other->FoodTier(),
+			                          VerdantEconomy::MinimumHeight(Other->FoodTier()) / 100.f));
+			continue;
+		}
+		if (W->LootCorpse(Other, this) > .001f)
+		{
 			ActionCooldown = .4f;
 			return;
 		}
-	const int32 Index = W->NearestGrove(GetActorLocation(), 700.f);
-	if (Index >= 0)
-	{
-		W->Harvest(Index, this, 5.f);
-		ActionCooldown = .45f;
 	}
-	else W->Notify(TEXT("靠近果林的发光植物按 E 采集；靠近倒下的生物可取走战利品。"));
+	if (W->CollectFood(this, FMath::Max(180.f, 250.f * BodySize)) > .001f) ActionCooldown = .45f;
 }
 
 void AVerdantCharacter::Contribute()
@@ -657,7 +838,7 @@ void AVerdantCharacter::Contribute()
 void AVerdantCharacter::Talk()
 {
 	if (bDead)return;
-	if (auto* Other = NearestFolk(750.f * FMath::Max(1.f, BodySize)))
+	if (auto* Other = NearestFolk(VerdantEconomy::HearingRadiusCm))
 	{
 		if (auto* PC = Cast<APlayerController>(GetController()))
 			if (auto* H = Cast<AVerdantHUD>(PC->GetHUD()))

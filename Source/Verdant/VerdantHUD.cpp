@@ -1,7 +1,11 @@
 #include "VerdantHUD.h"
 #include "VerdantWorld.h"
 #include "VerdantCharacter.h"
+#include "VerdantPlayerScale.h"
 #include "VerdantDialogue.h"
+#include "VerdantFoodPickup.h"
+#include "VerdantEconomyRules.h"
+#include "VerdantPopulation.h"
 #include "Engine/Canvas.h"
 #include "Engine/Font.h"
 #include "CanvasItem.h"
@@ -33,7 +37,7 @@
 namespace
 {
 	using namespace VerdantUI;
-	constexpr float StartingHeightCm = .45f * 180.f;
+	constexpr float StartingHeightCm = VerdantPlayerScale::StartingHeightCm;
 	constexpr float DamageLifetime = .85f;
 	constexpr int32 MaxDamageFloats = 6;
 
@@ -41,7 +45,7 @@ namespace
 	{
 		if (!NPC)return TEXT("");
 		if (NPC->HostileId == 0)return TEXT("敌对");
-		if (NPC->FollowId == 0)return TEXT("同行");
+		if (NPC->FollowId == 0)return NPC->bProtectLeader ? TEXT("保护你") : TEXT("同行");
 		const float Trust = NPC->Trust.FindRef(0);
 		if (Trust >= 10.f)return TEXT("友善");
 		if (Trust < 0.f || NPC->bWild)return TEXT("戒备");
@@ -64,93 +68,33 @@ namespace
 		return FString::Printf(TEXT("你的筹码：携带 %.1f 份食物 · 管理 %d 片果林 · 身高 %.2f 米"), P->Food, Groves, P->BodySize * 1.8f);
 	}
 
-	FString ContextHint(AVerdantCharacter* P, AVerdantWorld* W)
-	{
-		if (!P || !W || P->bDead)return TEXT("");
-		for (AVerdantCharacter* N : W->Folk)
-			if (IsValid(N) && N->bDead && N->Food > 0 && FVector::Dist2D(P->GetActorLocation(), N->GetActorLocation()) <
-				220.f * FMath::Max(1.f, P->BodySize))
-				return FString::Printf(TEXT("[E] 收取 %s 的 %.1f 份战利品"), *N->DisplayName, N->Food);
-		if (FVector::Dist2D(P->GetActorLocation(), W->MotherPosition) < 1000.f && !W->bRestored)
-		{
-			const float Available = FMath::Min(P->Food, FMath::Max(0.f, W->TreeGoal - W->TreeNutrition));
-			if (Available < .01f)return TEXT("母树需要养分 · 先采集或与居民协商分享");
-			return FString::Printf(
-				TEXT("母树还需 %.1f 份 · [F] 供奉 %.1f 份 · [Shift+F] 供奉全部可用的 %.1f 份"), W->TreeGoal - W->TreeNutrition,
-				FMath::Min(5.f, Available), Available);
-		}
-		const int32 I = W->NearestGrove(P->GetActorLocation(), 700.f);
-		FString Text;
-		if (I >= 0)
-		{
-			const auto& G = W->Groves[I];
-			auto* Keeper = W->FindFolk(G.ControllerId);
-			const bool LivingKeeper = Keeper && !Keeper->bDead;
-			const bool Allowed = W->CanHarvest(I, P);
-			Text = FString::Printf(
-				TEXT("%s · %s · 生机 %.0f%% | "), *G.Name, LivingKeeper ? *Keeper->DisplayName : TEXT("无人管理"),
-				G.Fertility * 100.f);
-			if (!Allowed)Text += TEXT("尚未获准采集，请与管理者协商");
-			else if (G.Food < .5f)Text += TEXT("果实暂空，正在再生");
-			else
-			{
-				const float Take = FMath::Min(5.f, G.Food);
-				const float Share = LivingKeeper && Keeper != P ? Take * FMath::Clamp(G.Share, 0.f, .9f) : 0.f;
-				Text += FString::Printf(TEXT("[按住 E] 每次实得 %.1f 份"), Take - Share);
-				if (Share > .01f)Text += FString::Printf(TEXT("（分成 %.1f）"), Share);
-			}
-			FString Management;
-			if (Allowed)
-			{
-				const float Cost = W->TendCost(I);
-				if (Cost >= .01f)
-					Management = P->Food + .001f >= Cost
-						             ? FString::Printf(TEXT("[B] 用 %.1f 份食物养护"), Cost)
-						             : FString::Printf(TEXT("养护需 %.1f 份食物，你还差 %.1f"), Cost, Cost - P->Food);
-			}
-			if (G.ControllerId == P->AgentId)
-			{
-				const TCHAR* Next = !G.bOpen ? TEXT("免费开放") : G.Share < .001f ? TEXT("改为30%分成") : TEXT("关闭采集");
-				if (!Management.IsEmpty())Management += TEXT(" · ");
-				Management += FString::Printf(TEXT("[G] %s"), Next);
-			}
-			else if (!LivingKeeper)
-			{
-				if (!Management.IsEmpty())Management += TEXT(" · ");
-				Management += TEXT("[G] 接管果林");
-			}
-			if (!Management.IsEmpty())Text += TEXT("\n") + Management;
-		}
-		if (auto* N = P->NearestFolk(750.f * FMath::Max(1.f, P->BodySize)))
-		{
-			Text += (Text.IsEmpty() ? TEXT("") : TEXT("\n")) + FString::Printf(
-				TEXT("[T] %s · %s · %s"), *N->DisplayName, *Stance(N), *N->ActionLabel);
-			if (P->Food > .01f && FVector::Dist2D(P->GetActorLocation(), W->MotherPosition) >= 1000.f &&
-				FVector::Dist2D(P->GetActorLocation(), N->GetActorLocation()) < 400.f * FMath::Max(1.f, P->BodySize))
-				Text += FString::Printf(TEXT(" · [F] 分享 %.1f 份"), FMath::Min(5.f, P->Food));
-		}
-		if (Text.IsEmpty())
-		{
-			if (W->HarvestLedger.FindRef(TEXT("0:0")) < .01f && W->Groves.Num() > 0)
-			{
-				const FVector Delta = W->Groves[0].Position - P->GetActorLocation();
-				const float Yaw = P->GetController()
-					                  ? P->GetController()->GetControlRotation().Yaw
-					                  : P->GetActorRotation().Yaw;
-				const float Relative = FMath::FindDeltaAngleDegrees(Yaw, Delta.Rotation().Yaw);
-				const TCHAR* Direction = FMath::Abs(Relative) > 140
-					                         ? TEXT("身后")
-					                         : Relative > 25
-					                         ? TEXT("右前方")
-					                         : Relative < -25
-					                         ? TEXT("左前方")
-					                         : TEXT("前方");
-				Text = FString::Printf(TEXT("朝%s寻找苔石果林 · %.0f 米 · 可以先和米芽谈谈"), Direction, Delta.Size2D() / 100.f);
-			}
-			else Text = TEXT("观察居民的打算，争取食物、采集权或果林管理权。");
-		}
-		return Text;
-	}
+    FString ContextHint(AVerdantCharacter* P, AVerdantWorld* W)
+    {
+        if (!P || !W || P->bDead) return TEXT("");
+        for (AVerdantCharacter* N : W->Folk)
+            if (IsValid(N) && N != P && N->bDead && N->Food > .001f && FVector::Dist2D(P->GetActorLocation(),N->GetActorLocation())<FMath::Max(220.f,P->Reach()+130.f))
+                return P->FoodTier() >= N->FoodTier()
+                    ? FString::Printf(TEXT("[E] 第%d档掉落 %.1f份 · 超出容量的仍留在原地"),N->FoodTier(),N->Food)
+                    : FString::Printf(TEXT("第%d档掉落 · 需要身高 %.2f米"),N->FoodTier(),VerdantEconomy::MinimumHeight(N->FoodTier())/100.f);
+        AVerdantFoodPickup* Best=nullptr; float BestDistance=FMath::Square(500.f);
+        for (AVerdantFoodPickup* F : W->FoodPickups)
+        {
+            if(!IsValid(F)||F->Remaining<=.001f)continue;
+            const float D=FVector::DistSquared2D(P->GetActorLocation(),F->GetActorLocation());
+            if(D<BestDistance){BestDistance=D;Best=F;}
+        }
+        FString Hint;
+        if(Best)
+            Hint=P->FoodTier()>=Best->FoodTier
+                ? FString::Printf(TEXT("[E] 第%d档食物 · 剩余 %.1f · 可装 %.1f"),Best->FoodTier,Best->Remaining,P->FreeFoodCapacity())
+                : FString::Printf(TEXT("第%d档食物 · 需要 %.2f米，当前 %.2f米"),Best->FoodTier,VerdantEconomy::MinimumHeight(Best->FoodTier)/100.f,P->HeightCm()/100.f);
+        if(FVector::Dist2D(P->GetActorLocation(),W->MotherPosition)<1000.f&&!W->bRestored)
+            Hint+=FString::Printf(TEXT("  [F] 供奉 · 母树还需 %.0f份"),W->TreeGoal-W->TreeNutrition);
+        if(auto* N=P->NearestFolk(2000.f))
+            Hint+=FString::Printf(TEXT("  [T] %s · 第%d档 · %s"),*N->DisplayName,N->FoodTier(),*Stance(N));
+        if(Hint.IsEmpty())Hint=TEXT("寻找彩色食物 · 按住 E 获取 · 每10秒自动消耗库存的20%成长");
+        return Hint;
+    }
 
 	FString DeliveryHint(AVerdantWorld* W)
 	{
@@ -260,12 +204,13 @@ void AVerdantHUD::BeginPlay()
 	auto Send = [this]()
 	{
 		auto* W = AVerdantWorld::Find(this);
-		if (W && W->Dialogue && InputBox.IsValid() && !W->Dialogue->bBusy && W->Dialogue->Selected.IsValid())
+		if (W && W->Dialogue && InputBox.IsValid() && W->Dialogue->Selected.IsValid() && W->Dialogue->CanAcceptPlayerMessage(W->Dialogue->Selected.Get()))
 		{
 			const FString Line = InputBox->GetText().ToString().TrimStartAndEnd();
 			if (!Line.IsEmpty())
 			{
 				W->Dialogue->Request(W->Dialogue->Selected.Get(), Line);
+				W->PlayUISound(TEXT("Confirm"));
 				InputBox->SetText(FText::GetEmpty());
 			}
 		}
@@ -391,7 +336,7 @@ void AVerdantHUD::BeginPlay()
 								Text([Player]()
 								{
 									auto* P = Player();
-									return P ? FString::Printf(TEXT("%.0f 份"), P->Food) : TEXT("—");
+									return P ? FString::Printf(TEXT("%.0f / %.0f"), P->Food, P->FoodCapacity()) : TEXT("—");
 								}, 24, Gold)
 							]
 						]
@@ -417,15 +362,7 @@ void AVerdantHUD::BeginPlay()
 						Text([Player]()
 						{
 							auto* P = Player();
-							return P
-								       ? FString::Printf(
-									       TEXT("力量 %.0f   ·   %s"), P->Strength(),
-									       P->Nutrition > .01f
-										       ? *FString::Printf(TEXT("吸收中 %.1f 份"), P->Nutrition)
-										       : P->Food >= 5.f
-										       ? TEXT("Q 食用并成长")
-										       : TEXT("食用需 5 份食物"))
-								       : TEXT("");
+                            return P ? FString::Printf(TEXT("第%d档 · %.0f秒后自动成长%s"),P->FoodTier(),P->GrowthSecondsRemaining(),P->IsRespawnProtected()?TEXT(" · 复活保护"):TEXT("")) : TEXT("");
 						}, 12, Muted)
 					]
 				)
@@ -607,7 +544,7 @@ void AVerdantHUD::BeginPlay()
 					     ]
 					     + SHorizontalBox::Slot().AutoWidth().Padding(8, 0)
 					     [
-						     Action(TEXT("Q"),TEXT("成长"))
+						     Action(TEXT("10秒"),TEXT("自动成长"))
 					     ]
 					     + SHorizontalBox::Slot().AutoWidth().Padding(8, 0)
 					     [
@@ -666,7 +603,7 @@ void AVerdantHUD::BeginPlay()
 				     + SVerticalBox::Slot().AutoHeight()
 				     [
 					     Label(TEXT(
-						     "WASD  移动    ·    鼠标  观察    ·    Shift  奔跑\n\n左键 / 右键  轻击 / 重击    ·    空格  闪避\n\n按住 E  连续采集 / 战利品    ·    Q  食用 5 份并成长\n\nF  分享 / 供奉    ·    Shift + F  批量供奉\n\nT  交谈    ·    B  养护土壤    ·    G  管理果林\n\nTab  生态手记    ·    R  重新开始这一局"), 15,
+						     "WASD  移动    ·    鼠标  观察    ·    Shift  奔跑\n\n左键 / 右键  轻击 / 重击    ·    空格  闪避\n\n按住 E  连续采集 / 战利品    ·    每10秒自动消耗20%库存并成长\n\nF  分享 / 供奉    ·    Shift + F  批量供奉\n\nT  交谈    ·    B  养护土壤    ·    G  管理果林\n\nTab  生态手记    ·    R  重新开始这一局"), 15,
 					           Ink)
 				     ]
 				     + SVerticalBox::Slot().AutoHeight().Padding(0, 20, 0, 0)
@@ -691,15 +628,15 @@ void AVerdantHUD::BeginPlay()
 				     ]
 				     + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0, 18, 0, 8)
 				     [
-					     Label(TEXT("旅程暂时结束"), 30, Gold)
+					     Label(TEXT("正在重新凝聚"), 30, Gold)
 				     ]
 				     + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
 				     [
-					     Label(TEXT("山谷仍在等待。也许这次，可以先谈谈。"), 15, Ink)
+					     Label(TEXT("损失15%体型后复活，世界和关系继续保留。"), 15, Ink)
 				     ]
 				     + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0, 24, 0, 0)
 				     [
-					     Action(TEXT("R"),TEXT("重新启程"))
+					     Text([Player](){auto* P=Player();return P?FString::Printf(TEXT("%.1f秒后回到安全区域"),P->RespawnSecondsRemaining()):FString();},16,Gold)
 				     ]
 				     , FMargin(32))
 			]
@@ -796,8 +733,10 @@ void AVerdantHUD::BeginPlay()
 									     {
 										     FString Value;
 										     auto* W = World();
-										     if (W && W->Dialogue)for (const FString& Line : W->Dialogue->Lines)Value +=
-											     Line + TEXT("\n\n");
+										     if (W && W->Dialogue)
+											     for (const FString& Line : W->Dialogue->Lines)
+												     Value +=
+													     Line + TEXT("\n\n");
 										     return Value.IsEmpty()
 											            ? TEXT("先听听对方的打算，再提出你的交换条件。\n\n上方提议只填入文字，按发送才会开口。")
 											            : Value;
@@ -844,7 +783,7 @@ void AVerdantHUD::BeginPlay()
 							     .IsEnabled_Lambda([this,World]()
 							     {
 								     auto* W = World();
-								     return W && W->Dialogue && !W->Dialogue->bBusy && InputBox.IsValid() && !InputBox->
+								     return W && W->Dialogue && W->Dialogue->CanAcceptPlayerMessage(W->Dialogue->Selected.Get()) && InputBox.IsValid() && !InputBox->
 									     GetText().ToString().TrimStartAndEnd().IsEmpty();
 							     })
 							     .OnClicked_Lambda(Send)
@@ -904,8 +843,9 @@ void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason)
 {
 	GetWorldTimerManager().ClearTimer(PresentationTimer);
 	if (bConversationOpen)CloseConversation();
-	if (GEngine && GEngine->GameViewport && RootWidget.IsValid())GEngine->GameViewport->RemoveViewportWidgetContent(
-		RootWidget.ToSharedRef());
+	if (GEngine && GEngine->GameViewport && RootWidget.IsValid())
+		GEngine->GameViewport->RemoveViewportWidgetContent(
+			RootWidget.ToSharedRef());
 	RootWidget.Reset();
 	InputBox.Reset();
 	ConversationScroll.Reset();
@@ -934,6 +874,7 @@ void AVerdantHUD::OpenConversation(AVerdantCharacter* NPC)
 	bJournalOpen = false;
 	bControlsOpen = false;
 	bConversationOpen = true;
+	W->PlayUISound(TEXT("Open"));
 	if (auto* P = Cast<AVerdantCharacter>(GetOwningPawn()))P->CancelForConversation();
 	if (auto* PC = GetOwningPlayerController())
 	{
@@ -952,11 +893,14 @@ void AVerdantHUD::FillConversationPrompt(const FString& Text)
 {
 	if (!bConversationOpen || !InputBox.IsValid())return;
 	InputBox->SetText(FText::FromString(Text));
+	if (auto* W = AVerdantWorld::Find(this)) W->PlayUISound(TEXT("Tick"));
 	FSlateApplication::Get().SetKeyboardFocus(InputBox);
 }
 
 void AVerdantHUD::CloseConversation()
 {
+	if (bConversationOpen)
+		if (auto* W = AVerdantWorld::Find(this)) W->PlayUISound(TEXT("Close"));
 	bConversationOpen = false;
 	if (auto* PC = GetOwningPlayerController())
 	{
@@ -982,7 +926,11 @@ void AVerdantHUD::DrawHUD()
 	}
 	if (!bConversationOpen && !P->bDead)
 	{
-		if (PC->WasInputKeyJustPressed(EKeys::Tab))bJournalOpen = !bJournalOpen;
+		if (PC->WasInputKeyJustPressed(EKeys::Tab))
+		{
+			bJournalOpen = !bJournalOpen;
+			W->PlayUISound(bJournalOpen ? TEXT("Open") : TEXT("Close"));
+		}
 		if (JournalScroll.IsValid() && bJournalOpen)
 		{
 			float Step = PC->WasInputKeyJustPressed(EKeys::PageDown)
@@ -990,12 +938,18 @@ void AVerdantHUD::DrawHUD()
 				             : PC->WasInputKeyJustPressed(EKeys::PageUp)
 				             ? -230.f
 				             : 0.f;
-			if (Step != 0.f)JournalScroll->SetScrollOffset(
-				FMath::Clamp(JournalScroll->GetScrollOffset() + Step, 0.f, JournalScroll->GetScrollOffsetOfEnd()));
+			if (Step != 0.f)
+				JournalScroll->SetScrollOffset(
+					FMath::Clamp(JournalScroll->GetScrollOffset() + Step, 0.f, JournalScroll->GetScrollOffsetOfEnd()));
 		}
-		if (PC->WasInputKeyJustPressed(EKeys::H))bControlsOpen = !bControlsOpen;
+		if (PC->WasInputKeyJustPressed(EKeys::H))
+		{
+			bControlsOpen = !bControlsOpen;
+			W->PlayUISound(bControlsOpen ? TEXT("Open") : TEXT("Close"));
+		}
 		if (PC->WasInputKeyJustPressed(EKeys::Escape))
 		{
+			if (bControlsOpen || bJournalOpen) W->PlayUISound(TEXT("Close"));
 			bControlsOpen = false;
 			bJournalOpen = false;
 		}
@@ -1003,7 +957,8 @@ void AVerdantHUD::DrawHUD()
 	const float HUDScale = FMath::Max(.25f, FMath::Min(Canvas->SizeX / 1600.f, Canvas->SizeY / 900.f));
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (bConversationOpen && (P->bDead || !W->Dialogue || !W->Dialogue->Selected.IsValid() || W->Dialogue->Selected->
-		bDead))CloseConversation();
+		bDead))
+		CloseConversation();
 	else if (bConversationOpen && !W->Dialogue->CanConverse(W->Dialogue->Selected.Get()))
 	{
 		CloseConversation();
@@ -1035,15 +990,28 @@ void AVerdantHUD::DrawHUD()
 		FVector2D SA, SB;
 		if (Project(A, SA, 145.f) && Project(B, SB, 145.f))DrawLine(SA.X, SA.Y, SB.X, SB.Y, Color, Thickness);
 	};
+    if(!bConversationOpen&&!P->bDead)
+    {
+        int32 FoodLabels=0;
+        for (AVerdantFoodPickup* Food : W->FoodPickups)
+        {
+            if(!IsValid(Food)||Food->Remaining<=.001f||FVector::DistSquared2D(Food->GetActorLocation(),P->GetActorLocation())>FMath::Square(800.f))continue;
+            const bool Allowed=P->FoodTier()>=Food->FoodTier;
+            Label(Food->GetActorLocation()+FVector(0,0,35.f),FString::Printf(TEXT("%d档 · %.0f%s"),Food->FoodTier,Food->Remaining,Allowed?TEXT(""):TEXT(" · 未解锁")),Allowed?Gold:Muted,12);
+            if(++FoodLabels>=10)break;
+        }
+    }
 	auto Readable = [&](AVerdantCharacter* Who, const FVector& Head)
 	{
 		if (bConversationOpen || FVector::DistSquared2D(Who->GetActorLocation(), P->GetActorLocation()) >
-			FMath::Square(3800.f))return false;
+			FMath::Square(3800.f))
+			return false;
 		FVector2D At;
 		if (!Project(Head, At))return false;
 		// Do not observe damage behind the persistent corner panels or opaque scenery.
-		if (At.Y < 320.f * HUDScale && (At.X < 360.f * HUDScale || At.X > Canvas->SizeX - 370.f * HUDScale))return
-			false;
+		if (At.Y < 320.f * HUDScale && (At.X < 360.f * HUDScale || At.X > Canvas->SizeX - 370.f * HUDScale))
+			return
+				false;
 		FHitResult Obstacle;
 		FCollisionQueryParams Query(SCENE_QUERY_STAT(VerdantHUDSight), false, P);
 		Query.AddIgnoredActor(Who);
@@ -1101,7 +1069,8 @@ void AVerdantHUD::DrawHUD()
 	for (AVerdantCharacter* NPC : W->Folk)
 		if (IsValid(NPC) && NPC != P)
 		{
-			const FVector Head = NPC->GetActorLocation() + FVector(0, 0, 105.f * NPC->BodySize);
+			const float HalfHeight = NPC->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			const FVector Head = NPC->GetActorLocation() + FVector(0, 0, HalfHeight + 15.f * NPC->BodySize);
 			if (!Readable(NPC, Head))
 			{
 				Observations.Remove(NPC->AgentId);
@@ -1112,9 +1081,36 @@ void AVerdantHUD::DrawHUD()
 			Observe(NPC, Head);
 			const float Distance = FVector::Dist2D(NPC->GetActorLocation(), P->GetActorLocation());
 			FString Name = FString::Printf(TEXT("%s · %s · %.1fm"), *NPC->DisplayName, *Stance(NPC),
-			                               NPC->BodySize * 1.8f);
-			if (NPC->bDead)Name = NPC->Food > 0 ? TEXT("倒下的 ") + NPC->DisplayName + TEXT(" · E 收取食物") : TEXT("");
+			                               HalfHeight * .02f);
+			if (NPC->bDead)Name = NPC->Food > 0 ? TEXT("倒下的 ") + NPC->DisplayName + FString::Printf(TEXT(" · 第%d档掉落"),NPC->FoodTier()) : TEXT("");
 			Label(Head, Name, NPC->bDead ? Muted : StanceColor(NPC), 14);
+			// Injured creatures retain a compact bar below their name until healed.
+			// This shares the name's visibility/occlusion gate; damage numbers remain
+			// to the side and action/speech labels remain above it.
+			const float MaximumHealth = FMath::Max(1.f, NPC->MaxHealth());
+			if (!NPC->bDead && FMath::IsFinite(NPC->Health) && NPC->Health < MaximumHealth - .01f)
+			{
+				FVector2D At;
+				if (Project(Head, At))
+				{
+					const float BarScale = FMath::Clamp(HUDScale, .75f, 1.5f);
+					const float Width = 96.f * BarScale, Height = 6.f * BarScale;
+					const float Border = BarScale;
+					const float Left = At.X - Width * .5f, Top = At.Y + 22.f;
+					if (Left >= 18.f && Left + Width <= Canvas->SizeX - 18.f
+						&& Top + Height + Border <= Canvas->SizeY - 175.f * HUDScale)
+					{
+						const float Fraction = FMath::Clamp(NPC->Health / MaximumHealth, 0.f, 1.f);
+						const FLinearColor Fill = Fraction < .3f
+							                          ? FLinearColor(.95f, .34f, .23f, .95f)
+							                          : FLinearColor(.58f, .77f, .40f, .95f);
+						DrawRect(FLinearColor(.04f, .06f, .04f, .9f), Left - Border, Top - Border,
+						         Width + Border * 2.f, Height + Border * 2.f);
+						DrawRect(FLinearColor(.20f, .23f, .18f, .95f), Left, Top, Width, Height);
+						DrawRect(Fill, Left, Top, Width * Fraction, Height);
+					}
+				}
+			}
 			if (!NPC->bDead && Distance < 1800.f)
 			{
 				const bool ShowingDamage = DamageFloats.ContainsByPredicate([NPC](const FVerdantHUDDamageFloat& Float)
@@ -1122,13 +1118,15 @@ void AVerdantHUD::DrawHUD()
 					return Float.Character.Get() == NPC;
 				});
 				if (!ShowingDamage)Label(Head + FVector(0, 0, 30.f * NPC->BodySize), NPC->ActionLabel, Muted, 12);
-				if (NPC->SpeechUntil > Now)Label(Head + FVector(0, 0, 70.f * NPC->BodySize), NPC->LastSpeech.Left(42),
-				                                 Gold, 14);
+				if (NPC->SpeechUntil > Now)
+					Label(Head + FVector(0, 0, 70.f * NPC->BodySize), NPC->LastSpeech.Left(42),
+					      Gold, 14);
 			}
 		}
 	for (auto It = Observations.CreateIterator(); It; ++It)
-		if (!It.Value().Character.IsValid() || (It.Key() != P->AgentId && !VisibleIds.Contains(It.Key())))It.
-			RemoveCurrent();
+		if (!It.Value().Character.IsValid() || (It.Key() != P->AgentId && !VisibleIds.Contains(It.Key())))
+			It.
+				RemoveCurrent();
 	auto AttackArc = [&](AVerdantCharacter* Who)
 	{
 		if (Who->bDead || Who->AttackTimer <= 0 || bConversationOpen)return;
@@ -1202,7 +1200,8 @@ void AVerdantHUD::DrawHUD()
 		const FVector Feet = P->GetActorLocation() - FVector(
 			0, 0, P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 		const FVector Right = FRotationMatrix(ViewRotation).GetUnitAxis(EAxis::Y).GetSafeNormal2D();
-		const FVector Base = Feet + Right * FMath::Max(70.f, P->BodySize * 80.f);
+		const float RulerScale = FMath::Min(1.f, P->BodySize / VerdantPlayerScale::ReferenceBodySize);
+		const FVector Base = Feet + Right * FMath::Max(70.f * RulerScale, P->BodySize * 80.f);
 		FVector2D Bottom, Start, Top;
 		if (Project(Base, Bottom) && Project(Base + FVector(0, 0, StartingHeightCm), Start) && Project(
 			Base + FVector(0, 0, Height), Top))
@@ -1217,10 +1216,11 @@ void AVerdantHUD::DrawHUD()
 			if (FMath::Abs(Start.Y - Top.Y) > 32.f)
 			{
 				TextAt(Top + FVector2D(10, -7), FString::Printf(TEXT("现在 %.2fm"), Height / 100.f), Color, 12, false);
-				TextAt(Start + FVector2D(10, -7),TEXT("出发时 0.81m"), Old, 12, false);
+				TextAt(Start + FVector2D(10, -7), FString::Printf(TEXT("出发时 %.2fm"), StartingHeightCm / 100.f), Old, 12, false);
 			}
-			else TextAt(Top + FVector2D(10, -7), FString::Printf(TEXT("%.2fm · 出发时0.81m"), Height / 100.f), Color, 12,
-			            false);
+			else
+				TextAt(Top + FVector2D(10, -7), FString::Printf(TEXT("%.2fm · 出发时%.2fm"), Height / 100.f, StartingHeightCm / 100.f), Color, 12,
+				       false);
 		}
 	}
 	if (!bConversationOpen)
@@ -1245,7 +1245,8 @@ void AVerdantHUD::DrawHUD()
 			// Conservative text bounds include the shadow and Chinese glyph widths.
 			const float TextHalfWidth = Size * Text.Len() * .75f, TextHeight = Size * 1.7f;
 			if (At.Y < 320.f * HUDScale && (At.X - TextHalfWidth < 360.f * HUDScale || At.X + TextHalfWidth > Canvas->
-				SizeX - 370.f * HUDScale))return;
+				SizeX - 370.f * HUDScale))
+				return;
 			if (BodyOnScreen && At.X + TextHalfWidth >= FMath::Min(HeadAt.X, FeetAt.X) - BodyHalfWidth
 				&& At.X - TextHalfWidth <= FMath::Max(HeadAt.X, FeetAt.X) + BodyHalfWidth
 				&& At.Y + TextHeight >= FMath::Min(HeadAt.Y, FeetAt.Y) - 16.f && At.Y <= FMath::Max(HeadAt.Y, FeetAt.Y)
@@ -1253,8 +1254,10 @@ void AVerdantHUD::DrawHUD()
 				return;
 			TextAt(At, Text, Color, Size);
 		};
-		for (const auto& G : W->Groves)if (FVector::Dist2D(P->GetActorLocation(), G.Position) < 11000.f)PlaceLabel(
-			G.Position + FVector(0, 0, 300), G.Name, G.Color, 17);
+		for (const auto& G : W->Groves)
+			if (FVector::Dist2D(P->GetActorLocation(), G.Position) < 11000.f)
+				PlaceLabel(
+					G.Position + FVector(0, 0, 300), G.Name, G.Color, 17);
 		PlaceLabel(W->MotherPosition + FVector(0, 0, 1700), W->bRestored ? TEXT("母树 · 新生") : TEXT("母树"), Gold, 20);
 	}
 }

@@ -2,10 +2,12 @@
 
 Run with UnrealEditor-Cmd Verdant.uproject -run=pythonscript -script=<this file>.
 The landscape and living world are built by the original runtime GameMode.
-Only /Game/Art/Materials/M_Verdant, M_Terrain and /Game/Maps/Valley are authored.
+Authors shared materials, /Game/Maps/Valley and the project-local Fable cloud
+adaptation. Requires the selected Titan sky dependencies to be migrated first.
 """
 from pathlib import Path
 import json
+import runpy
 import unreal as u
 
 ROOT = Path(u.Paths.project_dir())
@@ -29,7 +31,8 @@ def make_material(name, terrain=False):
     if not terrain:
         color.set_editor_property('parameter_name', 'Tint')
         color.set_editor_property('default_value', u.LinearColor(.3, .5, .2, 1))
-    roughness = u.MaterialEditingLibrary.create_material_expression(material, u.MaterialExpressionScalarParameter, -450, 100)
+    roughness = u.MaterialEditingLibrary.create_material_expression(material, u.MaterialExpressionScalarParameter, -450,
+                                                                    100)
     roughness.set_editor_property('parameter_name', 'Roughness')
     roughness.set_editor_property('default_value', .92 if terrain else .88)
     glow = u.MaterialEditingLibrary.create_material_expression(material, u.MaterialExpressionScalarParameter, -450, 240)
@@ -70,32 +73,18 @@ def spawn(cls, label, position=(0, 0, 0), rotation=(0, 0, 0)):
     return actor
 
 
-atmosphere = spawn(u.SkyAtmosphere, 'ValleyBlueSky')
-atmosphere.get_component_by_class(u.SkyAtmosphereComponent).set_editor_property('rayleigh_scattering_scale', .75)
-sun = spawn(u.DirectionalLight, 'WarmAfternoonSun', (0, 0, 10000), (-38, -38, 0))
-sunlight = sun.get_component_by_class(u.DirectionalLightComponent)
-sunlight.set_mobility(u.ComponentMobility.MOVABLE)
-sunlight.set_intensity(4.2)
-sunlight.set_light_color(u.LinearColor(1, .93, .82))
-sunlight.set_editor_property('atmosphere_sun_light', True)
-sky = spawn(u.SkyLight, 'OpenSkyFill')
-skylight = sky.get_component_by_class(u.SkyLightComponent)
-skylight.set_mobility(u.ComponentMobility.MOVABLE)
-skylight.set_intensity(1.25)
-skylight.set_editor_property('real_time_capture', True)
-fog = spawn(u.ExponentialHeightFog, 'DistantValleyHaze')
-fog_component = fog.get_component_by_class(u.ExponentialHeightFogComponent)
-# A thinner, cooler haze preserves distant ridge shapes and foreground contrast.
-fog_component.set_fog_density(.0045)
-fog_component.set_fog_height_falloff(.18)
-fog_component.set_fog_inscattering_color(u.LinearColor(.51, .62, .68))
+# Keep map regeneration on the same environment profile as the authored map.
+# Run Tools/migrate_titan_sky.py --apply once before rebuilding the launch map.
+runpy.run_path(str(ROOT / 'Tools/setup_fable_environment.py'))['apply'](save=False)
+runpy.run_path(str(ROOT / 'Tools/setup_sunset_sky.py'))['apply'](save=False)
 start = spawn(u.PlayerStart, 'TravelerArrival', (-1000, -5000, 210), (0, 78, 0))
 start.set_folder_path('Verdant/Start')
 assert levels.save_current_level(), 'Map save failed'
 u.EditorAssetLibrary.save_directory(MATERIALS, only_if_is_dirty=True, recursive=True)
+u.EditorAssetLibrary.save_directory('/Game/Art/Environment', only_if_is_dirty=True, recursive=True)
 report = {'map': LEVEL, 'game_mode': mode.get_path_name(),
           'materials': [MATERIALS + '/M_Verdant', MATERIALS + '/M_Terrain'],
-          'runtime_landscape': True, 'setup_actor_count': 5}
+          'runtime_landscape': True, 'setup_actor_count': 8}
 output = ROOT / 'Saved' / 'Validation'
 output.mkdir(parents=True, exist_ok=True)
 (output / 'map_setup.json').write_text(json.dumps(report, indent=2), encoding='utf-8')

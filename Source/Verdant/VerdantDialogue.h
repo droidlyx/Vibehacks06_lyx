@@ -1,33 +1,76 @@
-#pragma once
+﻿#pragma once
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "VerdantDialogue.generated.h"
 class AVerdantCharacter;
+class IHttpRequest;
+
+struct FVerdantDialogueJob
+{
+    int64 MessageId = 0, ThreadId = 0;
+    TWeakObjectPtr<AVerdantCharacter> Speaker, Listener;
+    FString Text;
+    float ExpiresAt = 0.f;
+    int32 SpeakerLife = 0, ListenerLife = 0, ListenerIntent = 0;
+    bool bInitiative = false, bPlayerThread = false, bAddressed = false;
+};
+struct FVerdantWarnedAction
+{
+    TWeakObjectPtr<AVerdantCharacter> Actor, Target;
+    FString Action;
+    float Amount = 0.f, ExecuteAt = 0.f, ExpiresAt = 0.f;
+    int32 ActorLife = 0, ActorIntent = 0, TargetLife = 0;
+};
 
 UCLASS()
 class VERDANT_API UVerdantDialogue : public UActorComponent
 {
-	GENERATED_BODY()
-
+    GENERATED_BODY()
 public:
-	bool bBusy = false;
-	FString Status = TEXT("靠近居民后可通过 DeepSeek 自由交谈");
-	FString Endpoint = TEXT("https://api.qnaigc.com/v1/chat/completions");
-	TArray<FString> Lines;
-	TMap<int32, TArray<FString>> Memories;
-	TWeakObjectPtr<AVerdantCharacter> Selected;
-	TMap<int32, TArray<FString>> Transcripts;
-	TMap<int32, FString> ConversationStatuses;
-	TWeakObjectPtr<AVerdantCharacter> RequestNPC;
-	void SelectNPC(AVerdantCharacter* NPC);
-	void AppendNPCLine(int32 NPCId, const FString& Line);
-	void SetNPCStatus(int32 NPCId, const FString& Message);
-	void RememberExchange(int32 NPCId, const FString& PlayerText, const FString& NPCResult);
-	FString LastDecisionReason;
-	bool CanConverse(const AVerdantCharacter* NPC) const;
-	bool CanApplyDecision(const AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount,
-	                      FString* Reason = nullptr) const;
-	void Request(AVerdantCharacter* NPC, const FString& PlayerText);
-	FString BuildState(AVerdantCharacter* NPC) const;
-	bool ApplyDecision(AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount);
+    UVerdantDialogue();
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    bool bBusy = false;
+    FString Status = TEXT("附近发言先由本地模型筛选，再由 DeepSeek 回应");
+    FString Endpoint = TEXT("https://api.qnaigc.com/v1/chat/completions");
+    TArray<FString> Lines;
+    TMap<int32, TArray<FString>> Memories;
+    TWeakObjectPtr<AVerdantCharacter> Selected;
+    TMap<int32, TArray<FString>> Transcripts;
+    TMap<int32, FString> ConversationStatuses;
+    TWeakObjectPtr<AVerdantCharacter> RequestNPC;
+    void SelectNPC(AVerdantCharacter* NPC);
+    void AppendNPCLine(int32 NPCId, const FString& Line);
+    void SetNPCStatus(int32 NPCId, const FString& Message);
+    void RememberExchange(int32 NPCId, const FString& Heard, const FString& Result);
+    FString LastDecisionReason;
+    bool CanConverse(const AVerdantCharacter* NPC) const;
+    bool CanAcceptPlayerMessage(const AVerdantCharacter* NPC) const;
+    bool CanApplyDecision(const AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount, FString* Reason = nullptr) const;
+    void Request(AVerdantCharacter* NPC, const FString& PlayerText);
+    FString BuildState(AVerdantCharacter* NPC) const;
+    bool ApplyDecision(AVerdantCharacter* NPC, const FString& Action, int32 TargetId, float Amount);
+private:
+    bool CanHear(const AVerdantCharacter* Speaker, const AVerdantCharacter* Listener) const;
+    bool IsCurrent(const FVerdantDialogueJob& Job) const;
+    void EnqueueSpeech(AVerdantCharacter* Speaker, const FString& Text, int64 ThreadId, bool bPlayerThread, AVerdantCharacter* Addressed);
+    void StartGate(const FVerdantDialogueJob& Job);
+    void StartCloud(const FVerdantDialogueJob& Job);
+    void FinishJob(const FVerdantDialogueJob& Job, const FString& Message = FString());
+    void Publish(const FVerdantDialogueJob& Job, const FString& Say, const FString& Action, int32 TargetId, float Amount);
+    void ConsiderInitiative();
+    void TickWarnedActions();
+    bool ReadingConversationWith(const AVerdantCharacter* NPC) const;
+    TArray<FVerdantDialogueJob> HearingQueue, CloudQueue;
+    TArray<FVerdantWarnedAction> WarnedActions;
+    TSet<int32> PendingNPCs;
+    TSet<FString> HeardPairs;
+    TMap<int64, int32> ThreadLines;
+    TMap<int64, float> ThreadExpiry;
+    TMap<int32, float> NextReplyAt, NextInitiativeAt;
+    TMap<FString, float> NextPairAt;
+    TMap<FString, FString> LastSituation;
+    TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> LocalRequest, CloudRequest;
+    int64 NextMessageId = 0;
+    float NextProactiveAt = 10.f, LastPlayerMessageAt = -100.f, LocalUnavailableUntil = 0.f;
 };
