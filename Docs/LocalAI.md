@@ -1,12 +1,16 @@
 ﻿# AI providers
 
-The current migration uses **DeepSeek for relevance and dialogue in one request per eligible NPC**. There is no separate
-local or cloud relevance-gate request. StartLux and Qwen are not needed by the updated dialogue path; ordinary movement,
-combat and resource behaviour continue to use game rules.
+The current source uses **initial intent → game feasibility check → final dialogue → publication-time revalidation**.
+DeepSeek first judges relevance and returns a private draft with a proposed action. The game checks feasibility without
+executing that proposal, then requests final dialogue from the same provider using the checked facts. A relevant turn
+can therefore require two sequential cloud requests; an irrelevant first response ends early. There is no separate local
+relevance service. StartLux and Qwen are not needed; ordinary movement, combat and resource behaviour continue to use game rules.
 
-The final response contract is: irrelevant input returns literal `无关` and ends silently; relevant input returns
-`say/action/target/amount` JSON in the same inference. This final protocol has compiled successfully and passed three
-focused API checks; integrated gameplay review remains pending.
+The first response contract is: irrelevant input returns literal `无关` and ends silently; relevant input returns
+`say/action/target/amount` JSON as a private draft. The final-dialogue request returns only `say` JSON and cannot choose
+another action. Before publishing it, the game rechecks actor life, intent versions, distance and action feasibility;
+stale conditions or an invalid final response can cancel the turn without starting a new action. These are current
+source-path descriptions, not a claim of completed gameplay or live-service validation for the two-request path.
 
 ## Cloud configuration
 
@@ -34,10 +38,11 @@ Before any API call, the speaker and listener must be valid and alive, within 40
 actual height ratio no greater than 5, inclusive. The same eligibility is checked again before applying a reply. Config lives in
 `[Verdant.Dialogue]`: `RadiusCm=4000`, `MaxHeightRatio=5`, `MaxListenersPerSpeech=3`.
 
-Direct speech requests only the selected NPC once. Broadcast considers at most 3 initial eligible listeners; with no
+Direct speech selects only the addressed NPC. Broadcast considers at most 3 initial eligible listeners; with no
 listeners it shows only the player's bubble and makes no API call. Player threads allow at most 3 answers without
-further bystander replies; proactive NPC chains allow at most 2 actual replies. Only one DeepSeek request runs at a
-time.
+further bystander replies; proactive NPC chains allow at most 2 actual replies. These are listener/reply limits, not
+single-request guarantees: each relevant response can use an initial-intent request and a final-dialogue request. Only
+one DeepSeek request runs at a time.
 `无关` responses publish no line or memory and create no new speech event. These limits reduce call/output volume;
 input tokens still incur usage.
 
@@ -55,13 +60,14 @@ for the current cloud-only path and can consume GPU memory again.
 
 The earlier 2x height policy passed 25 focused native distance/height boundary checks
 (`Saved/Validation/cloud-dialogue-switch-policy.json`). Six real cloud checks passed for the immediately preceding
-protocol that returned the text “不相关”; they are retained as historical results. The final literal `无关` protocol
-compiled (`Saved/cloud-dialogue-final-build.log`) and passed 3/3 targeted API cases
+protocol that returned the text “不相关”; they are retained as historical results. The subsequent single-request literal
+`无关` protocol compiled (`Saved/cloud-dialogue-final-build.log`) and passed 3/3 targeted API cases
 (`Saved/Validation/cloud-dialogue-switch-wuguan-live.json`), each with one request and no retry. The two irrelevant
 cases
 used one output token each; the relevant case returned a valid `give` action and dialogue together in 35 output tokens.
 Total usage was 1,584 tokens and latency was 1.03–1.83 seconds. These fixtures use synthetic nearby state and do not
-exercise the game scheduler or world actions. The full 20-NPC content review and integrated gameplay remain unverified.
+exercise the game scheduler or world actions, and they do not validate the current feasibility-check/final-dialogue
+request path. The full 20-NPC content review and integrated gameplay remain unverified.
 
 Historical Qwen/StartLux probes and old 3-NPC gameplay probes are not current acceptance tests. Some also capture
 screenshots or assume old queue semantics; do not run them blindly. Use the focused current protocol/policy checks and

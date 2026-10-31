@@ -65,7 +65,11 @@ public:
 	FString Persona;
 	TArray<FString> SocialTags;
 	FString ModelPath, IdlePath, WalkPath;
+	UPROPERTY(VisibleAnywhere, Category = "AI|Activity")
 	FVector HomePosition = FVector::ZeroVector;
+	UPROPERTY(VisibleAnywhere, Category = "AI|Activity")
+	float HomeRangeRadius = 1600.f;
+	bool bReturningHome = false;
 	int32 LifeRevision = 0;
 	int32 IntentRevision = 0;
 	bool bProtectLeader = false;
@@ -143,6 +147,7 @@ public:
 	float RespawnSecondsRemaining() const;
 	bool IsRespawnProtected() const;
 	bool Attack(bool Heavy = false);
+	bool CanStartDialogueAttack(const AVerdantCharacter* Target, FString* Reason = nullptr) const;
 	void ReceiveStrike(AVerdantCharacter* From, float Damage);
 	bool Eat(float Amount = 5.f);
 	void Dodge();
@@ -155,17 +160,26 @@ public:
 	void TendGrove();
 	void RestartJourney();
 	void SetSize(float NewSize);
+	void ResetScaleTestInput();
 	void Say(const FString& Line);
+	static constexpr float DialogueReplyDuration = 5.f;
 	void BeginDialogueReply(const FString& Line, AVerdantCharacter* FocusPlayer);
 	bool IsDialogueReplyActive() const;
+	const AVerdantCharacter* GetDialogueReplyFocus() const { return DialogueReplyFocus.Get(); }
 	AVerdantCharacter* NearestFolk(float Radius = 900.f) const;
 	AVerdantWorld* Valley() const;
 	void TickNPC(float Dt);
+	bool IsWithinHomeRange(const FVector& Position, float Inset = 0.f) const;
+	void SetHomeRangeCenter(const FVector& NewCenter);
 	void MoveToward(const FVector& Goal, float Acceptance = 180.f);
 	void UpdateAppearance();
 	void UpdateAnimation();
 
 private:
+	void TickScaleTestInput(float DeltaSeconds);
+	bool bScaleKeyHeld = false;
+	bool bScaleResetAwaitRelease = false;
+	float NextScaleBlockedNotice = 0.f;
 	void UpdateDialogueReplyPose();
 	bool bDialogueReplyActive = false;
 	TWeakObjectPtr<AVerdantCharacter> DialogueReplyFocus;

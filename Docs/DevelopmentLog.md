@@ -1,5 +1,26 @@
 # Development log
 
+## 2026-10-31 — Ember speech bubbles and a single 5-second reply
+
+- Ported the existing `SEmberConversation` Slate `SCanvas/SBorder/STextBlock` bubble from
+  `E:/UE_projects/EmberZeldaStandalone/Plugins/EmberDecision/Source/EmberDecision/Private/EmberConversation.cpp` into
+  `VerdantEmberSpeechWidget.h/.cpp`, attached at HUD Z30 to DeepSeek-backed `LastSpeech/SpeechUntil`. No Ember local
+  inference service was imported. Retired and deleted the old Canvas `VerdantSpeechBubbles.h/.cpp` implementation.
+- `Character.BeginDialogueReply` uses one 5-second deadline for the bubble and stopped movement. Each frame, the NPC
+  faces the player when within hearing range, otherwise the actual recipient; its existing plan resumes afterward.
+  Other speech or API results cannot overwrite or extend the reply. Death clears it and real damage still applies.
+  Warned attack/steal actions wait until the reply expires. Failures now appear as scene notifications after composing.
+- A narrow reproduction did start PIE and attach the native debugger before this port. The Publish breakpoint could
+  not bind (“no executable code”); only an engine UpdateTime stack and ordinary values were captured, so the old bubble
+  cause was not established at runtime. That older PIE could automatically issue NPC API requests.
+- The editor exited normally while waiting for a second bubble breakpoint; this was not the screenshot crash. Both
+  agent breakpoints were removed, the user's 9 exception breakpoints were preserved, and the debug session ended.
+  The narrow-debug record is `Saved/Validation/npc-reply-debug-triage.json`.
+- The final build check succeeded with exit code 0 (`Saved/ember-reply-five-seconds-build.log`). UBT reported “Target is
+  up to date”, 0 actions, in 1.43 seconds; this command did not compile files again. The module DLL is newer than the
+  relevant source and `VerdantEmberSpeechWidget.cpp.obj` exists, confirming the module contains the new implementation.
+  The new version has not undergone visual or gameplay acceptance. Earlier test records below do not validate it.
+
 ## 2026-10-31 — Inclusive 5x conversation height limit
 
 - Increased conversation eligibility to a taller/shorter height ratio of at most 5, including exactly 5x. The policy

@@ -3,6 +3,7 @@
 #include "VerdantWorld.h"
 #include "VerdantDialogue.h"
 #include "VerdantEconomyRules.h"
+#include "VerdantNPCScale.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -48,6 +49,47 @@ namespace
 
 	bool PopulationActorAlive(const AVerdantCharacter* Person) { return IsValid(Person) && !Person->bDead; }
 
+	struct FResidentSize
+	{
+		float HeightCm = 0.f;
+		int32 LogBin = 0;
+	};
+
+	TArray<FResidentSize> ResidentSizes(int32 Seed)
+	{
+		constexpr int32 Count = UE_ARRAY_COUNT(Profiles);
+		static_assert(Count == 20);
+		FRandomStream SizeRandom(static_cast<int32>(static_cast<uint32>(Seed) ^ 0x6d2b79f5u));
+		TArray<FResidentSize> Samples;
+		TArray<int32> RemainingBins;
+		for (int32 Bin = 0; Bin < Count; ++Bin)
+		{
+			const float Quantile = (Bin + SizeRandom.FRand()) / Count;
+			Samples.Add({VerdantNPCScale::HeightAtLogQuantile(Quantile), Bin});
+			if (Bin >= 3) RemainingBins.Add(Bin);
+		}
+		// Guarantee one visible upper-end example without adding an extra giant.
+		Samples.Last().HeightCm = VerdantNPCScale::MaximumHeightCm;
+		for (int32 I = RemainingBins.Num() - 1; I > 0; --I)
+			RemainingBins.Swap(I, SizeRandom.RandRange(0, I));
+		TArray<FResidentSize> Assigned;
+		Assigned.SetNum(Count);
+		int32 Next = 0;
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			// Keep the three peaceful arrival residents small; the sample set is unchanged.
+			const int32 Bin = Index == 0 ? 0 : Index == 3 ? 1 : Index == 5 ? 2 : RemainingBins[Next++];
+			Assigned[Index] = Samples[Bin];
+		}
+		return Assigned;
+	}
+
+	struct FResidentFootprint
+	{
+		FVector Position;
+		float Radius;
+	};
+
 	constexpr float SpawnFootClearance = 5.f;
 	constexpr float SpawnMinimumNormalZ = .819152f; // At most 35 degrees, below the movement limit.
 	const FVector ArrivalPoint(-1000.f, -5800.f, 0.f);
@@ -62,19 +104,37 @@ namespace
 			&& Hit.bBlockingHit && Hit.GetComponent() == W->Ground;
 	}
 
-	bool ClearCapsule(AVerdantWorld* W, const FVector& Foot, float Radius, float HalfHeight,
+	bool ClearCapsule(AVerdantWorld* W, const FVector& Center, float Radius, float HalfHeight,
 	                  const AActor* Ignore = nullptr)
 	{
 		FCollisionQueryParams Query(SCENE_QUERY_STAT(VerdantNPCSpawnSpace), false);
 		if (Ignore) Query.AddIgnoredActor(Ignore);
 		return !W->GetWorld()->OverlapBlockingTestByChannel(
-			Foot + FVector(0, 0, HalfHeight + SpawnFootClearance), FQuat::Identity, ECC_Pawn,
+			Center, FQuat::Identity, ECC_Pawn,
 			FCollisionShape::MakeCapsule(Radius, HalfHeight), Query);
+	}
+
+	bool FindCapsuleFoot(AVerdantWorld* W, const FVector& Surface, float Radius, float HalfHeight,
+	                     FVector& OutFoot)
+	{
+		FCollisionQueryParams Query(SCENE_QUERY_STAT(VerdantNPCSpawnLanding), false);
+		FHitResult Landing;
+		const FVector Start = Surface + FVector(0, 0, HalfHeight + FMath::Max(150.f, Radius * 2.f));
+		const FVector End = Surface + FVector(0, 0, HalfHeight - FMath::Max(100.f, Radius));
+		if (!W->GetWorld()->SweepSingleByChannel(Landing, Start, End, FQuat::Identity, ECC_Pawn,
+		                                         FCollisionShape::MakeCapsule(Radius, HalfHeight), Query)
+			|| Landing.bStartPenetrating || Landing.GetComponent() != W->Ground
+			|| Landing.ImpactNormal.Z < SpawnMinimumNormalZ)
+			return false;
+		// Hit.Location is the swept capsule center, including the lift needed on a slope.
+		OutFoot = Landing.Location - FVector(0, 0, HalfHeight) + FVector(0, 0, SpawnFootClearance);
+		return ClearCapsule(W, OutFoot + FVector(0, 0, HalfHeight), Radius, HalfHeight);
 	}
 
 	bool ChooseGround(AVerdantWorld* W, const FVector& Anchor, float Radius, float HalfHeight,
 	                  float InitialRadius, float InitialHalfHeight, bool KeepAwayFromArrival,
-	                  const TArray<FVector>& Occupied, FRandomStream& Random, FVector& OutGround)
+	                  const TArray<FResidentFootprint>& Occupied, FRandomStream& Random,
+	                  FVector& OutGround, FVector& OutFoot)
 	{
 		// Try nearby positions first, then expand. A low relative score never makes an invalid spot legal.
 		constexpr float SearchRanges[] = {900.f, 1800.f, 3600.f, 6000.f};
@@ -91,11 +151,11 @@ namespace
 					                                           SearchRanges[Ring]);
 				const FVector XY = Anchor + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0) * Distance;
 				if (FMath::Abs(XY.X) > 11000.f || FMath::Abs(XY.Y) > 11000.f) continue;
-				const float ArrivalClearance = KeepAwayFromArrival ? 2200.f : 450.f;
+				const float ArrivalClearance = (KeepAwayFromArrival ? 2200.f : 450.f) + Radius;
 				if (FVector::DistSquared2D(XY, ArrivalPoint) < FMath::Square(ArrivalClearance)) continue;
 				bool Crowded = false;
-				for (const FVector& Existing : Occupied)
-					if (FVector::DistSquared2D(XY, Existing) < FMath::Square(Radius + 260.f))
+				for (const FResidentFootprint& Existing : Occupied)
+					if (FVector::DistSquared2D(XY, Existing.Position) < FMath::Square(Radius + Existing.Radius + 180.f))
 					{
 						Crowded = true;
 						break;
@@ -104,8 +164,8 @@ namespace
 				FHitResult Floor;
 				if (!ReadTerrainFloor(W, XY, Floor) || Floor.ImpactNormal.Z < SpawnMinimumNormalZ) continue;
 				const FVector Point = Floor.ImpactPoint;
-				const float SupportRadius = FMath::Max(10.f, Radius * .75f);
-				const float MaxGroundVariation = FMath::Max(4.f, FMath::Min(30.f, Radius * .65f));
+				const float SupportRadius = FMath::Max(4.f, Radius * .75f);
+				const float MaxGroundVariation = FMath::Max(4.f, Radius * .65f);
 				float Roughness = 0.f;
 				bool Supported = true;
 				for (const FVector& Offset : {
@@ -122,15 +182,20 @@ namespace
 					Roughness = FMath::Max(Roughness, float(FMath::Abs(Support.ImpactPoint.Z - Point.Z)));
 				}
 				if (!Supported || Roughness > MaxGroundVariation) continue;
-				// Check the final body and the constructor capsule used during deferred spawning.
-				// No owner is ignored: terrain, the world's tree/rock components and prior residents all count.
-				if (!ClearCapsule(W, Point, Radius, HalfHeight)
-					|| !ClearCapsule(W, Point, InitialRadius, InitialHalfHeight))
+				// Both body sizes must be able to land without intersecting the terrain or props.
+				FVector FinalFoot, InitialFoot;
+				if (!FindCapsuleFoot(W, Point, Radius, HalfHeight, FinalFoot)
+					|| !FindCapsuleFoot(W, Point, InitialRadius, InitialHalfHeight, InitialFoot))
+					continue;
+				const FVector Foot(Point.X, Point.Y, FMath::Max(FinalFoot.Z, InitialFoot.Z));
+				if (!ClearCapsule(W, Foot + FVector(0, 0, HalfHeight), Radius, HalfHeight)
+					|| !ClearCapsule(W, Foot + FVector(0, 0, InitialHalfHeight), InitialRadius, InitialHalfHeight))
 					continue;
 				const float Score = Roughness + Distance * .025f;
 				if (Score < BestScore)
 				{
 					OutGround = Point;
+					OutFoot = Foot;
 					BestScore = Score;
 					Found = true;
 				}
@@ -171,12 +236,13 @@ void UVerdantPopulation::SpawnResidents()
 	bSpawnAttempted = true;
 	GConfig->GetInt(TEXT("Verdant.Population"), TEXT("Seed"), WorldSeed, GGameIni);
 	FRandomStream Random(WorldSeed);
-	const int32 Tiers[] = {1, 2, 4, 1, 3, 1, 2, 3, 2, 4, 3, 2, 3, 4, 4, 1, 4, 1, 3, 2};
-	static_assert(UE_ARRAY_COUNT(Tiers) == UE_ARRAY_COUNT(Profiles));
-	constexpr int32 ExpectedCount = UE_ARRAY_COUNT(Tiers);
-	TArray<FVector> Occupied;
+	constexpr int32 ExpectedCount = UE_ARRAY_COUNT(Profiles);
+	const TArray<FResidentSize> Sizes = ResidentSizes(WorldSeed);
+	TArray<FResidentFootprint> Occupied;
 	TArray<int32> FailedIds;
 	int32 SpawnedCount = 0;
+	int32 TallCount = 0, GiantCount = 0;
+	float SmallestHeight = BIG_NUMBER, LargestHeight = 0.f;
 	const auto* DefaultCapsule = GetDefault<AVerdantCharacter>()->GetCapsuleComponent();
 	const float InitialRadius = DefaultCapsule->GetUnscaledCapsuleRadius();
 	const float InitialHalfHeight = DefaultCapsule->GetUnscaledCapsuleHalfHeight();
@@ -185,25 +251,19 @@ void UVerdantPopulation::SpawnResidents()
 	{
 		const auto& Profile = Profiles[Index];
 		const int32 Id = Index + 1;
-		const int32 Tier = Tiers[Index];
-		const float Height = Tier == 1
-			                     ? Random.FRandRange(65.f, 110.f)
-			                     : Tier == 2
-			                     ? Random.FRandRange(135.f, 185.f)
-			                     : Tier == 3
-			                     ? Random.FRandRange(220.f, 295.f)
-			                     : Random.FRandRange(335.f, 410.f);
+		const float Height = Sizes[Index].HeightCm;
+		const int32 Tier = VerdantEconomy::Tier(Height);
 		const float Size = Height / 180.f;
 		FVector Anchor = Id <= 3 ? W->Groves[Id - 1].Position : W->Groves[(Id - 1) % 3].Position;
 		if (Id == 1 || Id == 4 || Id == 6)
 			Anchor = Arrival + FVector((Id == 1 ? -600.f : Id == 4 ? 500.f : 900.f), 950.f, 0);
 		if (Id == 5) Anchor = W->Groves[1].Position + FVector(-200.f, 1450.f, 0);
-		FVector Ground;
+		FVector Ground, SpawnFoot;
 		const float FinalRadius = 32.f * Size;
 		const float FinalHalfHeight = Height * .5f;
-		const bool KeepAwayFromArrival = FString(Profile.Tags).Contains(TEXT("predator"));
+		const bool KeepAwayFromArrival = Height >= 400.f || FString(Profile.Tags).Contains(TEXT("predator"));
 		if (!ChooseGround(W, Anchor, FinalRadius, FinalHalfHeight, InitialRadius, InitialHalfHeight,
-		                  KeepAwayFromArrival, Occupied, Random, Ground))
+		                  KeepAwayFromArrival, Occupied, Random, Ground, SpawnFoot))
 		{
 			FailedIds.Add(Id);
 			UE_LOG(LogTemp, Error, TEXT("VERDANT_RESIDENT_SPAWN_FAILED id=%d type=%s tier=%d reason=no_safe_ground"),
@@ -212,7 +272,7 @@ void UVerdantPopulation::SpawnResidents()
 		}
 		// SetSize preserves the constructor capsule's world-space foot point.
 		const FTransform Transform(FRotator(0, Random.FRandRange(0.f, 360.f), 0),
-		                           Ground + FVector(0, 0, InitialHalfHeight + SpawnFootClearance));
+		                           SpawnFoot + FVector(0, 0, InitialHalfHeight));
 		auto* N = GetWorld()->SpawnActorDeferred<AVerdantCharacter>(AVerdantCharacter::StaticClass(), Transform,
 		                                                            W, nullptr,
 		                                                            ESpawnActorCollisionHandlingMethod::DontSpawnIfColliding);
@@ -234,6 +294,10 @@ void UVerdantPopulation::SpawnResidents()
 		N->WalkPath = Profile.Walk;
 		N->BodySize = Size;
 		N->HomePosition = Ground;
+		// Routine randomness remains independent of the new height and placement streams.
+		FRandomStream RoutineRandom(static_cast<int32>(static_cast<uint32>(WorldSeed) ^
+			(0x51f15e5du + static_cast<uint32>(Id) * 0x9e3779b9u)));
+		N->HomeRangeRadius = RoutineRandom.FRandRange(1200.f, 2200.f);
 		N->HomeGrove = Id <= 3 ? Id - 1 : (Id - 1) % 3;
 		N->Outfit = Index % 3;
 		N->BodyColor = FLinearColor::MakeFromHSV8(uint8(Index * 37), 120, 190);
@@ -245,27 +309,83 @@ void UVerdantPopulation::SpawnResidents()
 		N->BrainClock = Index * .08f;
 		W->Folk.Add(N);
 		UGameplayStatics::FinishSpawningActor(N, Transform);
-		if (!IsValid(N) || N->IsActorBeingDestroyed()
-			|| !ClearCapsule(W, Ground, FinalRadius, FinalHalfHeight, N))
+		if (!IsValid(N) || N->IsActorBeingDestroyed())
 		{
 			W->Folk.Remove(N);
-			if (IsValid(N)) N->Destroy();
 			FailedIds.Add(Id);
-			UE_LOG(LogTemp, Error, TEXT("VERDANT_RESIDENT_SPAWN_FAILED id=%d type=%s reason=final_capsule_blocked"), Id,
+			UE_LOG(LogTemp, Error,
+			       TEXT("VERDANT_RESIDENT_SPAWN_FAILED id=%d type=%s reason=actor_destroyed_during_finish"), Id,
 			       Profile.Type);
 			continue;
 		}
-		Occupied.Add(Ground);
+		const auto* Capsule = N->GetCapsuleComponent();
+		const float ActualRadius = Capsule->GetScaledCapsuleRadius();
+		const float ActualHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+		const float ActualHeight = N->HeightCm();
+		const bool HeightMatches = FMath::IsNearlyEqual(ActualHeight, Height, .1f);
+		const FVector BeforeCenter = Capsule->GetComponentLocation();
+		const FVector PlannedCenter = SpawnFoot + FVector(0, 0, FinalHalfHeight);
+		const bool BlockedBefore = !ClearCapsule(W, BeforeCenter, ActualRadius, ActualHalfHeight, N);
+		const bool PlannedBlocked = !ClearCapsule(W, PlannedCenter, ActualRadius, ActualHalfHeight, N);
+		// PostInitializeComponents can snap the constructor's 32/90 capsule to the floor
+		// before BeginPlay applies the resident's real size. Restore only this checked spawn
+		// position; do not carry the constructor capsule's floor result into normal movement.
+		if (HeightMatches && !PlannedBlocked)
+		{
+			N->SetActorLocation(PlannedCenter, false, nullptr, ETeleportType::TeleportPhysics);
+			auto* Move = N->GetCharacterMovement();
+			Move->StopMovementImmediately();
+			Move->CurrentFloor.Clear();
+			Move->bForceNextFloorCheck = true;
+		}
+		const FVector ActualCenter = Capsule->GetComponentLocation();
+		const bool BlockedAfter = !ClearCapsule(W, ActualCenter, ActualRadius, ActualHalfHeight, N);
+		const bool CenterMatches = ActualCenter.Equals(PlannedCenter, .1f);
+		UE_LOG(LogTemp, Display,
+		       TEXT(
+			       "VERDANT_RESIDENT_SPAWN_CHECK id=%d expected_height_cm=%.3f actual_height_cm=%.3f before_center=%s planned_center=%s actual_center=%s blocked_before=%d planned_blocked=%d blocked_after=%d height_ok=%d center_ok=%d"
+		       ),
+		       Id, Height, ActualHeight, *BeforeCenter.ToCompactString(), *PlannedCenter.ToCompactString(),
+		       *ActualCenter.ToCompactString(), BlockedBefore ? 1 : 0, PlannedBlocked ? 1 : 0,
+		       BlockedAfter ? 1 : 0, HeightMatches ? 1 : 0, CenterMatches ? 1 : 0);
+		if (!HeightMatches || PlannedBlocked || BlockedAfter || !CenterMatches)
+		{
+			W->Folk.Remove(N);
+			N->Destroy();
+			FailedIds.Add(Id);
+			UE_LOG(LogTemp, Error,
+			       TEXT(
+				       "VERDANT_RESIDENT_SPAWN_FAILED id=%d type=%s reason=final_body_invalid height_ok=%d center_ok=%d planned_blocked=%d blocked_after=%d"
+			       ),
+			       Id, Profile.Type, HeightMatches ? 1 : 0, CenterMatches ? 1 : 0,
+			       PlannedBlocked ? 1 : 0, BlockedAfter ? 1 : 0);
+			continue;
+		}
+		Occupied.Add({Ground, FinalRadius});
 		++SpawnedCount;
+		SmallestHeight = FMath::Min(SmallestHeight, N->HeightCm());
+		LargestHeight = FMath::Max(LargestHeight, N->HeightCm());
+		if (N->HeightCm() > 500.f) ++TallCount;
+		if (N->HeightCm() >= 800.f) ++GiantCount;
 		N->GetCharacterMovement()->bRunPhysicsWithNoController = true;
 		N->UpdateAppearance();
-		UE_LOG(LogTemp, Display, TEXT("VERDANT_RESIDENT id=%d type=%s tier=%d height_cm=%.1f model=%s"),
-		       Id, *N->CharacterTypeId, N->FoodTier(), N->HeightCm(), *N->ModelPath);
+		UE_LOG(LogTemp, Display,
+		       TEXT(
+			       "VERDANT_RESIDENT id=%d type=%s tier=%d height_cm=%.3f log_bin=%d model=%s home=%s home_radius_cm=%.1f spawn_center=%s capsule_radius_cm=%.3f foot_lift_cm=%.3f"
+		       ),
+		       Id, *N->CharacterTypeId, N->FoodTier(), N->HeightCm(), Sizes[Index].LogBin, *N->ModelPath,
+		       *N->HomePosition.ToCompactString(), N->HomeRangeRadius, *N->GetActorLocation().ToCompactString(),
+		       FinalRadius, float(SpawnFoot.Z - Ground.Z));
 	}
 	GenerateRelations(W);
 	bSpawned = SpawnedCount == ExpectedCount;
 	UE_LOG(LogTemp, Display, TEXT("VERDANT_POPULATION_READY ready=%d expected=%d actual=%d"),
 	       bSpawned ? 1 : 0, ExpectedCount, SpawnedCount);
+	UE_LOG(LogTemp, Display,
+	       TEXT(
+		       "VERDANT_POPULATION_SIZES seed=%d distribution=log_stratified bins=%d min_cm=%.3f max_cm=%.3f above_5m=%d at_least_8m=%d"
+	       ),
+	       WorldSeed, ExpectedCount, SpawnedCount > 0 ? SmallestHeight : 0.f, LargestHeight, TallCount, GiantCount);
 	if (bSpawned)
 		W->Record(TEXT("二十位不同性格、不同体型的居民来到山谷；他们的旧识、合作与分歧已经登记。"));
 	else

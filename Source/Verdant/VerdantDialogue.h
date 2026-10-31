@@ -35,6 +35,20 @@ struct FVerdantWarnedAction
 	int32 ActorLife = 0, ActorIntent = 0, TargetLife = 0, TargetIntent = 0;
 };
 
+// A read-only feasibility snapshot, not an execution/completion receipt.
+struct FVerdantDialogueOutcome
+{
+	FVerdantDialogueJob Job;
+	FString Draft, Action, Result;
+	int32 TargetId = 0;
+	float Amount = 0.f;
+	bool bCanExecute = false;
+	int32 ListenerIntentAtCheck = 0;
+	TWeakObjectPtr<AVerdantCharacter> TargetAtCheck;
+	int32 TargetLifeAtCheck = 0;
+	float ExpiresAt = 0.f;
+};
+
 UCLASS()
 class VERDANT_API UVerdantDialogue : public UActorComponent
 {
@@ -84,12 +98,20 @@ private:
 	void StartCloud(const FVerdantDialogueJob& Job);
 	void FinishJob(const FVerdantDialogueJob& Job, const FString& Message = FString());
 	void Publish(const FVerdantDialogueJob& Job, const FString& Say, const FString& Action, int32 TargetId,
-	             float Amount);
+	             float Amount, const FString& Rejection = FString());
+	void CheckForReflection(const FVerdantDialogueJob& Job, const FString& Draft, const FString& Action,
+	                        int32 TargetId, float Amount, const FString& Failure = FString());
+	void StartReflection(const FVerdantDialogueOutcome& Outcome);
+	void PublishReflection(const FVerdantDialogueOutcome& Outcome, const FString& Say);
+	bool CanPublishReflection(const FVerdantDialogueOutcome& Outcome) const;
 	void ConsiderInitiative();
 	void TickWarnedActions();
+	bool HasWarnedActionFor(const AVerdantCharacter* NPC) const;
 	bool ReadingConversationWith(const AVerdantCharacter* NPC) const;
 	TArray<FVerdantDialogueJob> HearingQueue;
 	TArray<FVerdantWarnedAction> WarnedActions;
+	TSet<FString> ResolvedDecisions;
+	TSet<FString> CommittedDecisions;
 	TSet<int32> PendingNPCs;
 	TSet<FString> HeardPairs;
 	TMap<int64, int32> ThreadLines;
@@ -99,4 +121,6 @@ private:
 	TFunction<void()> CompletedCloudReply;
 	int64 NextMessageId = 0;
 	float NextProactiveAt = 10.f, LastPlayerMessageAt = -100.f;
+	int32 NextInitiatorIndex = 0;
+	bool bPreferPlayerInitiative = true;
 };

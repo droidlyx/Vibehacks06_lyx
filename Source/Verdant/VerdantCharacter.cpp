@@ -1,5 +1,7 @@
 #include "VerdantCharacter.h"
 #include "VerdantPlayerScale.h"
+#include "VerdantNPCScale.h"
+#include "VerdantManualScaleRules.h"
 #include "VerdantEconomyRules.h"
 #include "VerdantCreaturePresentation.h"
 #include "VerdantTitanPresentation.h"
@@ -64,6 +66,7 @@ namespace VerdantScaleTest
 			return;
 		}
 		const bool Reset = Action == TEXT("reset");
+		if (Reset)Player->ResetScaleTestInput();
 		if (!Reset && Action != TEXT("grow") && Action != TEXT("shrink"))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Verdant.ScaleTest grow|shrink|reset|status"));
@@ -114,18 +117,26 @@ namespace VerdantScaleTest
 			});
 			Input->KeyBindings.Add(MoveTemp(Binding));
 		};
-		AddKey(EKeys::LeftBracket, TEXT("shrink"));
-		AddKey(EKeys::RightBracket, TEXT("grow"));
+		// Scale keys are sampled continuously in TickScaleTestInput, not stepped here.
+		for (FKey Key : {EKeys::LeftBracket, EKeys::RightBracket, EKeys::Subtract, EKeys::Add})
+			for (EInputEvent Event : {IE_Pressed, IE_Released})
+			{
+				FInputKeyBinding Binding(FInputChord(Key), Event);
+				Binding.KeyDelegate.GetDelegateForManualSet().BindLambda([]()
+				{
+				});
+				Input->KeyBindings.Add(MoveTemp(Binding));
+			}
 		AddKey(EKeys::Backslash, TEXT("reset"));
-		AddKey(EKeys::Subtract, TEXT("shrink"));
-		AddKey(EKeys::Add, TEXT("grow"));
 		auto& Manager = IConsoleManager::Get();
 		if (!Manager.FindConsoleObject(TEXT("Verdant.ScaleTest")))
 			Manager.RegisterConsoleCommand(
 				TEXT("Verdant.ScaleTest"), TEXT("Development scale test: grow | shrink | reset | status"),
 				FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Console), ECVF_Cheat);
 		UE_LOG(LogTemp, Display,
-		       TEXT("VERDANT_SCALE_TEST controls=[ shrink, ] grow, Backslash reset; height range 0.18-36m"));
+		       TEXT(
+			       "VERDANT_SCALE_TEST hold [ or Numpad- shrink, ] or Numpad+ grow; factor=1.5 per second; Backslash reset"
+		       ));
 	}
 #endif
 }
@@ -365,9 +376,16 @@ void AVerdantCharacter::SetSize(float NewSize)
 {
 	if (!FMath::IsFinite(NewSize)) return;
 	const bool ScaleTest = VerdantScaleTest::IsActive(this);
+	const float BaseHeight = VerdantTitanPresentation::BaseHeight(this);
+	const float MinimumSize = AgentId == 0
+		                          ? VerdantPlayerScale::StartingBodySize
+		                          : VerdantNPCScale::MinimumHeightCm / BaseHeight;
+	const float MaximumSize = AgentId == 0
+		                          ? VerdantEconomy::MaximumHeightCm / BaseHeight
+		                          : VerdantNPCScale::MaximumHeightCm / BaseHeight;
 	NewSize = ScaleTest
 		          ? FMath::Clamp(NewSize, VerdantScaleTest::MinimumSize, VerdantScaleTest::MaximumSize)
-		          : FMath::Clamp(NewSize, AgentId == 0 ? VerdantPlayerScale::StartingBodySize : .35f, 2.5f);
+		          : FMath::Clamp(NewSize, MinimumSize, MaximumSize);
 	// Preserve the world-space foot position. Initial spawns use the constructor
 	// capsule height; all later growth adjusts height without lifting the feet.
 	const float ShapeScale = GetCapsuleComponent()->GetShapeScale();
@@ -403,15 +421,77 @@ void AVerdantCharacter::SetSize(float NewSize)
 	GetCharacterMovement()->MaxAcceleration = 1800.f * MotionScale;
 	GetCharacterMovement()->BrakingDecelerationWalking = 1800.f * MotionScale;
 	if (AgentId == 0)
-		GetCharacterMovement()->MaxWalkSpeed = bSprinting ? VerdantPlayerScale::SprintSpeed(BodySize)
-			: VerdantPlayerScale::MovementSpeed(BodySize, 430.f);
+		GetCharacterMovement()->MaxWalkSpeed = bSprinting
+			                                       ? VerdantPlayerScale::SprintSpeed(BodySize)
+			                                       : VerdantPlayerScale::MovementSpeed(BodySize, 430.f);
 	GetCharacterMovement()->JumpZVelocity = 400.f * FMath::Sqrt(BodySize);
 	AppliedSize = BodySize;
+}
+
+void AVerdantCharacter::ResetScaleTestInput()
+{
+	bScaleKeyHeld = false;
+	bScaleResetAwaitRelease = true;
+}
+
+void AVerdantCharacter::TickScaleTestInput(float DeltaSeconds)
+{
+#if !UE_BUILD_SHIPPING
+	if (AgentId != 0)return;
+	auto* PC = Cast<APlayerController>(GetController());
+	if (!PC || !IsPlayerControlled())
+	{
+		bScaleKeyHeld = false;
+		return;
+	}
+	const bool Grow = PC->IsInputKeyDown(EKeys::RightBracket) || PC->IsInputKeyDown(EKeys::Add);
+	const bool Shrink = PC->IsInputKeyDown(EKeys::LeftBracket) || PC->IsInputKeyDown(EKeys::Subtract);
+	const auto* HUD = Cast<AVerdantHUD>(PC->GetHUD());
+	if (bDead || PC->IsMoveInputIgnored() || (HUD && HUD->bConversationOpen) || GetWorld()->IsPaused())
+	{
+		bScaleKeyHeld = false;
+		bScaleResetAwaitRelease = Grow || Shrink;
+		return;
+	}
+	if (bScaleResetAwaitRelease)
+	{
+		if (!Grow && !Shrink)bScaleResetAwaitRelease = false;
+		return; // Reset cannot immediately restart growth while the old key remains down.
+	}
+	const int32 Direction = int32(Grow) - int32(Shrink);
+	if (Direction == 0)
+	{
+		if (bScaleKeyHeld)UE_LOG(LogTemp, Display, TEXT("VERDANT_SCALE_TEST hold_end size=%.4f"), BodySize);
+		bScaleKeyHeld = false;
+		return;
+	}
+	if (!bScaleKeyHeld)
+	{
+		bScaleKeyHeld = true;
+		Tags.AddUnique(TEXT("VerdantScaleTest"));
+		CancelForConversation(); // Once per gesture, never on every size update.
+		if (auto* W = Valley())W->Notify(TEXT("按住 [ 缩小 / ] 放大；每秒 ×1.5 或 ÷1.5，松开停止。"));
+		UE_LOG(LogTemp, Display, TEXT("VERDANT_SCALE_TEST hold direction=%d factor_per_second=1.5 size=%.4f"),
+		       Direction, BodySize);
+	}
+	const float Before = BodySize;
+	const float Target = float(VerdantManualScale::NextSize(Before, Direction, DeltaSeconds,
+	                                                        VerdantScaleTest::MinimumSize,
+	                                                        VerdantScaleTest::MaximumSize));
+	if (!FMath::IsFinite(Target) || Target == Before)return;
+	SetSize(Target); // Preserve the existing collision check and foot placement.
+	if (Target > Before && BodySize == Before && GetWorld()->GetTimeSeconds() >= NextScaleBlockedNotice)
+	{
+		NextScaleBlockedNotice = GetWorld()->GetTimeSeconds() + 1.f;
+		if (auto* W = Valley())W->Notify(TEXT("缩放受阻：附近地形或物体没有足够空间，请移到开阔处。"));
+	}
+#endif
 }
 
 void AVerdantCharacter::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	TickScaleTestInput(Dt);
 	if (bDialogueReplyActive && !IsDialogueReplyActive())
 	{
 		bDialogueReplyActive = false;
@@ -427,8 +507,8 @@ void AVerdantCharacter::Tick(float Dt)
 			// UI-only dialogue consumes key events. Read the current modifier state
 			// instead of leaving sprint latched off/on after dialogue or respawn.
 			const bool ShiftHeld = FSlateApplication::IsInitialized()
-				? FSlateApplication::Get().GetModifierKeys().IsShiftDown()
-				: PC->IsInputKeyDown(EKeys::LeftShift) || PC->IsInputKeyDown(EKeys::RightShift);
+				                       ? FSlateApplication::Get().GetModifierKeys().IsShiftDown()
+				                       : PC->IsInputKeyDown(EKeys::LeftShift) || PC->IsInputKeyDown(EKeys::RightShift);
 			bSprinting = !bDead && !PC->IsMoveInputIgnored() && ShiftHeld;
 		}
 	SocialActionCooldown = FMath::Max(0.f, SocialActionCooldown - Dt);
@@ -483,8 +563,9 @@ void AVerdantCharacter::Tick(float Dt)
 		}
 		TickAutomaticGrowth(Dt);
 		const float MovementSpeed = AgentId == 0
-			                            ? (bSprinting ? VerdantPlayerScale::SprintSpeed(BodySize)
-				                            : VerdantPlayerScale::MovementSpeed(BodySize, 430.f))
+			                            ? (bSprinting
+				                               ? VerdantPlayerScale::SprintSpeed(BodySize)
+				                               : VerdantPlayerScale::MovementSpeed(BodySize, 430.f))
 			                            : (bSprinting ? 640.f : 430.f) * FMath::Pow(BodySize, .32f);
 		GetCharacterMovement()->MaxWalkSpeed = MovementSpeed * (AttackTimer > 0 ? .35f : 1.f);
 		if (AgentId != 0 && DodgeTimer <= 0 && (HurtTimer <= 0 || AttackTimer > 0)) TickNPC(Dt);
@@ -665,6 +746,12 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 	const float ActualDamage = FMath::Min(Health, Damage);
 	if (auto* W = Valley())W->PlayCue(TEXT("Hit"), GetActorLocation(), From->BodySize);
 	Health = FMath::Max(0.f, Health - Damage);
+	// Emit the real hit once, including the killing blow, before death changes presentation.
+	if (FMath::IsFinite(ActualDamage) && ActualDamage > 0.f)
+		if (auto* PC = UGameplayStatics::GetPlayerController(this, 0))
+			if (PC->GetPawn() == this || PC->GetPawn() == From)
+				if (auto* HUD = Cast<AVerdantHUD>(PC->GetHUD()))
+					HUD->ShowDamageNumber(this, ActualDamage);
 	HurtTimer = .3f;
 	++IntentRevision;
 	HostileId = From->AgentId;
@@ -755,7 +842,9 @@ bool AVerdantCharacter::IsDodgeInvulnerable() const
 void AVerdantCharacter::Dodge()
 {
 	StopHarvest();
-	if (bDead || IsDialogueReplyActive() || DodgeTimer > 0 || DodgeRecoveryTimer > 0 || HurtTimer > 0 || AttackTimer > .25f)return;
+	if (bDead || IsDialogueReplyActive() || DodgeTimer > 0 || DodgeRecoveryTimer > 0 || HurtTimer > 0 || AttackTimer >
+		.25f)
+		return;
 	if (!GetCharacterMovement()->IsMovingOnGround())
 	{
 		if (AgentId == 0)SetCombatFeedback(TEXT("站稳后再闪避"), .55f);
@@ -930,13 +1019,20 @@ void AVerdantCharacter::TendGrove()
 void AVerdantCharacter::Say(const FString& Line)
 {
 	if (IsDialogueReplyActive())return; // Ambient barks must not replace a visible API reply.
+	if (bDialogueReplyActive)
+	{
+		BrainClock = 0.f;
+		MoveSampleAt = 0.f;
+		MoveSteeringAt = 0.f;
+	}
 	bDialogueReplyActive = false;
 	DialogueReplyFocus.Reset();
 	LastSpeech = Line.TrimStartAndEnd().Left(500);
 	SpeechStartedAt = GetWorld()->GetTimeSeconds();
 	// Long player messages are paginated in the overhead bubble. All pages share
 	// this game-time lifetime, so reading/typing pauses do not consume them.
-	SpeechUntil = SpeechStartedAt + (LastSpeech.IsEmpty() ? 0.f : FMath::Clamp(8.f + LastSpeech.Len() * .07f, 8.f, 48.f));
+	SpeechUntil = SpeechStartedAt + (
+		LastSpeech.IsEmpty() ? 0.f : FMath::Clamp(8.f + LastSpeech.Len() * .07f, 8.f, 48.f));
 }
 
 bool AVerdantCharacter::IsDialogueReplyActive() const
@@ -952,7 +1048,7 @@ void AVerdantCharacter::BeginDialogueReply(const FString& Line, AVerdantCharacte
 	if (Reply.IsEmpty())return;
 	LastSpeech = Reply;
 	SpeechStartedAt = GetWorld()->GetTimeSeconds();
-	SpeechUntil = SpeechStartedAt + 5.f;
+	SpeechUntil = SpeechStartedAt + DialogueReplyDuration;
 	bDialogueReplyActive = true;
 	DialogueReplyFocus = IsValid(FocusPlayer) && !FocusPlayer->bDead ? FocusPlayer : nullptr;
 	CancelForConversation();

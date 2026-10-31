@@ -84,7 +84,7 @@ float AVerdantFoodPickup::Take(AVerdantCharacter* Receiver, float Requested)
 	if (Remaining <= .001f)
 	{
 		Remaining = 0.f;
-		// Natural food is replaced at a new location by the world's 60-second cycle.
+		// Natural food is replaced at a new location by the world's 30-second cycle.
 		// Keep it hidden until then; death drops have no refill slot.
 		if (!bRenewable) Destroy();
 	}

@@ -49,7 +49,7 @@ float AVerdantWorld::MaxNegotiatedDonation(const AVerdantCharacter* NPC) const
     if (!RegisteredAlive(this, NPC) || NPC->AgentId == 0 || bRestored || !FMath::IsFinite(NPC->Food))
         return 0.f;
     // A new pledge replaces the old plan; actual food is deducted on arrival.
-    return FMath::Min(20.f, FMath::Max(0.f, NPC->Food));
+    return FMath::Min3(20.f, FMath::Max(0.f, NPC->Food), FMath::Max(0.f, TreeGoal - TreeNutrition));
 }
 
 int32 AVerdantWorld::NegotiationGrove(const AVerdantCharacter* NPC) const

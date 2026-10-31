@@ -14,11 +14,27 @@ namespace
 		return IsValid(Who) && !Who->bDead;
 	}
 
-	FVector WildHome(int32 AgentId)
+	constexpr float NPCCombatMaxDistance = 2800.f;
+	constexpr float NPCRetreatSizeRatio = 1.45f;
+	constexpr float NPCRetreatHealthFraction = .28f;
+
+	bool OutmatchedForCombat(const AVerdantCharacter* Who, const AVerdantCharacter* Target)
 	{
-		if (AgentId == 4) return FVector(-1800.f, -300.f, 0.f);
-		if (AgentId == 5) return FVector(2800.f, 3000.f, 0.f);
-		return FVector(-3300.f, 6200.f, 0.f);
+		return Target->BodySize > Who->BodySize * NPCRetreatSizeRatio
+			|| Who->Health < Who->MaxHealth() * NPCRetreatHealthFraction;
+	}
+
+	bool BeyondCombatDuty(const AVerdantCharacter* Who, const AVerdantCharacter* Target,
+	                      const AVerdantWorld* World, const AVerdantCharacter* Leader = nullptr)
+	{
+		const FVector Anchor = Leader ? Leader->GetActorLocation() : Who->bWild ? Who->HomePosition
+			: World->Groves.IsValidIndex(Who->HomeGrove) ? World->Groves[Who->HomeGrove].Position
+			: World->MotherPosition;
+		const float Leash = Leader ? 1400.f : Who->bWild ? 2300.f : 1800.f;
+		const float NearbyReach = FMath::Max(350.f,
+			Who->Reach() + Target->GetCapsuleComponent()->GetScaledCapsuleRadius() + 120.f);
+		return FVector::Dist2D(Who->GetActorLocation(), Anchor) > Leash
+			&& FVector::Dist2D(Who->GetActorLocation(), Target->GetActorLocation()) > NearbyReach;
 	}
 
 	// Read collision triangles directly: a smoothed vertex normal can hide an
@@ -242,6 +258,49 @@ namespace
 	}
 }
 
+bool AVerdantCharacter::CanStartDialogueAttack(const AVerdantCharacter* Target, FString* Reason) const
+{
+	const auto Reject = [Reason](const TCHAR* Message)
+	{
+		if (Reason)*Reason = Message;
+		return false;
+	};
+	if (Reason)Reason->Empty();
+	const auto* World = Valley();
+	if (!World || !Alive(this) || !Alive(Target) || Target == this)
+		return Reject(TEXT("当前没有可攻击的有效目标。"));
+	if (Target->IsRespawnProtected())return Reject(TEXT("目标仍处于复活保护中。"));
+	if (FVector::Dist2D(GetActorLocation(), Target->GetActorLocation()) > NPCCombatMaxDistance)
+		return Reject(TEXT("目标超出当前可追击的28米范围。"));
+	if (OutmatchedForCombat(this, Target))
+		return Reject(TEXT("当前体力或双方体型差距会使我撤退，无法接受这次攻击计划。"));
+	// An explicit attack clears follow/protect, so evaluate the same home leash
+	// that the combat brain will use afterwards, without the previous leader.
+	if (BeyondCombatDuty(this, Target, World))
+		return Reject(TEXT("我已远离原来的活动区域，无法继续追击这个目标。"));
+	return true;
+}
+
+bool AVerdantCharacter::IsWithinHomeRange(const FVector& Position, float Inset) const
+{
+	if (Position.ContainsNaN() || HomePosition.ContainsNaN() || !FMath::IsFinite(HomeRangeRadius)) return false;
+	const float Radius = FMath::Max(0.f, HomeRangeRadius - FMath::Max(0.f, Inset));
+	return FVector::DistSquared2D(HomePosition, Position) <= FMath::Square(Radius);
+}
+
+void AVerdantCharacter::SetHomeRangeCenter(const FVector& NewCenter)
+{
+	if (NewCenter.ContainsNaN()) return;
+	// Explicit relocation only. Following, defending and delivering never call this.
+	HomePosition = NewCenter;
+	ResetFoodRoute(this);
+	AvoidFoodUntil.Reset();
+	bReturningHome = true;
+	Destination = HomePosition;
+	MoveSteeringDirection = FVector::ZeroVector;
+	DetourUntil = 0.f;
+}
+
 void AVerdantCharacter::MoveToward(const FVector& Goal, float Acceptance)
 {
 	if (bDead || !GetCharacterMovement()) return;
@@ -445,7 +504,7 @@ void AVerdantCharacter::TickNPC(float Dt)
 	if (!Enemy)
 	{
 		float BestDistance = bWild ? 560.f : 620.f;
-		const bool HasCommittedPlan = FollowId >= 0 || DonationPledge > .001f;
+		const bool HasCommittedPlan = FollowId >= 0 || DonationPledge > .001f || bReturningHome;
 		for (AVerdantCharacter* Other : W->Folk)
 		{
 			if (!Alive(Other) || Other == this || Other->IsRespawnProtected() || SameParty(Other) || (bWild && Other->
@@ -476,19 +535,10 @@ void AVerdantCharacter::TickNPC(float Dt)
 	if (Enemy)
 	{
 		const float Distance = FVector::Dist2D(GetActorLocation(), Enemy->GetActorLocation());
-		const bool Outmatched = Enemy->BodySize > BodySize * 1.45f || Health < MaxHealth() * .28f;
-		const FVector Anchor = Leader
-			                       ? Leader->GetActorLocation()
-			                       : bWild
-			                       ? HomePosition
-			                       : W->Groves.IsValidIndex(HomeGrove)
-			                       ? W->Groves[HomeGrove].Position
-			                       : W->MotherPosition;
-		const float Leash = Leader ? 1400.f : bWild ? 2300.f : 1800.f;
-		const bool TooFarFromDuty = FVector::Dist2D(GetActorLocation(), Anchor) > Leash
-			&& Distance > FMath::Max(350.f, Reach() + Enemy->GetCapsuleComponent()->GetScaledCapsuleRadius() + 120.f);
+		const bool Outmatched = OutmatchedForCombat(this, Enemy);
+		const bool TooFarFromDuty = BeyondCombatDuty(this, Enemy, W, Leader);
 		const bool SafeRetreat = Outmatched && Distance > FMath::Max(1150.f, Enemy->Reach() + 500.f);
-		if (Distance > 2800.f || TooFarFromDuty || SafeRetreat)
+		if (Distance > NPCCombatMaxDistance || TooFarFromDuty || SafeRetreat)
 		{
 			AvoidThreatId = Enemy->AgentId;
 			AvoidThreatUntil = Now + 8.f;
@@ -646,11 +696,39 @@ void AVerdantCharacter::TickNPC(float Dt)
 		}
 	}
 
+	// Combat, escorting and delivery return above. They may leave this circle,
+	// but never overwrite it; ordinary life resumes in the original home range.
+	if (!bReturningHome && !IsWithinHomeRange(GetActorLocation()))
+	{
+		if (FoodTarget.IsValid()) AvoidFoodUntil.Add(FoodTarget, Now + 25.f);
+		ResetFoodRoute(this);
+		bReturningHome = true;
+	}
+	if (bReturningHome)
+	{
+		// Re-enter well inside the boundary before foraging again, avoiding chatter
+		// between a border food target and the return action after a short detour.
+		if (IsWithinHomeRange(GetActorLocation(), HomeRangeRadius * .35f))
+		{
+			bReturningHome = false;
+			ResetFoodRoute(this);
+			Destination = GetActorLocation();
+		}
+		else
+		{
+			Destination = HomePosition;
+			ActionLabel = TEXT("返回自己的活动范围");
+			MoveToward(Destination, 150.f);
+			return;
+		}
+	}
+
 	const float TargetStock = FoodTier() == 4 ? 160.f : FoodTier() == 3 ? 90.f : FoodTier() == 2 ? 45.f : 20.f;
 	bool NeedsFood = Food < TargetStock || DonationPledge > .001f;
 	if (AVerdantFoodPickup* Current = FoodTarget.Get())
 	{
 		if (!NeedsFood || Current->Remaining <= .001f || Current->FoodTier > FoodTier()
+			|| !IsWithinHomeRange(Current->GetActorLocation())
 			|| (Current->GroveIndex != INDEX_NONE && !W->CanHarvest(Current->GroveIndex, this)))
 			ResetFoodRoute(this);
 	}
@@ -665,7 +743,8 @@ void AVerdantCharacter::TickNPC(float Dt)
 		{
 			if (!IsValid(Other) || Other == this || Other->AgentId == 0 || !Other->bDead || Other->Food <= .001f)
 				continue;
-			if (FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) < Reach() + 120.f)
+			if (IsWithinHomeRange(Other->GetActorLocation())
+				&& FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) < Reach() + 120.f)
 				if (W->LootCorpse(Other, this, 5.f) > .001f) break;
 		}
 		NeedsFood = Food < TargetStock || DonationPledge > .001f;
@@ -732,14 +811,20 @@ void AVerdantCharacter::TickNPC(float Dt)
 	}
 	if (!Reconsider)
 	{
-		MoveToward(Destination, 150.f);
-		return;
+		if (IsWithinHomeRange(Destination))
+		{
+			MoveToward(Destination, 150.f);
+			return;
+		}
+		// A finished special action can leave its old destination outside home.
+		BrainClock = 0.f;
 	}
 
 	// Preserve the modest ecological action, funded only by the NPC's actual spare inventory.
 	const int32 NearbyGrove = W->NearestGrove(GetActorLocation(), 650.f);
 	if (!bWild && NearbyGrove != INDEX_NONE && DonationPledge <= .001f && Now >= NextTendAt
 		&& ActionCooldown <= 0.f && W->Groves[NearbyGrove].Fertility < .55f
+		&& IsWithinHomeRange(W->Groves[NearbyGrove].Position)
 		&& Food >= W->NegotiationReserve(this) + W->TendCost(NearbyGrove)
 		&& W->Tend(NearbyGrove, this))
 	{
@@ -752,8 +837,8 @@ void AVerdantCharacter::TickNPC(float Dt)
 
 	// Low-frequency local wandering is deterministic and independent of dialogue availability.
 	const float Phase = FMath::FloorToFloat(Now / 18.f) * 1.7f + AgentId * 1.3f;
-	const FVector Anchor = HomePosition.IsNearlyZero() ? WildHome(AgentId) : HomePosition;
-	Destination = W->SurfacePoint(Anchor + FVector(FMath::Cos(Phase), FMath::Sin(Phase), 0.f) * 320.f);
+	const float WanderRadius = FMath::Max(0.f, HomeRangeRadius) * .35f;
+	Destination = W->SurfacePoint(HomePosition + FVector(FMath::Cos(Phase), FMath::Sin(Phase), 0.f) * WanderRadius);
 	ActionLabel = Food >= TargetStock ? TEXT("带着储粮，观察附近") : TEXT("等待附近食物，再作打算");
 	MoveToward(Destination, 150.f);
 }

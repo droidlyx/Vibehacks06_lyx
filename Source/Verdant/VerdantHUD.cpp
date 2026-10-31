@@ -3,7 +3,7 @@
 #include "VerdantCharacter.h"
 #include "VerdantPlayerScale.h"
 #include "VerdantDialogue.h"
-#include "VerdantSpeechBubbles.h"
+#include "VerdantEmberSpeechWidget.h"
 #include "VerdantFoodPickup.h"
 #include "VerdantEconomyRules.h"
 #include "VerdantPopulation.h"
@@ -40,8 +40,8 @@ namespace
 {
 	using namespace VerdantUI;
 	constexpr float StartingHeightCm = VerdantPlayerScale::StartingHeightCm;
-	constexpr float DamageLifetime = .85f;
-	constexpr int32 MaxDamageFloats = 6;
+	constexpr float DamageLifetime = 1.25f;
+	constexpr int32 MaxDamageFloats = 24;
 
 	FString ConversationAvailabilityText(EVerdantConversationAvailability State)
 	{
@@ -283,7 +283,7 @@ void AVerdantHUD::BeginPlay()
 							SNew(SVerticalBox)
 							+ SVerticalBox::Slot().AutoHeight()
 							[
-								Label(TEXT("长大以后"), 24, Ink)
+								Label(TEXT("快快长大"), 24, Ink)
 							]
 							+ SVerticalBox::Slot().AutoHeight().Padding(0, 3, 0, 0)
 							[
@@ -751,8 +751,10 @@ void AVerdantHUD::BeginPlay()
 									{
 										W->Dialogue->SelectNPC(
 											Option->bBroadcast ? nullptr : Option->NPC.Get());
-										if ((Option->bBroadcast || Option->NPC.IsValid()) && W->Dialogue->GetPlayerConversationAvailability(
-											Option->bBroadcast ? nullptr : Option->NPC.Get()) == EVerdantConversationAvailability::Busy)
+										if ((Option->bBroadcast || Option->NPC.IsValid()) && W->Dialogue->
+											GetPlayerConversationAvailability(
+												Option->bBroadcast ? nullptr : Option->NPC.Get()) ==
+											EVerdantConversationAvailability::Busy)
 											SelectionError = TEXT("请先返回场景，等待当前回应结束。");
 									}
 								if (InputBox.IsValid())InputBox->SetError(FText::FromString(SelectionError));
@@ -860,7 +862,12 @@ void AVerdantHUD::BeginPlay()
 				                                                           UpdateConversationTargets();
 			                                                           return EActiveTimerReturnType::Continue;
 		                                                           }));
-	if (GEngine && GEngine->GameViewport)GEngine->GameViewport->AddViewportWidgetContent(RootWidget.ToSharedRef(), 5);
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->AddViewportWidgetContent(RootWidget.ToSharedRef(), 5);
+		SpeechOverlay = VerdantEmberSpeech::Create(this);
+		GEngine->GameViewport->AddViewportWidgetContent(SpeechOverlay.ToSharedRef(), 30);
+	}
 }
 
 void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason)
@@ -871,6 +878,9 @@ void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason)
 	ConversationRefreshTimer.Reset();
 	if (bConversationOpen)CloseConversation();
 	RefreshPresentation = nullptr;
+	if (GEngine && GEngine->GameViewport && SpeechOverlay.IsValid())
+		GEngine->GameViewport->RemoveViewportWidgetContent(SpeechOverlay.ToSharedRef());
+	SpeechOverlay.Reset();
 	if (GEngine && GEngine->GameViewport && RootWidget.IsValid())
 		GEngine->GameViewport->RemoveViewportWidgetContent(
 			RootWidget.ToSharedRef());
@@ -927,7 +937,9 @@ void AVerdantHUD::UpdateConversationTargets()
 			                   : W->Dialogue->GetPlayerConversationAvailability(Option->bBroadcast ? nullptr : N);
 		const bool WasReady = Option->bReady;
 		Option->bReady = State == EVerdantConversationAvailability::Ready;
-		if (Option == ConversationTarget && Option->bReady && !WasReady && InputBox.IsValid())InputBox->SetError(FText::GetEmpty());
+		if (Option == ConversationTarget && Option->bReady && !WasReady && InputBox.IsValid())
+			InputBox->SetError(
+				FText::GetEmpty());
 		if (!Option->bBroadcast && IsValid(N))Option->Label = N->DisplayName;
 		const FString Display = Option->Label + (Option->bReady
 			                                         ? FString()
@@ -1061,6 +1073,41 @@ void AVerdantHUD::CloseConversation()
 	if (RefreshPresentation)RefreshPresentation();
 }
 
+void AVerdantHUD::ShowDamageNumber(AVerdantCharacter* Target, float Amount)
+{
+	if (!IsValid(Target) || !GetWorld() || !FMath::IsFinite(Amount) || Amount <= 0.f)return;
+	const float Now = GetWorld()->GetTimeSeconds();
+	DamageFloats.RemoveAll([Now](const FVerdantHUDDamageFloat& Float)
+	{
+		return Now - Float.BornAt >= DamageLifetime;
+	});
+	int32 Count = 0, Lane = 0;
+	for (const auto& Float : DamageFloats)
+		if (Float.Character.Get() == Target)
+		{
+			++Count;
+			Lane = (Float.Lane + 1) % 3;
+		}
+	if (Count >= 4)
+	{
+		const int32 Oldest = DamageFloats.IndexOfByPredicate([Target](const FVerdantHUDDamageFloat& Float)
+		{
+			return Float.Character.Get() == Target;
+		});
+		if (Oldest != INDEX_NONE)DamageFloats.RemoveAt(Oldest);
+	}
+	if (DamageFloats.Num() >= MaxDamageFloats)DamageFloats.RemoveAt(0);
+	FVerdantHUDDamageFloat Float;
+	Float.Character = Target;
+	Float.Position = Target->GetActorLocation() + FVector(0, 0,
+	                                                      Target->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	Float.Amount = Amount;
+	Float.BornAt = Now;
+	Float.Lane = Lane;
+	Float.bPlayerDamage = Target == GetOwningPawn();
+	DamageFloats.Add(Float);
+}
+
 void AVerdantHUD::DrawHUD()
 {
 	Super::DrawHUD();
@@ -1168,7 +1215,8 @@ void AVerdantHUD::DrawHUD()
 	};
 	DamageFloats.RemoveAll([Now](const FVerdantHUDDamageFloat& Float)
 	{
-		return !Float.Character.IsValid() || Float.Character->bDead || Now - Float.BornAt >= DamageLifetime;
+		// A lethal hit keeps its number at the last head position for the full lifetime.
+		return Now - Float.BornAt >= DamageLifetime;
 	});
 	auto Observe = [&](AVerdantCharacter* Who, const FVector& Head)
 	{
@@ -1176,33 +1224,7 @@ void AVerdantHUD::DrawHUD()
 		const bool SameActor = Previous && Previous->Character.Get() == Who;
 		float FlashUntil = SameActor ? Previous->StrikeFlashUntil : -1.f;
 		if (SameActor && Who->AttackTimer > 0 && !Previous->bHitApplied && Who->bHitApplied)FlashUntil = Now + .11f;
-		// Only a live, already observed actor's real health decrease can produce a number.
-		// Growth/healing, first observation, shrinking, and the death transition do not.
-		if (SameActor && Who != P && !Who->bDead && !Previous->bDead && Who->HurtTimer > 0 && Who->BodySize + .0001f >=
-			Previous->BodySize)
-		{
-			const float Lost = Previous->Health - Who->Health;
-			if (FMath::IsFinite(Lost) && Lost > .05f)
-			{
-				int32 PerActor = 0;
-				for (const auto& Float : DamageFloats)if (Float.Character.Get() == Who)++PerActor;
-				if (PerActor >= 2)
-				{
-					const int32 Oldest = DamageFloats.IndexOfByPredicate([Who](const FVerdantHUDDamageFloat& Float)
-					{
-						return Float.Character.Get() == Who;
-					});
-					if (Oldest != INDEX_NONE)DamageFloats.RemoveAt(Oldest);
-				}
-				if (DamageFloats.Num() >= MaxDamageFloats)DamageFloats.RemoveAt(0);
-				FVerdantHUDDamageFloat Float;
-				Float.Character = Who;
-				Float.Position = Head;
-				Float.Amount = Lost;
-				Float.BornAt = Now;
-				DamageFloats.Add(Float);
-			}
-		}
+		// Observation is only for attack flashes; damage is emitted by ReceiveStrike.
 		FVerdantHUDObservation Sample;
 		Sample.Character = Who;
 		Sample.Health = Who->Health;
@@ -1229,8 +1251,9 @@ void AVerdantHUD::DrawHUD()
 			VisibleFolk.Add(NPC);
 			Observe(NPC, Head);
 			const float Distance = FVector::Dist2D(NPC->GetActorLocation(), P->GetActorLocation());
-			const auto TalkState = W->Dialogue ? W->Dialogue->GetPlayerConversationAvailability(NPC)
-				: EVerdantConversationAvailability::Unavailable;
+			const auto TalkState = W->Dialogue
+				                       ? W->Dialogue->GetPlayerConversationAvailability(NPC)
+				                       : EVerdantConversationAvailability::Unavailable;
 			const FString Social = Stance(NPC);
 			const FString Talk = ConversationAvailabilityText(TalkState);
 			FString Name = NPC->DisplayName + TEXT(" · ")
@@ -1240,8 +1263,10 @@ void AVerdantHUD::DrawHUD()
 					       ? TEXT("倒下的 ") + NPC->DisplayName + FString::Printf(
 						       TEXT(" · 第%d档掉落"), NPC->FoodTier())
 					       : TEXT("");
-			Label(Head, Name, NPC->bDead || (TalkState != EVerdantConversationAvailability::Ready && NPC->HostileId != 0)
-				? Muted : StanceColor(NPC), 14);
+			Label(Head, Name,
+			      NPC->bDead || (TalkState != EVerdantConversationAvailability::Ready && NPC->HostileId != 0)
+				      ? Muted
+				      : StanceColor(NPC), 14);
 			// Injured creatures retain a compact bar below their name until healed.
 			// This shares the name's visibility/occlusion gate; damage numbers remain
 			// to the side and action/speech labels remain above it.
@@ -1329,21 +1354,49 @@ void AVerdantHUD::DrawHUD()
 			AttackArc(NPC);
 			++OtherArcs;
 		}
-	for (const auto& Float : DamageFloats)
-		if (Float.Character.IsValid() && VisibleIds.Contains(Float.Character->AgentId))
+	if (!bConversationOpen && HasCanvasFont())
+		for (auto& Float : DamageFloats)
 		{
-			const float Age = Now - Float.BornAt;
-			FLinearColor Color = Gold;
-			Color.A = FMath::Clamp(1.f - Age / DamageLifetime, 0.f, 1.f);
+			const float Age = FMath::Max(0.f, Now - Float.BornAt);
+			AVerdantCharacter* Target = Float.Character.Get();
+			if (IsValid(Target) && !Target->bDead)
+				Float.Position = Target->GetActorLocation() + FVector(0, 0,
+				                                                      Target->GetCapsuleComponent()->
+				                                                              GetScaledCapsuleHalfHeight());
 			FVector2D At;
-			if (Project(Float.Position + FVector(0, 0, (28.f + Age * 65.f) * Float.Character->BodySize), At))
+			if (!PC->ProjectWorldLocationToScreen(Float.Position, At) || At.X < 0.f || At.X > Canvas->SizeX
+				|| At.Y < 0.f || At.Y > Canvas->SizeY)
+				continue;
+			if (!Float.bPlayerDamage)
 			{
-				// Keep the short damage number beside the actor's centered name/action rows.
-				At.X += At.X + 160.f < Canvas->SizeX ? 118.f : -118.f;
-				TextAt(At, Float.Amount < 10.f
-					           ? FString::Printf(TEXT("-%.1f"), Float.Amount)
-					           : FString::Printf(TEXT("-%.0f"), Float.Amount), Color, 17);
+				FHitResult Obstacle;
+				FCollisionQueryParams Query(SCENE_QUERY_STAT(VerdantDamageSight), false, P);
+				if (Target)Query.AddIgnoredActor(Target);
+				if (GetWorld()->LineTraceSingleByChannel(Obstacle, ViewLocation, Float.Position, ECC_Visibility,
+				                                         Query))
+					continue;
 			}
+			const float Scale = FMath::Clamp(HUDScale, .8f, 1.7f);
+			const float Progress = FMath::Clamp(Age / DamageLifetime, 0.f, 1.f);
+			const float Rise = 1.f - FMath::Square(1.f - Progress);
+			const float Pop = 1.f + .28f * FMath::Square(1.f - FMath::Clamp(Age / .18f, 0.f, 1.f));
+			At.X += (Float.Lane == 1 ? -32.f : Float.Lane == 2 ? 32.f : 0.f) * Scale;
+			At.Y -= (64.f + 52.f * Rise) * Scale;
+			At.X = FMath::Clamp(float(At.X), 75.f * Scale, Canvas->SizeX - 75.f * Scale);
+			At.Y = FMath::Clamp(float(At.Y), 20.f * Scale,
+			                    FMath::Max(20.f * Scale, Canvas->SizeY - 175.f * HUDScale - 60.f * Scale));
+			FLinearColor Color = Float.bPlayerDamage ? FLinearColor(1.f, .28f, .18f) : FLinearColor(1.f, .88f, .35f);
+			Color.A = FMath::Clamp((DamageLifetime - Age) / .35f, 0.f, 1.f);
+			const FString Number = Float.Amount < 10.f
+				                       ? FString::Printf(TEXT("%.1f"), Float.Amount)
+				                       : FString::Printf(TEXT("%.0f"), Float.Amount);
+			FCanvasTextItem Item(At, FText::FromString(Number),
+			                     FSlateFontInfo(CanvasFont.Get(), FMath::RoundToInt(36.f * Scale * Pop)), Color);
+			Item.bCentreX = true;
+			Item.bOutlined = true;
+			Item.OutlineColor = FLinearColor(.02f, .025f, .02f, Color.A);
+			Item.EnableShadow(FLinearColor(0, 0, 0, Color.A), FVector2D(2.f, 2.f) * Scale);
+			Canvas->DrawItem(Item);
 		}
 	const float Height = P->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 2.f;
 	if (Height > LastPlayerHeightCm + .02f)GrowthVisibleUntil = Now + 2.4f;
@@ -1417,6 +1470,4 @@ void AVerdantHUD::DrawHUD()
 					G.Position + FVector(0, 0, 300), G.Name, G.Color, 17);
 		PlaceLabel(W->MotherPosition + FVector(0, 0, 1700), W->bRestored ? TEXT("母树 · 新生") : TEXT("母树"), Gold, 20);
 	}
-	if (!bConversationOpen && HasCanvasFont())
-		VerdantSpeechBubbles::Draw(Canvas, PC, CanvasFont.Get(), W, P);
 }

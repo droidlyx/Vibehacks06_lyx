@@ -36,6 +36,8 @@ struct FVerdantHUDDamageFloat
 	FVector Position = FVector::ZeroVector;
 	float Amount = 0.f;
 	float BornAt = 0.f;
+	int32 Lane = 0;
+	bool bPlayerDamage = false;
 };
 
 UCLASS()
@@ -47,6 +49,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void DrawHUD() override;
+	void ShowDamageNumber(AVerdantCharacter* Target, float Amount);
 	void OpenConversation(AVerdantCharacter* NPC);
 	void CloseConversation();
 	bool HasCanvasFont() const;
@@ -67,6 +70,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UFont> CanvasFont;
 	TSharedPtr<SWidget> RootWidget;
+	TSharedPtr<SWidget> SpeechOverlay;
 	TSharedPtr<SMultiLineEditableTextBox> InputBox;
 	TSharedPtr<SComboBox<TSharedPtr<FVerdantConversationTarget>>> TargetBox;
 	TArray<TSharedPtr<FVerdantConversationTarget>> ConversationTargets;

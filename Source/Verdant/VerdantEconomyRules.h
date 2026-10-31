@@ -8,7 +8,7 @@ namespace VerdantEconomy
 	constexpr float GrowthInterval = 5.f;
 	constexpr float GrowthFraction = .20f;
 	constexpr float FoodValueMultiplier = 1.f / 5.f;
-	constexpr float FoodRefillInterval = 60.f;
+	constexpr float FoodRefillInterval = 30.f;
 	constexpr float RespawnDelay = 2.5f;
 	constexpr float RespawnProtection = 3.f;
 	constexpr float DeathHeightMultiplier = .85f;

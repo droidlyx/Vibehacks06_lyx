@@ -180,6 +180,7 @@ AVerdantFoodPickup* AVerdantWorld::FindFood(const AVerdantCharacter* Who, float 
 	for (AVerdantFoodPickup* P : FoodPickups)
 	{
 		if (!IsValid(P) || P->Remaining <= .001f || Who->FoodTier() < P->FoodTier) continue;
+		if (Who->AgentId != 0 && !Who->IsWithinHomeRange(P->GetActorLocation())) continue;
 		if (Avoided && Avoided->FindRef(TWeakObjectPtr<AVerdantFoodPickup>(P)) > GetWorld()->GetTimeSeconds()) continue;
 		if (P->GroveIndex != INDEX_NONE && !CanHarvest(P->GroveIndex, Who)) continue;
 		const float D = FVector::DistSquared(Who->GetActorLocation(), P->GetActorLocation());
@@ -206,6 +207,7 @@ float AVerdantWorld::CollectFood(AVerdantCharacter* Who, float Radius)
 	for (AVerdantFoodPickup* P : FoodPickups)
 	{
 		if (!IsValid(P) || P->Remaining <= .001f)continue;
+		if (Who->AgentId != 0 && !Who->IsWithinHomeRange(P->GetActorLocation())) continue;
 		const float D = FVector::DistSquared(Who->GetActorLocation(), P->GetActorLocation());
 		if (D < Distance)
 		{
