@@ -3,7 +3,7 @@
 请完整解压文件夹后双击 `Play.cmd`。保留 `Verdant.exe`、`Verdant/`、`Engine/` 和其他随包文件的相对位置，不要只复制一个
 EXE。无需安装 Unreal 编辑器、Python、Qwen 或 StartLux。
 
-如果 Windows 提示缺少运行库，可运行包内 `Engine/Extras/Redist/en-us/UEPrereqSetup_x64.exe`（如果本包包含该安装程序），然后重新启动游戏。
+如果 Windows 提示缺少运行库，运行包内 `Engine/Extras/Redist/en-us/vc_redist.x64.exe` 安装或修复 x64 运行库，然后重新启动游戏。
 
 ## 对话服务
 
