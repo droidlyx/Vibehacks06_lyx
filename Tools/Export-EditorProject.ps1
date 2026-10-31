@@ -7,11 +7,14 @@ New-Item -ItemType Directory -Path $dest | Out-Null
 foreach($folder in @('Source','Config','Content','Build','Docs','Assets','Tools')){
  Copy-Item -LiteralPath (Join-Path $root $folder) -Destination $dest -Recurse
 }
-foreach($file in @('Verdant.uproject','README.md','Play.cmd','Start-Game.ps1','Start-LocalAI.ps1','Open-Editor.cmd','.gitignore','.gitattributes')){
+foreach($file in @('Verdant.uproject','README.md','AGENTS.md','Play.cmd','Start-Game.ps1','Start-LocalAI.ps1','Start-SecondaryAI.ps1','Stop-SecondaryAI.ps1','Open-Editor.cmd','.gitignore','.gitattributes')){
  Copy-Item -LiteralPath (Join-Path $root $file) -Destination $dest
 }
-New-Item -ItemType Directory -Path (Join-Path $dest 'Local') | Out-Null
-Copy-Item -LiteralPath (Join-Path $root 'Local\AI') -Destination (Join-Path $dest 'Local') -Recurse
+$localAI=Join-Path $root 'Local\AI'
+if(Test-Path -LiteralPath $localAI -PathType Container){
+ New-Item -ItemType Directory -Path (Join-Path $dest 'Local') | Out-Null
+ Copy-Item -LiteralPath $localAI -Destination (Join-Path $dest 'Local') -Recurse
+}
 New-Item -ItemType Directory -Path (Join-Path $dest 'Binaries\Win64') -Force | Out-Null
 foreach($file in @('UnrealEditor-Verdant.dll','UnrealEditor-Verdant.pdb','UnrealEditor.modules','VerdantEditor.target')){
  Copy-Item -LiteralPath (Join-Path $root ('Binaries\Win64\'+$file)) -Destination (Join-Path $dest 'Binaries\Win64')
