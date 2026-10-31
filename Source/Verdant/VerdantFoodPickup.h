@@ -23,7 +23,6 @@ public:
 	float Remaining = 5.f;
 	float InitialAmount = 5.f;
 	bool bRenewable = true;
-	float RefillAt = -1.f;
 	FVector Anchor;
 	void Configure(AVerdantWorld* World, int32 Tier, float Amount, bool Renewable, int32 Grove = INDEX_NONE);
 	void RefreshVisual();

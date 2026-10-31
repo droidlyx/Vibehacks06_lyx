@@ -134,6 +134,10 @@ def apply(save=True):
     component = dome.get_component_by_class(u.StaticMeshComponent)
     component.set_static_mesh(u.load_asset('/Engine/BasicShapes/Sphere'))
     component.set_material(0, material)
+    # Persist the profile as well as the live enabled flag: BlockAll can be
+    # reapplied when the map is reloaded or duplicated for PIE.
+    dome.set_actor_enable_collision(False)
+    component.set_collision_profile_name('NoCollision')
     component.set_collision_enabled(u.CollisionEnabled.NO_COLLISION)
     component.set_editor_property('generate_overlap_events', False)
     component.set_cast_shadow(False)

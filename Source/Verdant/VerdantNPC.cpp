@@ -5,6 +5,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
+#include "ProceduralMeshComponent.h"
 
 namespace
 {
@@ -19,20 +20,270 @@ namespace
 		if (AgentId == 5) return FVector(2800.f, 3000.f, 0.f);
 		return FVector(-3300.f, 6200.f, 0.f);
 	}
+
+	// Read collision triangles directly: a smoothed vertex normal can hide an
+	// unwalkable face, and evaluating the fractal field for every edge is costly.
+	struct FWalkingQuery
+	{
+		AVerdantWorld* Valley;
+		AVerdantCharacter* Walker;
+		const FProcMeshSection* Section;
+		FTransform GroundTransform;
+		FCollisionQueryParams Obstacles;
+		FCollisionShape Capsule;
+		int32 Row = 0;
+		float SpacingX = 0.f, SpacingY = 0.f, HalfHeight, FloorZ;
+		mutable int32 SweepsRemaining = MAX_int32;
+		mutable bool bSweepBudgetExhausted = false;
+
+		FWalkingQuery(AVerdantWorld* InValley, AVerdantCharacter* InWalker)
+			: Valley(InValley), Walker(InWalker), Section(nullptr),
+			  Obstacles(SCENE_QUERY_STAT(VerdantNPCWalking), false, InWalker)
+		{
+			HalfHeight = Walker->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			const float Radius = Walker->GetCapsuleComponent()->GetScaledCapsuleRadius();
+			Capsule = FCollisionShape::MakeCapsule(FMath::Max(1.f, Radius - .5f), HalfHeight - .5f);
+			FloorZ = Walker->GetCharacterMovement()->GetWalkableFloorZ();
+			if (Valley->Ground)
+			{
+				Section = Valley->Ground->GetProcMeshSection(0);
+				GroundTransform = Valley->Ground->GetComponentTransform();
+				// Ground is checked face by face below. Sweeping a level capsule
+				// through a rising floor would incorrectly call every hill a wall.
+				Obstacles.AddIgnoredComponent(Valley->Ground.Get());
+			}
+			if (Section && Section->ProcVertexBuffer.Num() >= 4)
+			{
+				Row = FMath::RoundToInt(FMath::Sqrt(float(Section->ProcVertexBuffer.Num())));
+				if (Row * Row != Section->ProcVertexBuffer.Num()) Row = 0;
+				if (Row >= 2)
+				{
+					const FVector Origin = Section->ProcVertexBuffer[0].Position;
+					SpacingX = Section->ProcVertexBuffer[1].Position.X - Origin.X;
+					SpacingY = Section->ProcVertexBuffer[Row].Position.Y - Origin.Y;
+				}
+			}
+			for (AVerdantCharacter* Other : Valley->Folk)
+				if (IsValid(Other)) Obstacles.AddIgnoredActor(Other);
+		}
+
+		bool Ground(const FVector& At, FVector& Surface, FVector& Normal) const
+		{
+			if (Row < 2 || SpacingX <= SMALL_NUMBER || SpacingY <= SMALL_NUMBER) return false;
+			const FVector Origin = Section->ProcVertexBuffer[0].Position;
+			const FVector RayStart = GroundTransform.InverseTransformPosition(At);
+			const FVector RayDirection = GroundTransform.InverseTransformVector(FVector::UpVector);
+			FVector Point = RayStart;
+			for (int32 Iteration = 0; Iteration < 5; ++Iteration)
+			{
+				const float X = float((Point.X - Origin.X) / SpacingX);
+				const float Y = float((Point.Y - Origin.Y) / SpacingY);
+				if (X < 0 || Y < 0 || X >= Row - 1 || Y >= Row - 1) return false;
+				const int32 IX = FMath::FloorToInt(X), IY = FMath::FloorToInt(Y);
+				const int32 A = IY * Row + IX;
+				const bool Upper = X - IX >= Y - IY;
+				const FVector VA = Section->ProcVertexBuffer[A].Position;
+				const FVector VB = Section->ProcVertexBuffer[A + (Upper ? 1 : Row)].Position;
+				const FVector VD = Section->ProcVertexBuffer[A + Row + 1].Position;
+				FVector Plane = FVector::CrossProduct(VB - VA, VD - VA);
+				const float Denominator = FVector::DotProduct(Plane, RayDirection);
+				if (FMath::Abs(Denominator) < SMALL_NUMBER) return false;
+				const FVector Hit = RayStart + RayDirection * (FVector::DotProduct(Plane, VA - RayStart) / Denominator);
+				if (FVector::DistSquared2D(Hit, Point) < .0001f)
+				{
+					const FVector Scale = GroundTransform.GetScale3D();
+					if (FMath::Abs(Scale.X * Scale.Y * Scale.Z) < SMALL_NUMBER) return false;
+					Normal = GroundTransform.TransformVectorNoScale(Plane / Scale).GetSafeNormal();
+					if (Normal.Z < 0.f) Normal = -Normal;
+					Surface = GroundTransform.TransformPosition(Hit);
+					return !Surface.ContainsNaN();
+				}
+				Point = Hit;
+			}
+			return false;
+		}
+
+		bool Segment(const FVector& From, const FVector& To) const
+		{
+			// Half a terrain cell catches intermediate ridges, not just endpoint grade.
+			const int32 Steps = FMath::Max(1, FMath::CeilToInt(FVector::Dist2D(From, To) / 25.f));
+			FVector Previous = From;
+			for (int32 I = 0; I <= Steps; ++I)
+			{
+				FVector Surface, Normal;
+				if (!Ground(FMath::Lerp(From, To, float(I) / Steps), Surface, Normal)) return false;
+				if (I > 0 && Normal.Z + .001f < FloorZ) return false;
+				const FVector Center = Surface + FVector(0, 0, HalfHeight + 2.f);
+				FHitResult Hit;
+				if (SweepsRemaining <= 0)
+				{
+					bSweepBudgetExhausted = true;
+					return false;
+				}
+				--SweepsRemaining;
+				if (Valley->GetWorld()->SweepSingleByChannel(Hit, Previous, Center, FQuat::Identity,
+				                                             ECC_Pawn, Capsule, Obstacles))
+					return false;
+				Previous = Center;
+			}
+			return true;
+		}
+	};
+
+	bool FindLocalRoute(const FWalkingQuery& SourceQuery, const FVector& Start, const FVector& Goal,
+	                    bool AvoidForward, TArray<FVector>& Path)
+	{
+		// A bounded, on-demand search; ordinary clear walking never builds a grid.
+		// A private query copy also caps physics work, regardless of terrain shape.
+		const FWalkingQuery Query(SourceQuery);
+		Query.SweepsRemaining = 384;
+		constexpr int32 Radius = 7, Side = Radius * 2 + 1, NodeCount = Side * Side;
+		const float Step = FMath::Clamp(Query.Walker->GetCapsuleComponent()->GetScaledCapsuleRadius() * 3.f,
+		                                100.f, 200.f);
+		struct FNode
+		{
+			FVector Position = FVector::ZeroVector;
+			float Cost = BIG_NUMBER;
+			int32 Parent = INDEX_NONE;
+			bool bSampled = false, bWalkable = false, bClosed = false;
+		};
+		TArray<FNode> Nodes;
+		Nodes.SetNum(NodeCount);
+		auto Sample = [&](int32 Index) -> FNode&
+		{
+			FNode& N = Nodes[Index];
+			if (!N.bSampled)
+			{
+				FVector Normal;
+				N.bSampled = true;
+				N.bWalkable = Query.Ground(Start + FVector((Index % Side - Radius) * Step,
+				                                           (Index / Side - Radius) * Step, 0), N.Position, Normal)
+					&& Normal.Z + .001f >= Query.FloorZ;
+				N.Position.Z += Query.HalfHeight + 2.f;
+			}
+			return N;
+		};
+		const int32 First = Radius * Side + Radius;
+		FNode& Origin = Sample(First);
+		Origin.Position = Start;
+		Origin.Cost = 0.f;
+		TArray<int32> Open;
+		Open.Add(First);
+		int32 Best = First;
+		float BestDistance = FVector::Dist2D(Start, Goal);
+		for (int32 Expanded = 0; Expanded < 96 && !Open.IsEmpty() && !Query.bSweepBudgetExhausted; ++Expanded)
+		{
+			int32 Slot = 0;
+			float Score = BIG_NUMBER;
+			for (int32 I = 0; I < Open.Num(); ++I)
+			{
+				const FNode& N = Nodes[Open[I]];
+				const float Candidate = N.Cost + FVector::Dist2D(N.Position, Goal);
+				if (Candidate < Score)
+				{
+					Score = Candidate;
+					Slot = I;
+				}
+			}
+			const int32 Current = Open[Slot];
+			Open.RemoveAtSwap(Slot);
+			FNode& N = Nodes[Current];
+			N.bClosed = true;
+			const float Distance = FVector::Dist2D(N.Position, Goal);
+			if (Distance < BestDistance)
+			{
+				Best = Current;
+				BestDistance = Distance;
+			}
+			if (Current != First && Distance < Step && Query.Segment(N.Position, Goal))
+			{
+				Best = Current;
+				BestDistance = Distance;
+				break;
+			}
+			const int32 X = Current % Side, Y = Current / Side;
+			if (Current != First && (X == 0 || X == Side - 1 || Y == 0 || Y == Side - 1)
+				&& Distance + Step < FVector::Dist2D(Start, Goal))
+				break;
+			for (int32 DY = -1; DY <= 1; ++DY)
+				for (int32 DX = -1; DX <= 1; ++DX)
+				{
+					if ((!DX && !DY) || X + DX < 0 || X + DX >= Side || Y + DY < 0 || Y + DY >= Side) continue;
+					const int32 Next = (Y + DY) * Side + X + DX;
+					FNode& Other = Sample(Next);
+					if (Current == First && AvoidForward && FVector::DotProduct(
+						(Other.Position - Start).GetSafeNormal2D(), (Goal - Start).GetSafeNormal2D()) > .5f)
+						continue;
+					const float Cost = N.Cost + FVector::Dist(N.Position, Other.Position);
+					if (Other.bClosed || !Other.bWalkable || Cost >= Other.Cost || !Query.Segment(
+						N.Position, Other.Position))
+						continue;
+					Other.Cost = Cost;
+					Other.Parent = Current;
+					Open.AddUnique(Next);
+				}
+		}
+		Path.Reset();
+		if (Query.bSweepBudgetExhausted) return false;
+		if (Best == First || BestDistance + 20.f >= FVector::Dist2D(Start, Goal)) return false;
+		for (int32 I = Best; I != First && I != INDEX_NONE; I = Nodes[I].Parent) Path.Insert(Nodes[I].Position, 0);
+		return !Path.IsEmpty();
+	}
+
+	void ResetFoodRoute(AVerdantCharacter* Who)
+	{
+		Who->FoodTarget.Reset();
+		Who->FoodCollectionFailures = 0;
+		Who->MoveSampleAt = 0.f;
+		Who->MoveRecoveryCount = 0;
+		Who->MoveSteeringAt = 0.f;
+		Who->LocalMovePath.Reset();
+		Who->BrainClock = 0.f;
+	}
 }
 
 void AVerdantCharacter::MoveToward(const FVector& Goal, float Acceptance)
 {
 	if (bDead || !GetCharacterMovement()) return;
+	if (IsDialogueReplyActive())
+	{
+		UpdateDialogueReplyPose();
+		return;
+	}
 	auto* W = Valley();
 	if (!W) return;
 	const float Now = GetWorld()->GetTimeSeconds();
 	const FVector Here = GetActorLocation();
-	if (FVector::DistSquared2D(Here, Goal) <= FMath::Square(Acceptance))
+	const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+	if (MoveIntentRevision < 0) MovePathSearchAt = Now + static_cast<float>(AgentId % 20) * .06f;
+	if (MoveIntentRevision != IntentRevision || FVector::DistSquared2D(LocalMoveGoal, Goal) > FMath::Square(160.f)
+		|| !FMath::IsNearlyEqual(MoveAcceptance, Acceptance, 1.f))
+	{
+		LocalMovePath.Reset();
+		LocalMoveGoal = Goal;
+		MoveIntentRevision = IntentRevision;
+		MoveAcceptance = Acceptance;
+		MoveSteeringAt = 0.f;
+		MoveSampleAt = 0.f;
+		MoveRecoveryCount = 0;
+	}
+	if (Now < MoveSteeringAt)
+	{
+		if (!MoveSteeringDirection.IsNearlyZero()) AddMovementInput(MoveSteeringDirection, MoveSteeringScale, true);
+		else GetCharacterMovement()->StopMovementImmediately();
+		return;
+	}
+	MoveSteeringAt = Now + .12f;
+	MoveSteeringDirection = FVector::ZeroVector;
+	const FWalkingQuery Query(W, this);
+	// Arrival must have a traversable connection, not merely matching XY on
+	// opposite sides of a ridge. Failed food interactions have their own retry limit.
+	if (FVector::DistSquared2D(Here, Goal) <= FMath::Square(Acceptance) && Query.Segment(Here, Goal))
 	{
 		GetCharacterMovement()->StopMovementImmediately();
 		MoveSampleAt = 0.f;
 		MoveRecoveryCount = 0;
+		LocalMovePath.Reset();
 		DetourUntil = 0.f;
 		return;
 	}
@@ -52,25 +303,16 @@ void AVerdantCharacter::MoveToward(const FVector& Goal, float Acceptance)
 		const float Moved = FVector::Dist2D(Here, MoveSamplePosition);
 		const bool MovingGoal = FVector::Dist2D(Goal, MoveSampleGoal) > 300.f;
 		const float Advance = FVector::Dist2D(MoveSamplePosition, MoveSampleGoal) - FVector::Dist2D(Here, Goal);
-		if (Moved < 45.f || (!MovingGoal && Advance < 35.f))
+		if (Moved < 25.f || (!MovingGoal && Advance < 20.f && LocalMovePath.IsEmpty()))
 		{
 			++MoveRecoveryCount;
 			DetourUntil = 0.f;
+			LocalMovePath.Reset();
 			BrainClock = 0.f;
 			if (MoveRecoveryCount == 1)
 			{
 				Say(TEXT("这边受阻，我试着绕开。"));
 				W->Record(DisplayName + TEXT(" 遇到阻挡，开始寻找绕行路线。"));
-			}
-			if (MoveRecoveryCount >= 3 && HostileId < 0 && !bWild && FollowId < 0 && DonationPledge <= .001f
-				&& W->Groves.IsValidIndex(HomeGrove))
-			{
-				AvoidGrove = HomeGrove;
-				AvoidGroveUntil = Now + 8.f;
-				W->Record(DisplayName + TEXT(" 暂时绕开受阻的果林，寻找其他采集地点。"));
-				GetCharacterMovement()->StopMovementImmediately();
-				MoveSampleAt = 0.f;
-				return;
 			}
 		}
 		else MoveRecoveryCount = 0;
@@ -78,52 +320,31 @@ void AVerdantCharacter::MoveToward(const FVector& Goal, float Acceptance)
 		MoveSamplePosition = Here;
 		MoveSampleGoal = Goal;
 	}
-	const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(VerdantNPCMove), false, this);
-	for (AVerdantCharacter* Other : W->Folk) if (IsValid(Other) && Other != this) Params.AddIgnoredActor(Other);
-	const float ProbeDistance = FMath::Max(110.f, Radius * 2.5f);
-	const FCollisionShape Probe = FCollisionShape::MakeSphere(FMath::Max(18.f, Radius * .75f));
-	if (DetourUntil > Now && FVector::Dist2D(Here, DetourPoint) < FMath::Max(60.f, Radius)) DetourUntil = 0.f;
-	FVector MoveGoal = DetourUntil > Now ? DetourPoint : Goal;
-	FVector Direction = (MoveGoal - Here).GetSafeNormal2D();
-	FHitResult Obstacle;
-	// An uphill floor may intersect this horizontal probe; let CharacterMovement
-	// climb it instead of treating every terrain hit as a wall.
-	if (GetWorld()->SweepSingleByChannel(Obstacle, Here, Here + Direction * ProbeDistance,
-	                                     FQuat::Identity, ECC_WorldStatic, Probe,
-	                                     Params) && !GetCharacterMovement()->IsWalkable(Obstacle))
+	while (!LocalMovePath.IsEmpty() && FVector::Dist2D(Here, LocalMovePath[0]) < FMath::Max(35.f, Radius * .65f))
+		LocalMovePath.RemoveAt(0, 1, EAllowShrinking::No);
+	FVector MoveGoal = LocalMovePath.IsEmpty() ? Goal : LocalMovePath[0];
+	auto ClearAhead = [&](const FVector& Target)
 	{
-		const float Preferred = ((AgentId + MoveRecoveryCount) % 2 == 0) ? 1.f : -1.f;
-		const float Step = FMath::Clamp(Radius * 5.f, 240.f, 550.f);
-		const FVector ToGoal = (Goal - Here).GetSafeNormal2D();
-		bool Found = false;
-		// A short committed waypoint prevents choosing opposite sides every frame.
-		for (float Angle : {65.f, 90.f, 125.f, -65.f, -90.f, -125.f, 175.f})
+		const float Distance = FMath::Min(float(FVector::Dist2D(Here, Target)), FMath::Max(100.f, Radius * 3.f));
+		return Query.Segment(Here, Here + (Target - Here).GetSafeNormal2D() * Distance);
+	};
+	if (!ClearAhead(MoveGoal) || (MoveRecoveryCount > 0 && LocalMovePath.IsEmpty()))
+	{
+		LocalMovePath.Reset();
+		if (Now >= MovePathSearchAt)
 		{
-			const FVector CandidateDirection = ToGoal.RotateAngleAxis(Angle * Preferred, FVector::UpVector);
-			FVector Candidate = W->SurfacePoint(Here + CandidateDirection * Step,
-			                                    GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-			const float MaxGrade = FMath::Tan(FMath::DegreesToRadians(
-				FMath::Clamp(GetCharacterMovement()->GetWalkableFloorAngle(), 0.f, 89.f)));
-			if (FMath::Abs(Candidate.Z - Here.Z) > Step * MaxGrade) continue;
-			FHitResult Hit;
-			if (!GetWorld()->SweepSingleByChannel(Hit, Here, Candidate, FQuat::Identity, ECC_WorldStatic, Probe,
-			                                      Params))
-			{
-				DetourPoint = Candidate;
-				DetourUntil = Now + 1.4f;
-				Direction = (Candidate - Here).GetSafeNormal2D();
-				Found = true;
-				break;
-			}
+			MovePathSearchAt = Now + 1.25f + (AgentId % 5) * .07f;
+			FindLocalRoute(Query, Here, Goal, MoveRecoveryCount > 0, LocalMovePath);
 		}
-		if (!Found)
+		if (LocalMovePath.IsEmpty())
 		{
 			GetCharacterMovement()->StopMovementImmediately();
-			BrainClock = FMath::Min(BrainClock, .15f);
 			return;
 		}
+		MoveGoal = LocalMovePath[0];
 	}
+	FVector Direction = (MoveGoal - Here).GetSafeNormal2D();
+	FVector Separated = Direction;
 	for (AVerdantCharacter* Other : W->Folk)
 	{
 		if (!Alive(Other) || Other == this) continue;
@@ -131,10 +352,17 @@ void AVerdantCharacter::MoveToward(const FVector& Goal, float Acceptance)
 		const float Clearance = Radius + Other->GetCapsuleComponent()->GetScaledCapsuleRadius() + 35.f;
 		const float Distance = Difference.Size2D();
 		if (Distance > 1.f && Distance < Clearance)
-			Direction += Difference.GetSafeNormal2D() * (1.f - Distance / Clearance) * 1.4f;
+			Separated += Difference.GetSafeNormal2D() * (1.f - Distance / Clearance) * 1.4f;
 	}
-	if (DetourUntil > Now && !ActionLabel.EndsWith(TEXT(" · 绕路"))) ActionLabel += TEXT(" · 绕路");
-	AddMovementInput(Direction.GetSafeNormal2D(), 1.f, true);
+	// Separation must not steer a valid route back into a rock or steep face.
+	if (!Separated.Equals(Direction, .01f) && ClearAhead(Here + Separated.GetSafeNormal2D() * 120.f))
+		Direction = Separated.GetSafeNormal2D();
+	DetourUntil = LocalMovePath.IsEmpty() ? 0.f : Now + .3f;
+	DetourPoint = MoveGoal;
+	if (!LocalMovePath.IsEmpty() && !ActionLabel.EndsWith(TEXT(" · 绕路"))) ActionLabel += TEXT(" · 绕路");
+	MoveSteeringDirection = Direction;
+	MoveSteeringScale = FMath::Clamp(float(FVector::Dist2D(Here, MoveGoal)) / 120.f, .25f, 1.f);
+	AddMovementInput(MoveSteeringDirection, MoveSteeringScale, true);
 }
 
 void AVerdantCharacter::TickNPC(float Dt)
@@ -142,6 +370,11 @@ void AVerdantCharacter::TickNPC(float Dt)
 	auto* W = Valley();
 	if (!W || bDead || AgentId == 0)
 		return;
+	if (IsDialogueReplyActive())
+	{
+		UpdateDialogueReplyPose();
+		return;
+	}
 	// Temporary arrival display: keep each species available to inspect instead
 	// of letting its ordinary harvesting/hunting immediately scatter the group.
 	// A strike or an agreed movement task releases the original NPC permanently.
@@ -175,12 +408,10 @@ void AVerdantCharacter::TickNPC(float Dt)
 		return Alive(TheirLeader) && (TheirLeader == this ||
 			(TheirLeader->HostileId != AgentId && Trust.FindRef(TheirLeader->AgentId) >= 0.f));
 	};
-	// An actual ReceiveStrike sets HostileId directly; search cooldowns never
-	// suppress that immediate self-defence path.
+	// Explicit hostility (including an API decision or actual ReceiveStrike)
+	// survives social heuristics; only invalid or protected targets cancel it here.
 	AVerdantCharacter* Enemy = W->FindFolk(HostileId);
-	if (!Alive(Enemy) || Enemy == this || SameParty(Enemy)
-		|| (Enemy->bWild && FriendlyEscort(Enemy) && Enemy->HostileId != AgentId && Trust.FindRef(Enemy->AgentId) >=
-			0.f))
+	if (!Alive(Enemy) || Enemy == this || Enemy->IsRespawnProtected())
 	{
 		if (HostileId >= 0) ++IntentRevision;
 		HostileId = -1;
@@ -192,7 +423,8 @@ void AVerdantCharacter::TickNPC(float Dt)
 		float Best = 1600.f;
 		for (AVerdantCharacter* Other : W->Folk)
 		{
-			if (!Alive(Other) || Other == this || SameParty(Other) || Other->HostileId != Leader->AgentId) continue;
+			if (!Alive(Other) || Other == this || Other->IsRespawnProtected() || SameParty(Other) || Other->HostileId !=
+				Leader->AgentId) continue;
 			if (Other->AgentId == AvoidThreatId && Now < AvoidThreatUntil) continue;
 			const float Distance = FVector::Dist2D(GetActorLocation(), Other->GetActorLocation());
 			if (Distance >= Best || FVector::Dist2D(Other->GetActorLocation(), Leader->GetActorLocation()) > 1200.f)
@@ -213,9 +445,11 @@ void AVerdantCharacter::TickNPC(float Dt)
 	if (!Enemy)
 	{
 		float BestDistance = bWild ? 560.f : 620.f;
+		const bool HasCommittedPlan = FollowId >= 0 || DonationPledge > .001f;
 		for (AVerdantCharacter* Other : W->Folk)
 		{
-			if (!Alive(Other) || Other == this || SameParty(Other) || (bWild && Other->bWild)) continue;
+			if (!Alive(Other) || Other == this || Other->IsRespawnProtected() || SameParty(Other) || (bWild && Other->
+				bWild)) continue;
 			if (Other->AgentId == AvoidThreatId && Now < AvoidThreatUntil) continue;
 			const float Distance = FVector::Dist2D(GetActorLocation(), Other->GetActorLocation());
 			const bool KnownThreat = Other->HostileId == AgentId ||
@@ -223,7 +457,10 @@ void AVerdantCharacter::TickNPC(float Dt)
 			const bool WildThreat = Other->bWild && !bWild && !FriendlyEscort(Other)
 				&& Trust.FindRef(Other->AgentId) < 10.f && Other->Trust.FindRef(AgentId) < 10.f;
 			const bool Hunting = bWild && FollowId < 0 && Trust.FindRef(Other->AgentId) < 10.f;
-			if ((KnownThreat || WildThreat || Hunting) && Distance < BestDistance)
+			// Existing commitments override dislikes and opportunistic hunting.
+			// A real attack remains a reason to defend oneself while travelling.
+			if ((Other->HostileId == AgentId || (!HasCommittedPlan && (KnownThreat || WildThreat || Hunting)))
+				&& Distance < BestDistance)
 			{
 				Enemy = Other;
 				BestDistance = Distance;
@@ -352,7 +589,7 @@ void AVerdantCharacter::TickNPC(float Dt)
 	}
 
 	// Network requests never stop the current rule-driven action.
-	if (DonationPledge > .001f && !bWild)
+	if (DonationPledge > .001f)
 	{
 		if (W->bRestored)
 		{
@@ -409,59 +646,114 @@ void AVerdantCharacter::TickNPC(float Dt)
 		}
 	}
 
-	if (BrainClock > 0.f)
+	const float TargetStock = FoodTier() == 4 ? 160.f : FoodTier() == 3 ? 90.f : FoodTier() == 2 ? 45.f : 20.f;
+	bool NeedsFood = Food < TargetStock || DonationPledge > .001f;
+	if (AVerdantFoodPickup* Current = FoodTarget.Get())
 	{
-		MoveToward(Destination, 130.f + GetCapsuleComponent()->GetScaledCapsuleRadius());
+		if (!NeedsFood || Current->Remaining <= .001f || Current->FoodTier > FoodTier()
+			|| (Current->GroveIndex != INDEX_NONE && !W->CanHarvest(Current->GroveIndex, this)))
+			ResetFoodRoute(this);
+	}
+	const bool Reconsider = BrainClock <= 0.f;
+	if (Reconsider)
+	{
+		BrainClock = .65f + AgentId * .07f;
+		for (auto It = AvoidFoodUntil.CreateIterator(); It; ++It)
+			if (!It.Key().IsValid() || It.Value() <= Now) It.RemoveCurrent();
+		// Corpse transfers still use the same source-tier/capacity rules as the player.
+		for (AVerdantCharacter* Other : W->Folk)
+		{
+			if (!IsValid(Other) || Other == this || Other->AgentId == 0 || !Other->bDead || Other->Food <= .001f)
+				continue;
+			if (FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) < Reach() + 120.f)
+				if (W->LootCorpse(Other, this, 5.f) > .001f) break;
+		}
+		NeedsFood = Food < TargetStock || DonationPledge > .001f;
+		if (NeedsFood && !FoodTarget.IsValid())
+		{
+			if (AVerdantFoodPickup* Pickup = W->FindFood(this, 6000.f, &AvoidFoodUntil))
+			{
+				ResetFoodRoute(this);
+				FoodTarget = Pickup;
+				FoodTargetDeadline = Now + 45.f + FVector::Dist2D(GetActorLocation(), Pickup->GetActorLocation()) /
+					100.f;
+				BrainClock = .65f + AgentId * .07f;
+			}
+		}
+	}
+	if (NeedsFood)
+	{
+		if (AVerdantFoodPickup* Pickup = FoodTarget.Get())
+		{
+			Destination = Pickup->GetActorLocation();
+			ActionLabel = DonationPledge > .001f ? TEXT("为供奉寻找食物") : TEXT("寻找可获取的散落食物");
+			const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Destination);
+			const float CollectionRange = FMath::Max(180.f, Reach() + 130.f);
+			const bool WithinCollectionRange = DistanceSquared <= FMath::Square(CollectionRange);
+			const bool CloseInXY = FVector::DistSquared2D(GetActorLocation(), Destination) <= FMath::Square(25.f);
+			if (Now >= FoodAttemptAt && (WithinCollectionRange || CloseInXY))
+			{
+				// Try this exact target, so a nearer blocked pile cannot steal the attempt.
+				// Matching XY with an unreachable height is also a failed attempt;
+				// MoveToward may already be at its minimum arrival radius there.
+				const float Taken = WithinCollectionRange ? Pickup->Take(this) : 0.f;
+				if (Taken > .001f)
+				{
+					FoodAttemptAt = Now + 3.5f + (AgentId % 5) * .2f;
+					FoodCollectionFailures = 0;
+					MoveSampleAt = 0.f;
+					MoveRecoveryCount = 0;
+					MoveSteeringAt = 0.f;
+					GetCharacterMovement()->StopMovementImmediately();
+					if (!IsValid(Pickup) || Pickup->Remaining <= .001f || Food >= TargetStock) ResetFoodRoute(this);
+					return;
+				}
+				++FoodCollectionFailures;
+				FoodAttemptAt = Now + 1.5f;
+				MoveSteeringAt = 0.f;
+			}
+			const bool StuckOnThisFood = MoveRecoveryCount >= 3
+				&& FVector::DistSquared2D(MoveSampleGoal, Destination) < FMath::Square(50.f);
+			if (StuckOnThisFood || FoodCollectionFailures >= 3 || Now >= FoodTargetDeadline)
+			{
+				AvoidFoodUntil.Add(FoodTarget, Now + 25.f + AgentId % 5);
+				W->Record(DisplayName + TEXT(" 暂时放弃无法接近的食物，寻找另一处。"));
+				ResetFoodRoute(this);
+				Destination = GetActorLocation();
+				GetCharacterMovement()->StopMovementImmediately();
+				return;
+			}
+			const float NormalAcceptance = 120.f + GetCapsuleComponent()->GetScaledCapsuleRadius();
+			const bool CloseButTooHigh = DistanceSquared > FMath::Square(CollectionRange)
+				&& FVector::Dist2D(GetActorLocation(), Destination) <= NormalAcceptance + 25.f;
+			MoveToward(Destination, FoodCollectionFailures > 0 || CloseButTooHigh ? 25.f : NormalAcceptance);
+			return;
+		}
+	}
+	if (!Reconsider)
+	{
+		MoveToward(Destination, 150.f);
 		return;
 	}
-	BrainClock = .65f + AgentId * .07f;
 
-    // Corpse transfers use exactly the same source-tier/capacity rules as the player.
-    for (AVerdantCharacter* Other : W->Folk)
-    {
-        if (!IsValid(Other) || Other == this || Other->AgentId == 0 || !Other->bDead || Other->Food <= .001f) continue;
-        if (FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) < Reach() + 120.f)
-            if (W->LootCorpse(Other, this, 5.f) > .001f) break;
-    }
+	// Preserve the modest ecological action, funded only by the NPC's actual spare inventory.
+	const int32 NearbyGrove = W->NearestGrove(GetActorLocation(), 650.f);
+	if (!bWild && NearbyGrove != INDEX_NONE && DonationPledge <= .001f && Now >= NextTendAt
+		&& ActionCooldown <= 0.f && W->Groves[NearbyGrove].Fertility < .55f
+		&& Food >= W->NegotiationReserve(this) + W->TendCost(NearbyGrove)
+		&& W->Tend(NearbyGrove, this))
+	{
+		NextTendAt = Now + 60.f;
+		ActionCooldown = 1.5f;
+		ActionLabel = TEXT("用余粮照料土地");
+		GetCharacterMovement()->StopMovementImmediately();
+		return;
+	}
 
-    const float TargetStock = FoodTier() == 4 ? 160.f : FoodTier() == 3 ? 90.f : FoodTier() == 2 ? 45.f : 20.f;
-    if (Food < TargetStock || DonationPledge > .001f)
-    {
-        if (AVerdantFoodPickup* Pickup = W->FindFood(this, 6000.f))
-        {
-            Destination = Pickup->GetActorLocation();
-            ActionLabel = DonationPledge > .001f ? TEXT("为供奉寻找食物") : TEXT("寻找可获取的散落食物");
-            if (FVector::Dist2D(GetActorLocation(), Destination) < FMath::Max(240.f, 250.f * BodySize))
-            {
-                if (ActionCooldown <= 0.f)
-                {
-                    W->CollectFood(this, FMath::Max(240.f, 250.f * BodySize));
-                    ActionCooldown = 3.5f + (AgentId % 5) * .2f;
-                }
-            }
-            else MoveToward(Destination, 120.f + GetCapsuleComponent()->GetScaledCapsuleRadius());
-            return;
-        }
-    }
-
-    // Preserve the modest ecological action, funded only by the NPC's actual spare inventory.
-    const int32 NearbyGrove = W->NearestGrove(GetActorLocation(), 650.f);
-    if (!bWild && NearbyGrove != INDEX_NONE && DonationPledge <= .001f && Now >= NextTendAt
-        && ActionCooldown <= 0.f && W->Groves[NearbyGrove].Fertility < .55f
-        && Food >= W->NegotiationReserve(this) + W->TendCost(NearbyGrove)
-        && W->Tend(NearbyGrove, this))
-    {
-        NextTendAt = Now + 60.f;
-        ActionCooldown = 1.5f;
-        ActionLabel = TEXT("用余粮照料土地");
-        GetCharacterMovement()->StopMovementImmediately();
-        return;
-    }
-
-    // Low-frequency local wandering is deterministic and independent of dialogue availability.
-    const float Phase = FMath::FloorToFloat(Now / 18.f) * 1.7f + AgentId * 1.3f;
-    const FVector Anchor = HomePosition.IsNearlyZero() ? WildHome(AgentId) : HomePosition;
-    Destination = W->SurfacePoint(Anchor + FVector(FMath::Cos(Phase), FMath::Sin(Phase), 0.f) * 320.f);
-    ActionLabel = Food >= TargetStock ? TEXT("带着储粮，观察附近") : TEXT("等待附近食物，再作打算");
-    MoveToward(Destination, 150.f);
+	// Low-frequency local wandering is deterministic and independent of dialogue availability.
+	const float Phase = FMath::FloorToFloat(Now / 18.f) * 1.7f + AgentId * 1.3f;
+	const FVector Anchor = HomePosition.IsNearlyZero() ? WildHome(AgentId) : HomePosition;
+	Destination = W->SurfacePoint(Anchor + FVector(FMath::Cos(Phase), FMath::Sin(Phase), 0.f) * 320.f);
+	ActionLabel = Food >= TargetStock ? TEXT("带着储粮，观察附近") : TEXT("等待附近食物，再作打算");
+	MoveToward(Destination, 150.f);
 }

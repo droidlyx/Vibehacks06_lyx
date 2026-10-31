@@ -5,13 +5,15 @@
 // Pure, shared rules: no actor state, rendering, network, or hidden resource grants.
 namespace VerdantEconomy
 {
-	constexpr float GrowthInterval = 10.f;
+	constexpr float GrowthInterval = 5.f;
 	constexpr float GrowthFraction = .20f;
+	constexpr float FoodValueMultiplier = 1.f / 5.f;
+	constexpr float FoodRefillInterval = 60.f;
 	constexpr float RespawnDelay = 2.5f;
 	constexpr float RespawnProtection = 3.f;
 	constexpr float DeathHeightMultiplier = .85f;
 	constexpr float MaximumHeightCm = 450.f;
-	constexpr float HearingRadiusCm = 2000.f;
+	constexpr float FoodEpsilon = .001f;
 
 	inline int Tier(float HeightCm)
 	{
@@ -21,7 +23,7 @@ namespace VerdantEconomy
 
 	inline float Amount(int FoodTier)
 	{
-		return FoodTier == 4 ? 100.f : FoodTier == 3 ? 40.f : FoodTier == 2 ? 15.f : 5.f;
+		return (FoodTier == 4 ? 100.f : FoodTier == 3 ? 40.f : FoodTier == 2 ? 15.f : 5.f) * FoodValueMultiplier;
 	}
 
 	inline float MinimumHeight(int FoodTier)

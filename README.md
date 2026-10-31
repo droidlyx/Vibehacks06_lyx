@@ -1,8 +1,8 @@
 # 长大以后 · Verdant Accord
 
-当前编辑器工作副本的对话先由本地 StartLux（`http://127.0.0.1:8090/v1/systemone`）筛选，再将通过筛选的请求加入 DeepSeek 队列，通过 `https://api.qnaigc.com/v1` 调用 `deepseek/deepseek-v4.1-flash-1017` 生成回应。通过 `Open-Editor.cmd` 打开编辑器或通过 `Start-Game.ps1` 启动游戏时，若 DeepSeek 密钥有效且引导工具存在，会在后台检查并按需启动 StartLux；模型就绪前对话暂不可用。直接打开项目或执行验证时，请先显式运行 `Start-SecondaryAI.ps1`。启动器不再加载 Qwen。本地筛选服务不可用或响应无效时，不会跳过筛选直接调用云端。NPC 日常行动仍由游戏规则驱动。密钥和启动说明见 [AI 配置](Docs/LocalAI.md)。
+当前编辑器工作副本的NPC对话通过`https://api.qnaigc.com/v1`调用`deepseek/deepseek-v4.1-flash-1017`。每个符合距离和体型条件的候选NPC只请求一次，由同一次推理判断相关性并生成回应：无关返回字面`无关`，游戏静默结束；相关返回对白和行动JSON。正常启动器不再运行StartLux或Qwen，GPU留给游戏。NPC日常行动仍由游戏规则驱动。密钥和启动说明见[AI配置](Docs/LocalAI.md)，详细边界见[对话架构](Docs/ConversationRuntime.zh-CN.md)。
 
-当前源码包含 DeepSeek 对话、生物角色与界面更新；下文的 v0.3 可玩包及历史验证记录属于原始交付版本，尚未按当前源码重新打包，不能作为这些更新的试玩验收结果。
+当前源码已接入20名不同模型的NPC、11类关系、按需对话、四档食物、自动成长和缩小复活，详见[本轮接入记录](Docs/RuntimeIntegration.zh-CN.md)。最终冷编译及DLL链接已通过，可重新打开编辑器手动试玩。下文的v0.3可玩包及历史验证记录属于原始交付版本，尚未按当前源码重新打包。
 
 设计、素材、生成预算与当前进展：[中文项目总览](Docs/ProjectOverview.zh-CN.md)。
 一个原创 UE 5.8 原型：在不同体型居民共同生活的山谷中连续成长，用战斗或 AI 协商取得养分，让母树复苏，并改变果林的开放程度、控制者和居民生存状态。
@@ -11,7 +11,7 @@
 
 ## 开始试玩
 
-历史 **v0.3** 便携包通过包内 **Play.cmd** 启动，使用原版独立本地 AI 服务；首次模型加载需要几秒。完整便携包位于 `Builds/v0.3/Windows`；v0.1保留在 `Builds/Windows`。这与当前源码的 StartLux 筛选→DeepSeek 对话链路不同，新链路仍待用户手动试玩验收。
+历史 **v0.3** 便携包通过包内 **Play.cmd** 启动，使用原版独立本地AI服务；首次模型加载需要几秒。完整便携包位于`Builds/v0.3/Windows`；v0.1保留在`Builds/Windows`。这些旧包尚未更新为当前的单次DeepSeek链路，新链路仍待用户手动试玩验收。
 
 源码启动要求 Unreal Engine 5.8.3；可通过环境变量 `UE_ROOT` 指定引擎目录。仓库使用 Git LFS，克隆后执行 `git lfs pull`。
 
@@ -22,9 +22,9 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 
 独立构建：`powershell -ExecutionPolicy Bypass -File Tools/Build.ps1 -Package -Version my-build`。每个版本保存到独立目录，避免覆盖已有可玩版本。
 
-打包后运行 `Tools/Stage-Portable.ps1 -Version my-build` 补齐本地模型和许可；`Tools/Validate-Build.ps1 -Version my-build -FullJourney` 可重跑独立构建检查。
+打包后运行`Tools/Stage-Portable.ps1 -Version my-build`补齐启动脚本和许可；当前便携包不再携带本地模型或推理运行时，也不复制密钥。既有`Validate-Build.ps1`玩法检查包含历史协议假设，不能替代当前专项API检查或用户试玩。
 
-本地模型权重和推理二进制不进入 Git。安装见 [LocalAI.md](Docs/LocalAI.md)。缺少模型时，移动、成长、战斗和 NPC 日常行为仍可运行，交谈会明确提示服务不可用。
+本地模型权重和推理二进制不进入Git，当前运行也无需安装。云端密钥配置见[LocalAI.md](Docs/LocalAI.md)。未配置密钥或云端服务不可用时，移动、成长、战斗和NPC日常行为仍可运行，交谈会提示服务不可用。
 
 ## 操作
 
@@ -32,8 +32,8 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 |---|---|
 | WASD / 鼠标 / Shift | 移动 / 观察 / 奔跑 |
 | 鼠标左键 / 右键 / 空格 | 轻击 / 重击 / 闪避 |
-| 按住 E | 在果林内连续采集，或取走倒下生物的战利品 |
-| Q | 食用5份食物，逐渐吸收并长大 |
+| 按住 E | 获取附近散落食物或NPC尸体食物；受档位和容量限制，剩余保留 |
+| Q | 查看自动成长提示；每5秒自动消耗库存的20%并成长 |
 | F / Shift+F | F在母树附近供奉5份、居民附近分享5份；Shift+F在母树附近批量供奉 |
 | T | 与附近居民自由交谈；Enter发送，Esc退出 |
 | B | 在允许采集的果林花费食物养护土壤 |
@@ -52,10 +52,10 @@ powershell -ExecutionPolicy Bypass -File Start-Game.ps1 -Editor
 
 ## 当前边界
 
-- 一个约400米宽的原创自然山谷，三片果林，三位主要居民和三位野外生物。
-- 玩家约0.8米起步，原型成长上限约4.5米；没有无限尺度地形。
+- 一个约400米宽的原创自然山谷，三片果林，20名NPC、四档各5名，及160个食物点。
+- 玩家保留当前18厘米起步设置，上限约4.5米；NPC不成长。玩家死亡后缩小复活，世界不重置。
 - 角色与基础动作来自原始CC0素材的新组装/导入；母树和营养植物为程序造型。
-- NPC日常采集、避敌、迁移使用游戏规则；自由对话和协商选择使用真实本地模型。
+- NPC日常行动使用游戏规则；交谈要求实际三维距离≤20米、较高/较矮身高比≤2，每个候选由一次DeepSeek请求完成相关性和回复。每次发言最多3个候选，每条链最多2句实际NPC回复。主动交谈低频触发。
 - 模型可以拒绝、误解或还价。支持的实际行动有范围，任意口头承诺不会自动成为新玩法。
 - 原型无存档、多人联机或完整剧情战役。R会重置世界。
 

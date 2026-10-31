@@ -1,6 +1,115 @@
 # Development log
 
-## 2026-10-31 — Current source integration checkpoint
+## 2026-10-31 — Inclusive 5x conversation height limit
+
+- Increased conversation eligibility to a taller/shorter height ratio of at most 5, including exactly 5x. The policy
+  default, `MaxHeightRatio=5` configuration, dialogue initialization fallback and constructor clamp ceiling now agree.
+  The true 3D 40 m hearing radius is unchanged.
+- All 38 pure-policy checks passed (`Saved/Validation/dialogue-height-ratio-5-policy.json`), covering the inclusive 5x
+  boundary, actor-order symmetry, just-over-limit rejection both ways, combined 40 m/5x limits and cases now allowed
+  beyond the former 2x restriction. No API requests or PIE were run. Native compilation passed with exit code 0 in
+  21.55 seconds (`Saved/dialogue-height-ratio-5-build.log`), and the editor reopened with the new build loaded. Earlier
+  2x and 31-case results below remain historical records. No visual or broader gameplay acceptance is claimed.
+
+## 2026-10-31 — Consistent conversation availability and persistent audience selection
+
+- Added one `GetPlayerConversationAvailability` check for overhead status, audience choices, default shortcuts and send.
+  It reports TooFar, SizeMismatch, Cooldown, Busy, Unavailable or Ready using the true 3D 40 m hearing radius. Overhead
+  labels show names and state without metre values. Names remain visible to at least 60 m, using 1.5 times the hearing
+  radius, so out-of-range status is visible; hearing itself remains 40 m.
+- The audience dropdown refreshes through Slate every 0.1 seconds, including while the world is paused. It reuses
+  entries and refreshes list membership only when that membership changes, rather than rebuilding or sorting every
+  frame.
+  Busy NPCs remain listed with their state instead of being filtered through `CanAcceptPlayerMessage`.
+- Selecting a busy NPC shows a brief instruction to return to the scene and wait for the current response. Availability
+  changes restore the relevant controls and clear stale errors, avoiding a wait inside the paused composer.
+- A selected NPC leaving range remains selected as an unavailable entry. The draft is preserved and the audience does
+  not switch to broadcast. Sending becomes available again after the NPC returns and the other conditions are met.
+- Native compilation passed with exit code 0; the final incremental build took 8.71 seconds
+  (`Saved/dialogue-live-status-build-final.log`). No API requests, PIE, screenshots or visual tests were run; gameplay
+  acceptance remains with the user. Earlier rule-check results below do not validate this interaction change.
+
+## 2026-10-31 — Four natural prompts and one 40-metre hearing radius
+
+- Default shortcuts now offer request food, invite company, negotiate gathering and offer food to the mother tree.
+  Each inserts a natural proposal into the shared draft; none binds a model decision or guarantees a result.
+- Increased the default hearing radius from 20 m to 40 m (`[Verdant.Dialogue] RadiusCm=4000`). HUD target selection,
+  actual listeners, Options distance candidates, Population relationship/shared-event context and speech-bubble distance
+  all read `Dialogue.GetHearingRadiusCm`. The 2x height limit, one-request direct speech and 3-listener broadcast cap
+  remain.
+- Execution distances are independent: giving still requires 11 m, stealing 3 m, and land transfers retain their own
+  nearby-target requirements. A larger hearing radius does not permit remote food or ownership transfers.
+- All 31 pure-policy boundary checks passed (`Saved/Validation/dialogue-radius-40m-policy.json`). After ending the
+  existing Play session as requested, the normal native build succeeded with exit code 0 in 21.59 seconds
+  (`Saved/dialogue-radius-40m-build.log`). No PIE, gameplay tests or API calls were initiated for this revision; visual
+  and gameplay acceptance remain with the user. Previous build and API results below are historical checkpoints.
+
+## 2026-10-31 — Shared composer, explicit audiences and autonomous negotiation
+
+- Replaced per-NPC composers with one shared draft. The interface contains 3 default topic starters, a broadcast/NPC
+  audience selector, free text, send and cancel. T opens with broadcast selected; topic starters only fill the draft.
+- Direct speech creates one request for the selected eligible NPC, and that answer does not propagate to bystanders.
+  Broadcast selects at most 3 initial eligible listeners. With no listeners it still shows the player's bubble, uses
+  no API call and counts as a successful send. Player threads allow at most 3 answers; proactive NPC chains retain 2.
+- Retained the 20 m and 2x height eligibility rules, 5-second player cooldown, shared 20-second NPC initiative interval,
+  real pause while composing, and deferred HTTP completion with fresh validation after resuming.
+- DeepSeek now decides acceptance, refusal, counteroffers and actions. Removed hardcoded personality, trust, gift and
+  fixed-deal social gates while retaining life, inventory, capacity, food-tier, ownership, distance and cycle
+  constraints.
+  The 14 existing action names remain execution interfaces, not dialogue-menu choices or newly invented abilities.
+- `share` executes the requested ratio from 0 through 0.9; `cede` can transfer management to any valid nearby actor.
+  New follow, donation or attack plans clear conflicting plans. Wild NPCs can pledge donations, and the rule brain no
+  longer immediately overturns accepted promises using old preferences.
+- Two real API examples passed structure/action checks with 1,453 total tokens, but the share dialogue incorrectly
+  described 15% as “十五成”; `Saved/Validation/free-dialogue-live.json` retains that failed wording. The prompt now
+  requires percentages throughout. The focused repair check passed with one request, 749 tokens and 1.656 seconds
+  (`Saved/Validation/free-dialogue-share15-fix-live.json`): `share/target=2/amount=0.15`, both mentions correctly said
+  15%, and no claim that the player had already fulfilled the deal.
+- Native build passed with exit code 0 (`Saved/dialogue-shared-free-build.log`). SocialProbe social assertions were
+  updated but not run; other old in-memory baselines are obsolete. These synthetic API fixtures and compilation do not
+  validate world actions. No full-suite, PIE or visual acceptance is claimed; gameplay review remains with the user.
+
+## 2026-10-31 — Paused speech input and shared dialogue pacing
+
+- Opening the composer with T now pauses the game world. Enter closes it and resumes only after a non-empty message
+  enters the queue successfully; Esc cancels and resumes without consuming the speech cooldown.
+- A successful player send starts a 5-second game-time cooldown. Pressing T during that cooldown shows the remaining
+  time without opening the composer or pausing the scene. Empty or rejected sends do not consume it.
+- Player and NPC speech now appears above each speaker. Chinese text wraps by measured width and long text paginates
+  in groups of 5 lines, supporting up to 500 characters instead of truncating the display at 42 characters.
+- HTTP completions arriving while paused are retained until the resumed dialogue Tick, which rechecks current actor
+  life, plans, distance, height and legal actions before publishing dialogue or applying changes.
+- Removed individual NPC response timers and NPC-pair dialogue cooldowns. Proactive speech uses one shared 20-second
+  global interval, first checked at game time 10 seconds and checked every 3 seconds while idle. Replies to the player
+  do not wait for that proactive interval. New-context deduplication and the existing candidate/queue gates remain.
+- The one-call DeepSeek protocol is unchanged: relevant replies use the four-field JSON; irrelevant input returns the
+  short `无关` marker and ends silently. Native compilation passed with exit code 0
+  (`Saved/dialogue-compose-bubbles-build-final.log`). No PIE, API requests or screenshots were run for this revision;
+  visual and gameplay acceptance remain with the user.
+
+## 2026-10-31 — Single-request cloud dialogue and GPU release
+
+- Replaced local relevance screening with one DeepSeek request per eligible NPC. The same response either returns
+  literal `无关`, ending silently, or the `say/action/target/amount` JSON. No separate cloud gate or `stop` parameter.
+- Eligibility uses actual 3D distance of at most 20 m and a taller/shorter height ratio of at most 2. Each speech event
+  selects at most 3 candidates; each dialogue chain permits at most 2 actual NPC replies.
+- Requests disable thinking, use temperature 0.3 and cap output at 256 tokens. The provider rejected
+  `response_format=json_object`, so the prompt constrains JSON and the game validates it before applying actions.
+- Normal editor/game launchers no longer bootstrap local inference. Portable staging no longer copies the local
+  inference runtime or weights; existing models and old packaged builds remain unchanged.
+- After exact process identity checks, stopped this copy's StartLux service and the stale Qwen process from the earlier
+  build of the same game. Ports 8066, 8081 and 8090 had no listeners afterward. Total GPU usage was 888 MiB at that
+  observation, not an isolated performance benchmark or a promised steady-state budget.
+- Distance/height boundary checks passed 25/25 (`Saved/Validation/cloud-dialogue-switch-policy.json`). Six API cases
+  passed for the preceding `不相关` protocol with 3,620 total tokens (`cloud-dialogue-switch-live.json`); those results
+  are historical. The final `无关` protocol compiled successfully (`Saved/cloud-dialogue-final-build.log`) and passed
+  3/3 targeted API fixtures (`Saved/Validation/cloud-dialogue-switch-wuguan-live.json`), with one request per case and
+  no retry. The two irrelevant cases used one output token each; the valid handoff returned dialogue and `give` together
+  in 35 output tokens. Total usage was 1,584 tokens; observed latency was 1.03–1.83 seconds. These synthetic fixtures
+  did
+  not exercise the game scheduler or world actions. No claim of full 20-NPC gameplay acceptance.
+
+## 2026-10-31 — Historical source integration checkpoint before cloud-only switch
 
 - Saved the five-scale terrain, ecology and player-scale changes together with the food-tier, growth and respawn rules.
 - The current source adds 20 resident types from the character catalog, instance relations, nearby speech events,

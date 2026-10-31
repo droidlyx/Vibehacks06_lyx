@@ -3,6 +3,7 @@
 #include "GameFramework/Character.h"
 #include "VerdantCharacter.generated.h"
 class AVerdantWorld;
+class AVerdantFoodPickup;
 class USpringArmComponent;
 class UCameraComponent;
 class UStaticMeshComponent;
@@ -103,12 +104,27 @@ public:
 	int32 MoveRecoveryCount = 0;
 	int32 AvoidGrove = -1;
 	float AvoidGroveUntil = 0.f;
+	// Short-lived routes and failed food targets belong to this NPC, not the world.
+	TArray<FVector> LocalMovePath;
+	FVector LocalMoveGoal = FVector::ZeroVector;
+	FVector MoveSteeringDirection = FVector::ZeroVector;
+	float MoveSteeringScale = 1.f;
+	float MoveSteeringAt = 0.f;
+	float MovePathSearchAt = 0.f;
+	float MoveAcceptance = 0.f;
+	int32 MoveIntentRevision = -1;
+	TWeakObjectPtr<AVerdantFoodPickup> FoodTarget;
+	TMap<TWeakObjectPtr<AVerdantFoodPickup>, float> AvoidFoodUntil;
+	float FoodTargetDeadline = 0.f;
+	float FoodAttemptAt = 0.f;
+	int32 FoodCollectionFailures = 0;
 	float NextTendAt = 0.f;
 	float BrainClock = 0.f;
 	float ReconsiderAt = 0.f;
 	FVector Destination = FVector::ZeroVector;
 	FString ActionLabel;
 	FString LastSpeech;
+	float SpeechStartedAt = 0.f;
 	float SpeechUntil = 0.f;
 	FString CombatFeedback;
 	float FeedbackUntil = 0.f;
@@ -140,6 +156,8 @@ public:
 	void RestartJourney();
 	void SetSize(float NewSize);
 	void Say(const FString& Line);
+	void BeginDialogueReply(const FString& Line, AVerdantCharacter* FocusPlayer);
+	bool IsDialogueReplyActive() const;
 	AVerdantCharacter* NearestFolk(float Radius = 900.f) const;
 	AVerdantWorld* Valley() const;
 	void TickNPC(float Dt);
@@ -148,6 +166,9 @@ public:
 	void UpdateAnimation();
 
 private:
+	void UpdateDialogueReplyPose();
+	bool bDialogueReplyActive = false;
+	TWeakObjectPtr<AVerdantCharacter> DialogueReplyFocus;
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void LookYaw(float Value);

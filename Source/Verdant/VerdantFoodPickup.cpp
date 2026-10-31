@@ -52,11 +52,12 @@ float AVerdantFoodPickup::Take(AVerdantCharacter* Receiver, float Requested)
 	FCollisionQueryParams Query(SCENE_QUERY_STAT(VerdantFoodReach), false, Receiver);
 	Query.AddIgnoredActor(this);
 	if (GetWorld()->LineTraceSingleByChannel(Obstruction, Receiver->GetActorLocation(), GetActorLocation(),
-	                                         ECC_Visibility, Query)) return 0.f;
+	                                         ECC_Visibility, Query))
+		return 0.f;
 	if (GroveIndex != INDEX_NONE && !Valley->CanHarvest(GroveIndex, Receiver)) return 0.f;
 	AVerdantCharacter* GroveOwner = Valley->Groves.IsValidIndex(GroveIndex)
-		                           ? Valley->FindFolk(Valley->Groves[GroveIndex].ControllerId)
-		                           : nullptr;
+		                                ? Valley->FindFolk(Valley->Groves[GroveIndex].ControllerId)
+		                                : nullptr;
 	const float Share = IsValid(GroveOwner) && !GroveOwner->bDead && GroveOwner != Receiver
 		                    ? FMath::Clamp(Valley->Groves[GroveIndex].Share, 0.f, .9f)
 		                    : 0.f;
@@ -83,8 +84,9 @@ float AVerdantFoodPickup::Take(AVerdantCharacter* Receiver, float Requested)
 	if (Remaining <= .001f)
 	{
 		Remaining = 0.f;
-		if (bRenewable) RefillAt = Valley->Elapsed + 60.f + FoodTier * 20.f;
-		else Destroy();
+		// Natural food is replaced at a new location by the world's 60-second cycle.
+		// Keep it hidden until then; death drops have no refill slot.
+		if (!bRenewable) Destroy();
 	}
 	RefreshVisual();
 	return Taken;

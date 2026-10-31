@@ -5,6 +5,7 @@
 #include "VerdantTitanPresentation.h"
 #include "VerdantWorld.h"
 #include "VerdantHUD.h"
+#include "VerdantDialogue.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -22,6 +23,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "InputCoreTypes.h"
+#include "Framework/Application/SlateApplication.h"
 #include "HAL/IConsoleManager.h"
 
 namespace VerdantScaleTest
@@ -282,7 +284,7 @@ void AVerdantCharacter::RespawnPlayer()
 	AppliedSize = 0.f;
 	SetSize(TargetHeight / VerdantTitanPresentation::BaseHeight(this));
 	const float Overflow = FMath::Max(0.f, Food - FoodCapacity());
-	if (Overflow > .0001f)
+	if (Overflow > VerdantEconomy::FoodEpsilon)
 	{
 		// The same inventory cannot remain on the corpse and return on the player.
 		// The world owns this drop, which keeps the pre-death source tier.
@@ -293,6 +295,8 @@ void AVerdantCharacter::RespawnPlayer()
 		}
 		Food -= Overflow;
 	}
+	// Discard only sub-threshold rounding residue, which cannot form a pickup.
+	Food = FMath::Min(Food, FoodCapacity());
 	const FVector Arrival(-1000.f, -5800.f, 0.f);
 	const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	FVector Spawn = W->SurfacePoint(Arrival, HalfHeight + 8.f);
@@ -399,7 +403,8 @@ void AVerdantCharacter::SetSize(float NewSize)
 	GetCharacterMovement()->MaxAcceleration = 1800.f * MotionScale;
 	GetCharacterMovement()->BrakingDecelerationWalking = 1800.f * MotionScale;
 	if (AgentId == 0)
-		GetCharacterMovement()->MaxWalkSpeed = VerdantPlayerScale::MovementSpeed(BodySize, bSprinting ? 640.f : 430.f);
+		GetCharacterMovement()->MaxWalkSpeed = bSprinting ? VerdantPlayerScale::SprintSpeed(BodySize)
+			: VerdantPlayerScale::MovementSpeed(BodySize, 430.f);
 	GetCharacterMovement()->JumpZVelocity = 400.f * FMath::Sqrt(BodySize);
 	AppliedSize = BodySize;
 }
@@ -407,6 +412,25 @@ void AVerdantCharacter::SetSize(float NewSize)
 void AVerdantCharacter::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	if (bDialogueReplyActive && !IsDialogueReplyActive())
+	{
+		bDialogueReplyActive = false;
+		DialogueReplyFocus.Reset();
+		// Resume the current plan without interpreting the speaking pause as being stuck.
+		BrainClock = 0.f;
+		MoveSampleAt = 0.f;
+		MoveSteeringAt = 0.f;
+	}
+	if (AgentId == 0)
+		if (auto* PC = Cast<APlayerController>(GetController()))
+		{
+			// UI-only dialogue consumes key events. Read the current modifier state
+			// instead of leaving sprint latched off/on after dialogue or respawn.
+			const bool ShiftHeld = FSlateApplication::IsInitialized()
+				? FSlateApplication::Get().GetModifierKeys().IsShiftDown()
+				: PC->IsInputKeyDown(EKeys::LeftShift) || PC->IsInputKeyDown(EKeys::RightShift);
+			bSprinting = !bDead && !PC->IsMoveInputIgnored() && ShiftHeld;
+		}
 	SocialActionCooldown = FMath::Max(0.f, SocialActionCooldown - Dt);
 	RespawnProtectionRemaining = FMath::Max(0.f, RespawnProtectionRemaining - Dt);
 	if (bDead && AgentId == 0)
@@ -430,6 +454,16 @@ void AVerdantCharacter::Tick(float Dt)
 	AttackInputBuffer = FMath::Max(0.f, AttackInputBuffer - Dt);
 	if (AttackInputBuffer <= 0)QueuedAttackType = -1;
 	if (GetWorld()->GetTimeSeconds() > FeedbackUntil) CombatFeedback.Empty();
+	if (IsDialogueReplyActive())
+	{
+		// A reply pauses only this NPC's locomotion/action brain. Growth and real
+		// damage still work, and the same SpeechUntil also expires the bubble.
+		TickAutomaticGrowth(Dt);
+		UpdateDialogueReplyPose();
+		CarriedNutrition->SetVisibility(DonationPledge > .001f && Food > .001f);
+		UpdateAnimation();
+		return;
+	}
 	if (AttackTimer > 0)
 	{
 		SetActorRotation(FRotator(0, LockedActionYaw, 0));
@@ -449,7 +483,8 @@ void AVerdantCharacter::Tick(float Dt)
 		}
 		TickAutomaticGrowth(Dt);
 		const float MovementSpeed = AgentId == 0
-			                            ? VerdantPlayerScale::MovementSpeed(BodySize, bSprinting ? 640.f : 430.f)
+			                            ? (bSprinting ? VerdantPlayerScale::SprintSpeed(BodySize)
+				                            : VerdantPlayerScale::MovementSpeed(BodySize, 430.f))
 			                            : (bSprinting ? 640.f : 430.f) * FMath::Pow(BodySize, .32f);
 		GetCharacterMovement()->MaxWalkSpeed = MovementSpeed * (AttackTimer > 0 ? .35f : 1.f);
 		if (AgentId != 0 && DodgeTimer <= 0 && (HurtTimer <= 0 || AttackTimer > 0)) TickNPC(Dt);
@@ -546,7 +581,7 @@ void AVerdantCharacter::UpdateAnimation()
 
 bool AVerdantCharacter::Attack(bool Heavy)
 {
-	if (bDead || AttackTimer > 0 || DodgeTimer > 0 || HurtTimer > 0) return false;
+	if (bDead || IsDialogueReplyActive() || AttackTimer > 0 || DodgeTimer > 0 || HurtTimer > 0) return false;
 	StopHarvest();
 	QueuedAttackType = -1;
 	AttackInputBuffer = 0;
@@ -609,7 +644,8 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 {
 	StopHarvest();
 	if (bDead || RespawnProtectionRemaining > 0.f || !IsValid(From) || From == this || !FMath::IsFinite(Damage) ||
-		Damage <= 0)return;
+		Damage <= 0)
+		return;
 	if (IsDodgeInvulnerable())
 	{
 		SetCombatFeedback(TEXT("闪避成功"));
@@ -662,6 +698,9 @@ void AVerdantCharacter::ReceiveStrike(AVerdantCharacter* From, float Damage)
 		++LifeRevision;
 		++IntentRevision;
 		bDead = true;
+		bDialogueReplyActive = false;
+		DialogueReplyFocus.Reset();
+		SpeechUntil = GetWorld()->GetTimeSeconds();
 		AttackTimer = 0;
 		bHitApplied = true;
 		DodgeTimer = 0;
@@ -691,13 +730,15 @@ bool AVerdantCharacter::Eat(float Amount)
 {
 	if (AgentId == 0)
 	{
-		if (auto* W = Valley()) W->
-			Notify(FString::Printf(TEXT("食物每10秒自动转化成长，距离下一次 %.0f 秒。"), GrowthSecondsRemaining()));
+		if (auto* W = Valley())
+			W->
+				Notify(FString::Printf(TEXT("食物每5秒自动转化成长，距离下一次 %.0f 秒。"), GrowthSecondsRemaining()));
 		return false;
 	}
 	// NPCs keep their spawn size. Eating is only a paid emergency recovery action.
-	if (bDead || !FMath::IsFinite(Amount) || Amount <= 0.f || Food <= 0.f || Health >= MaxHealth() - .001f) return
-		false;
+	if (bDead || !FMath::IsFinite(Amount) || Amount <= 0.f || Food <= 0.f || Health >= MaxHealth() - .001f)
+		return
+			false;
 	const float Paid = FMath::Min3(Amount, Food, (MaxHealth() - Health) / 1.9f);
 	Food -= Paid;
 	Health = FMath::Min(MaxHealth(), Health + Paid * 1.9f);
@@ -714,7 +755,7 @@ bool AVerdantCharacter::IsDodgeInvulnerable() const
 void AVerdantCharacter::Dodge()
 {
 	StopHarvest();
-	if (bDead || DodgeTimer > 0 || DodgeRecoveryTimer > 0 || HurtTimer > 0 || AttackTimer > .25f)return;
+	if (bDead || IsDialogueReplyActive() || DodgeTimer > 0 || DodgeRecoveryTimer > 0 || HurtTimer > 0 || AttackTimer > .25f)return;
 	if (!GetCharacterMovement()->IsMovingOnGround())
 	{
 		if (AgentId == 0)SetCombatFeedback(TEXT("站稳后再闪避"), .55f);
@@ -791,8 +832,9 @@ void AVerdantCharacter::Interact()
 	for (AVerdantCharacter* Other : W->Folk)
 	{
 		if (!IsValid(Other) || Other == this || Other->AgentId == 0 || !Other->bDead || Other->Food <= .001f) continue;
-		if (FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) > 220.f * FMath::Max(1.f, BodySize)) continue
-			;
+		if (FVector::Dist2D(GetActorLocation(), Other->GetActorLocation()) > 220.f * FMath::Max(1.f, BodySize))
+			continue
+				;
 		if (FoodTier() < Other->FoodTier())
 		{
 			W->Notify(FString::Printf(TEXT("这是第%d档掉落，需要至少 %.2f 米身高。"), Other->FoodTier(),
@@ -838,14 +880,11 @@ void AVerdantCharacter::Contribute()
 void AVerdantCharacter::Talk()
 {
 	if (bDead)return;
-	if (auto* Other = NearestFolk(VerdantEconomy::HearingRadiusCm))
-	{
-		if (auto* PC = Cast<APlayerController>(GetController()))
-			if (auto* H = Cast<AVerdantHUD>(PC->GetHUD()))
-				H->
-					OpenConversation(Other);
-	}
-	else if (auto* W = Valley()) W->Notify(TEXT("靠近一位居民，按 T 自由交谈。"));
+	auto* W = Valley();
+	if (!W || !W->Dialogue)return;
+	if (auto* PC = Cast<APlayerController>(GetController()))
+		if (auto* H = Cast<AVerdantHUD>(PC->GetHUD()))
+			H->OpenConversation(nullptr);
 }
 
 void AVerdantCharacter::ToggleClaim()
@@ -890,8 +929,53 @@ void AVerdantCharacter::TendGrove()
 
 void AVerdantCharacter::Say(const FString& Line)
 {
-	LastSpeech = Line;
-	SpeechUntil = GetWorld()->GetTimeSeconds() + 8.f;
+	if (IsDialogueReplyActive())return; // Ambient barks must not replace a visible API reply.
+	bDialogueReplyActive = false;
+	DialogueReplyFocus.Reset();
+	LastSpeech = Line.TrimStartAndEnd().Left(500);
+	SpeechStartedAt = GetWorld()->GetTimeSeconds();
+	// Long player messages are paginated in the overhead bubble. All pages share
+	// this game-time lifetime, so reading/typing pauses do not consume them.
+	SpeechUntil = SpeechStartedAt + (LastSpeech.IsEmpty() ? 0.f : FMath::Clamp(8.f + LastSpeech.Len() * .07f, 8.f, 48.f));
+}
+
+bool AVerdantCharacter::IsDialogueReplyActive() const
+{
+	return AgentId != 0 && !bDead && bDialogueReplyActive && GetWorld()
+		&& GetWorld()->GetTimeSeconds() < SpeechUntil;
+}
+
+void AVerdantCharacter::BeginDialogueReply(const FString& Line, AVerdantCharacter* FocusPlayer)
+{
+	if (AgentId == 0 || bDead || !GetWorld() || IsDialogueReplyActive())return;
+	const FString Reply = Line.TrimStartAndEnd().Left(500);
+	if (Reply.IsEmpty())return;
+	LastSpeech = Reply;
+	SpeechStartedAt = GetWorld()->GetTimeSeconds();
+	SpeechUntil = SpeechStartedAt + 5.f;
+	bDialogueReplyActive = true;
+	DialogueReplyFocus = IsValid(FocusPlayer) && !FocusPlayer->bDead ? FocusPlayer : nullptr;
+	CancelForConversation();
+	UpdateDialogueReplyPose();
+	UpdateAnimation();
+}
+
+void AVerdantCharacter::UpdateDialogueReplyPose()
+{
+	if (!IsDialogueReplyActive())return;
+	bSprinting = false;
+	ConsumeMovementInputVector();
+	if (auto* Move = GetCharacterMovement())
+	{
+		Move->StopMovementImmediately();
+		Move->MaxWalkSpeed = 0.f;
+		Move->bOrientRotationToMovement = false;
+	}
+	if (const auto* Focus = DialogueReplyFocus.Get(); IsValid(Focus) && !Focus->bDead)
+	{
+		const FVector TowardPlayer = (Focus->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+		if (!TowardPlayer.IsNearlyZero())SetActorRotation(FRotator(0.f, TowardPlayer.Rotation().Yaw, 0.f));
+	}
 }
 
 void AVerdantCharacter::RestartJourney() { UGameplayStatics::OpenLevel(this, FName(TEXT("Valley"))); }
@@ -968,6 +1052,8 @@ void AVerdantCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindKey(EKeys::R, IE_Pressed, this, &ThisClass::RestartJourney);
 	Input->BindKey(EKeys::LeftShift, IE_Pressed, this, &ThisClass::SprintStart);
 	Input->BindKey(EKeys::LeftShift, IE_Released, this, &ThisClass::SprintStop);
+	Input->BindKey(EKeys::RightShift, IE_Pressed, this, &ThisClass::SprintStart);
+	Input->BindKey(EKeys::RightShift, IE_Released, this, &ThisClass::SprintStop);
 #if !UE_BUILD_SHIPPING
 	VerdantScaleTest::Bind(Input, this);
 #endif

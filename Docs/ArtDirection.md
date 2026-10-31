@@ -58,3 +58,43 @@ In the earlier three-species presentation, the long-tailed ferret uses a 110 cm 
 capsule half-height per size unit; its visual horizontal anchor is the rig origin near the torso, not the tail-inclusive
 bounds centre. Other creatures in that pass and the hero use the 180 cm reference height. These are not universal size
 assumptions for every model in the expanded population.
+
+## Environment scale and ecology — applied 2026-10-31
+
+Twelve active nature meshes follow four stable world-space scale bands. Each repeated
+mesh keeps its own nominal height with continuous uniform 0.8–1.2 instance scaling:
+
+- Ground: grass 25 cm, clover 8 cm, flowers 28 cm, true pebbles 12/14 cm.
+- Understory: bush 1.1 m, fern 0.7 m, medium rocks 1.2/1.5/1.8 m.
+- Ordinary woodland: CommonTree 6.5 m.
+- Upper canopy: TwistedTree 14 m; the unique existing Mother Tree remains approximately 22 m.
+
+The full 68-mesh allocation is in `Assets/Environment/scale-plan.json`, distinguishing
+active and reserve meshes. Six CC0 meshes were imported from the existing local Quaternius
+pack. Source hashes and material descriptions are in `ecology-assets.json`; current
+terrain height generation and character scale rules are not part of this ecology edit.
+
+`VerdantEcology.cpp` replaces uniform scatter and repeated roadside rows with ten irregular
+forest regions, sparse high-canopy accents, rock groups and anchor-adjacent understory.
+Separate seeded streams keep layers reproducible. Clearances preserve routes, grove
+interaction spaces and the Mother Tree approach. Steep/unsupported placements are
+rejected; actual counts are logged at the user's next Play.
+
+The smallest scale has a persistent population of short grass and clover across eligible
+near-player terrain, not just isolated decorative patches. `VerdantGroundCoverComponent`
+keeps 25 reusable six-metre world cells with jittered sites and mild density variation.
+Positions and sizes remain the same after cell unload/reload. Fine-detail render radius
+is approximately 12 m; farther landscape retains separate decorative islands. It samples
+existing terrain triangles instead of evaluating fractal terrain per blade. This foliage
+has no collision or dynamic shadow; cliffs above 55 degrees are excluded. Initial cells
+fill nearest-first over roughly 2.6 seconds. Coverage and performance await manual review.
+
+The twelve nutrition plants per grove occupy unequal 5/4/3 patches rather than an even
+ring, with composite nominal height 1.2 m and continuous +/-20% variation. Gameplay food
+accounting is unchanged by this visual placement edit.
+
+Six mesh/material imports were verified and existing nature materials enabled for
+instancing. The cold Editor build succeeded. No PIE, gameplay suite or screenshot capture
+was run. Live Interchange texture import did crash; isolated native-factory commandlet
+import subsequently succeeded. Evidence is recorded in `Docs/EditorScreenshotCrash.md`.
+The editor was reopened for user review.

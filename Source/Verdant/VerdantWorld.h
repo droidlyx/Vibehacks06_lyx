@@ -13,6 +13,15 @@ class USoundConcurrency;
 class UVerdantPopulation;
 class AVerdantFoodPickup;
 
+// One slot per opening natural food item; drops never acquire a slot.
+struct FVerdantFoodSpawnSlot
+{
+	int32 Tier = 1;
+	int32 GroveIndex = INDEX_NONE;
+	bool bStarter = false;
+	TWeakObjectPtr<AVerdantFoodPickup> Pickup;
+};
+
 USTRUCT()
 struct FVerdantGrove
 {
@@ -136,9 +145,13 @@ public:
 	TObjectPtr<UVerdantPopulation> Population;
 	UPROPERTY()
 	TArray<TObjectPtr<AVerdantFoodPickup>> FoodPickups;
+	FRandomStream FoodRegrowthRandom{14664};
+	TArray<FVerdantFoodSpawnSlot> FoodSpawnSlots;
+	float NextFoodRefillAt = 0.f;
 	void SpawnFoodField();
 	void TickFoodField();
-	AVerdantFoodPickup* FindFood(const AVerdantCharacter* Who, float MaxDistance = 6000.f) const;
+	AVerdantFoodPickup* FindFood(const AVerdantCharacter* Who, float MaxDistance = 6000.f,
+	                             const TMap<TWeakObjectPtr<AVerdantFoodPickup>, float>* Avoided = nullptr) const;
 	float CollectFood(AVerdantCharacter* Who, float Radius = 350.f);
 	float LootCorpse(AVerdantCharacter* Corpse, AVerdantCharacter* Receiver, float Amount = MAX_flt);
 	AVerdantFoodPickup* SpawnFoodDrop(const FVector& Position, float Amount, int32 Tier);
@@ -227,6 +240,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<USoundConcurrency> CueConcurrency;
 	float EconomyClock = 0.f;
+	bool bSimulationInitialized = false;
+	float NextPopulationInitAt = 0.f;
 	TMap<int32, float> LastHarvestNotice;
 	float PolicyProbeElapsed = 0.f, PolicyProbeNextSample = 0.f, PolicyProbeInterventionAt = -1.f;
 	bool bPolicyProbeInterventionApplied = false, bPolicyProbeFinished = false;

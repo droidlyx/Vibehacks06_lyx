@@ -3,51 +3,77 @@
 #include "GameFramework/HUD.h"
 #include "VerdantHUD.generated.h"
 class SWidget;
+class FActiveTimerHandle;
 class SMultiLineEditableTextBox;
 class SScrollBox;
 class UFont;
 class AVerdantCharacter;
+template <typename OptionType>
+class SComboBox;
 
-struct FVerdantHUDObservation {
- TWeakObjectPtr<AVerdantCharacter> Character;
- float Health=0.f;
- float BodySize=0.f;
- bool bDead=false;
- bool bHitApplied=true;
- float StrikeFlashUntil=-1.f;
+struct FVerdantConversationTarget
+{
+	TWeakObjectPtr<AVerdantCharacter> NPC;
+	FString Label;
+	FText DisplayText;
+	bool bReady = false;
+	bool bBroadcast = false;
 };
-struct FVerdantHUDDamageFloat {
- TWeakObjectPtr<AVerdantCharacter> Character;
- FVector Position=FVector::ZeroVector;
- float Amount=0.f;
- float BornAt=0.f;
+
+struct FVerdantHUDObservation
+{
+	TWeakObjectPtr<AVerdantCharacter> Character;
+	float Health = 0.f;
+	float BodySize = 0.f;
+	bool bDead = false;
+	bool bHitApplied = true;
+	float StrikeFlashUntil = -1.f;
+};
+
+struct FVerdantHUDDamageFloat
+{
+	TWeakObjectPtr<AVerdantCharacter> Character;
+	FVector Position = FVector::ZeroVector;
+	float Amount = 0.f;
+	float BornAt = 0.f;
 };
 
 UCLASS()
-class VERDANT_API AVerdantHUD : public AHUD {
- GENERATED_BODY()
+class VERDANT_API AVerdantHUD : public AHUD
+{
+	GENERATED_BODY()
+
 public:
- virtual void BeginPlay() override;
- virtual void EndPlay(const EEndPlayReason::Type Reason) override;
- virtual void DrawHUD() override;
- void OpenConversation(AVerdantCharacter* NPC);
- void CloseConversation();
- bool HasCanvasFont() const;
- bool bConversationOpen=false;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+	virtual void DrawHUD() override;
+	void OpenConversation(AVerdantCharacter* NPC);
+	void CloseConversation();
+	bool HasCanvasFont() const;
+	bool bConversationOpen = false;
+
 private:
- FTimerHandle PresentationTimer;
- bool bJournalOpen=false;
- bool bSeasonPresented=false;
- bool bControlsOpen=false;
- void FillConversationPrompt(const FString& Text);
- UPROPERTY(Transient) TObjectPtr<UFont> CanvasFont;
- TSharedPtr<SWidget> RootWidget;
- TSharedPtr<SMultiLineEditableTextBox> InputBox;
- TSharedPtr<SScrollBox> ConversationScroll;
- TSharedPtr<SScrollBox> JournalScroll;
- int32 LastDialogueLineCount=-1;
- TMap<int32,FVerdantHUDObservation> Observations;
- TArray<FVerdantHUDDamageFloat> DamageFloats;
- float LastPlayerHeightCm=81.f;
- float GrowthVisibleUntil=-1.f;
+	FTimerHandle PresentationTimer;
+	TFunction<void()> RefreshPresentation;
+	bool bPausedForConversation = false;
+	bool bJournalOpen = false;
+	bool bSeasonPresented = false;
+	bool bControlsOpen = false;
+	void FillConversationPrompt(const FString& Text);
+	void RefreshConversationTargets(AVerdantCharacter* Preferred);
+	void UpdateConversationTargets();
+	bool CanSendConversationTarget() const;
+	TWeakPtr<FActiveTimerHandle> ConversationRefreshTimer;
+	UPROPERTY(Transient)
+	TObjectPtr<UFont> CanvasFont;
+	TSharedPtr<SWidget> RootWidget;
+	TSharedPtr<SMultiLineEditableTextBox> InputBox;
+	TSharedPtr<SComboBox<TSharedPtr<FVerdantConversationTarget>>> TargetBox;
+	TArray<TSharedPtr<FVerdantConversationTarget>> ConversationTargets;
+	TSharedPtr<FVerdantConversationTarget> ConversationTarget;
+	TSharedPtr<SScrollBox> JournalScroll;
+	TMap<int32, FVerdantHUDObservation> Observations;
+	TArray<FVerdantHUDDamageFloat> DamageFloats;
+	float LastPlayerHeightCm = 81.f;
+	float GrowthVisibleUntil = -1.f;
 };

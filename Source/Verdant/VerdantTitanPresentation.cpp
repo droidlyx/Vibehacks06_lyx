@@ -6,6 +6,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInterface.h"
 
 namespace VerdantTitanPresentation
 {
@@ -57,6 +59,29 @@ namespace VerdantTitanPresentation
 				return false;
 			}
 			C->GetMesh()->SetSkeletalMeshAsset(Mesh);
+			// Some original Titan meshes contain empty slots. Supply component-only
+			// overrides for those slots; never rewrite the mesh asset or replace its
+			// authored, non-null materials. The ferret's empty mouth/eye slot stays dark.
+			for (int32 Slot = 0; Slot < Mesh->GetMaterials().Num(); ++Slot)
+			{
+				if (Mesh->GetMaterials()[Slot].MaterialInterface) continue;
+				UMaterialInterface* Fallback = nullptr;
+				if (auto* W = C->Valley())
+				{
+					const FLinearColor Color = IsFerret(C) && Slot == 1
+						                           ? FLinearColor(.035f, .025f, .018f)
+						                           : C->BodyColor;
+					Fallback = W->ColoredMaterial(Color);
+				}
+				if (!Fallback)
+					Fallback = LoadObject<UMaterialInterface>(nullptr,
+					                                          TEXT(
+						                                          "/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+				if (!Fallback) Fallback = UMaterial::GetDefaultMaterial(MD_Surface);
+				C->GetMesh()->SetMaterial(Slot, Fallback);
+				UE_LOG(LogTemp, Display, TEXT("VERDANT_RESIDENT_MATERIAL_FALLBACK type=%s slot=%d material=%s"),
+				       *C->CharacterTypeId, Slot, *GetPathNameSafe(Fallback));
+			}
 			C->IdleAnimation = C->IdlePath.IsEmpty() ? nullptr : Asset<UAnimSequence>(C->IdlePath);
 			C->WalkAnimation = C->WalkPath.IsEmpty() ? nullptr : Asset<UAnimSequence>(C->WalkPath);
 			C->RunAnimation = C->WalkAnimation;

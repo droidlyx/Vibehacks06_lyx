@@ -27,6 +27,7 @@ public:
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
     static UVerdantPopulation* Find(const UObject* Context);
     void SpawnResidents();
+    bool HasSpawnedResidents() const { return bSpawned; }
     FString ContextFor(const AVerdantCharacter* Who) const;
     bool HasRelation(int32 A, int32 B, const FString& Kind) const;
     FString RequestSummary(const AVerdantCharacter* Who) const;
@@ -42,4 +43,6 @@ private:
     float DeliveryAmount = 0.f;
     int32 DeliveryLifeRevision = 0;
     bool bSpawned = false;
+    bool bSpawnAttempted = false;
+    bool bWaitingForTerrainLogged = false;
 };

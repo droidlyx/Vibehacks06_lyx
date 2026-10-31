@@ -3,6 +3,7 @@
 #include "VerdantCharacter.h"
 #include "VerdantPlayerScale.h"
 #include "VerdantDialogue.h"
+#include "VerdantSpeechBubbles.h"
 #include "VerdantFoodPickup.h"
 #include "VerdantEconomyRules.h"
 #include "VerdantPopulation.h"
@@ -23,6 +24,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SMultiLineEditableTextBox.h"
 #include "Widgets/Notifications/SProgressBar.h"
 #include "Framework/Application/SlateApplication.h"
@@ -40,6 +42,20 @@ namespace
 	constexpr float StartingHeightCm = VerdantPlayerScale::StartingHeightCm;
 	constexpr float DamageLifetime = .85f;
 	constexpr int32 MaxDamageFloats = 6;
+
+	FString ConversationAvailabilityText(EVerdantConversationAvailability State)
+	{
+		switch (State)
+		{
+		case EVerdantConversationAvailability::Ready: return TEXT("可以交谈");
+		case EVerdantConversationAvailability::TooFar: return TEXT("距离太远");
+		case EVerdantConversationAvailability::SizeMismatch: return TEXT("体型差距过大");
+		case EVerdantConversationAvailability::Cooldown: return TEXT("发言冷却中");
+		case EVerdantConversationAvailability::Busy: return TEXT("正在回应");
+		case EVerdantConversationAvailability::Unavailable: return TEXT("暂时无法交谈");
+		default: return TEXT("无法交谈");
+		}
+	}
 
 	FString Stance(const AVerdantCharacter* NPC)
 	{
@@ -60,41 +76,46 @@ namespace
 		return Ink;
 	}
 
-	FString PlayerStake(const AVerdantCharacter* P, const AVerdantWorld* W)
+	FString ContextHint(AVerdantCharacter* P, AVerdantWorld* W)
 	{
-		if (!P || !W)return TEXT("");
-		int32 Groves = 0;
-		for (const auto& G : W->Groves)if (G.ControllerId == P->AgentId)++Groves;
-		return FString::Printf(TEXT("你的筹码：携带 %.1f 份食物 · 管理 %d 片果林 · 身高 %.2f 米"), P->Food, Groves, P->BodySize * 1.8f);
+		if (!P || !W || P->bDead) return TEXT("");
+		for (AVerdantCharacter* N : W->Folk)
+			if (IsValid(N) && N != P && N->bDead && N->Food > .001f && FVector::Dist2D(
+				P->GetActorLocation(), N->GetActorLocation()) < FMath::Max(220.f, P->Reach() + 130.f))
+				return P->FoodTier() >= N->FoodTier()
+					       ? FString::Printf(TEXT("[E] 第%d档掉落 %.1f份 · 超出容量的仍留在原地"), N->FoodTier(), N->Food)
+					       : FString::Printf(TEXT("第%d档掉落 · 需要身高 %.2f米"), N->FoodTier(),
+					                         VerdantEconomy::MinimumHeight(N->FoodTier()) / 100.f);
+		AVerdantFoodPickup* Best = nullptr;
+		float BestDistance = FMath::Square(500.f);
+		for (AVerdantFoodPickup* F : W->FoodPickups)
+		{
+			if (!IsValid(F) || F->Remaining <= .001f)continue;
+			const float D = FVector::DistSquared2D(P->GetActorLocation(), F->GetActorLocation());
+			if (D < BestDistance)
+			{
+				BestDistance = D;
+				Best = F;
+			}
+		}
+		FString Hint;
+		if (Best)
+			Hint = P->FoodTier() >= Best->FoodTier
+				       ? FString::Printf(
+					       TEXT("[E] 第%d档食物 · 剩余 %.1f · 可装 %.1f"), Best->FoodTier, Best->Remaining,
+					       P->FreeFoodCapacity())
+				       : FString::Printf(
+					       TEXT("第%d档食物 · 需要 %.2f米，当前 %.2f米"), Best->FoodTier,
+					       VerdantEconomy::MinimumHeight(Best->FoodTier) / 100.f, P->HeightCm() / 100.f);
+		if (FVector::Dist2D(P->GetActorLocation(), W->MotherPosition) < 1000.f && !W->bRestored)
+			Hint += FString::Printf(TEXT("  [F] 供奉 · 母树还需 %.0f份"), W->TreeGoal - W->TreeNutrition);
+		if (W->Dialogue && W->Dialogue->PlayerSpeechCooldownRemaining() > 0.f)
+			Hint += FString::Printf(TEXT("  发言冷却 %.1f 秒"), W->Dialogue->PlayerSpeechCooldownRemaining());
+		else if (W->Dialogue)
+			Hint += TEXT("  [T] 发言");
+		if (Hint.IsEmpty())Hint = TEXT("寻找彩色食物 · 按住 E 获取 · 每5秒自动消耗库存的20%成长");
+		return Hint;
 	}
-
-    FString ContextHint(AVerdantCharacter* P, AVerdantWorld* W)
-    {
-        if (!P || !W || P->bDead) return TEXT("");
-        for (AVerdantCharacter* N : W->Folk)
-            if (IsValid(N) && N != P && N->bDead && N->Food > .001f && FVector::Dist2D(P->GetActorLocation(),N->GetActorLocation())<FMath::Max(220.f,P->Reach()+130.f))
-                return P->FoodTier() >= N->FoodTier()
-                    ? FString::Printf(TEXT("[E] 第%d档掉落 %.1f份 · 超出容量的仍留在原地"),N->FoodTier(),N->Food)
-                    : FString::Printf(TEXT("第%d档掉落 · 需要身高 %.2f米"),N->FoodTier(),VerdantEconomy::MinimumHeight(N->FoodTier())/100.f);
-        AVerdantFoodPickup* Best=nullptr; float BestDistance=FMath::Square(500.f);
-        for (AVerdantFoodPickup* F : W->FoodPickups)
-        {
-            if(!IsValid(F)||F->Remaining<=.001f)continue;
-            const float D=FVector::DistSquared2D(P->GetActorLocation(),F->GetActorLocation());
-            if(D<BestDistance){BestDistance=D;Best=F;}
-        }
-        FString Hint;
-        if(Best)
-            Hint=P->FoodTier()>=Best->FoodTier
-                ? FString::Printf(TEXT("[E] 第%d档食物 · 剩余 %.1f · 可装 %.1f"),Best->FoodTier,Best->Remaining,P->FreeFoodCapacity())
-                : FString::Printf(TEXT("第%d档食物 · 需要 %.2f米，当前 %.2f米"),Best->FoodTier,VerdantEconomy::MinimumHeight(Best->FoodTier)/100.f,P->HeightCm()/100.f);
-        if(FVector::Dist2D(P->GetActorLocation(),W->MotherPosition)<1000.f&&!W->bRestored)
-            Hint+=FString::Printf(TEXT("  [F] 供奉 · 母树还需 %.0f份"),W->TreeGoal-W->TreeNutrition);
-        if(auto* N=P->NearestFolk(2000.f))
-            Hint+=FString::Printf(TEXT("  [T] %s · 第%d档 · %s"),*N->DisplayName,N->FoodTier(),*Stance(N));
-        if(Hint.IsEmpty())Hint=TEXT("寻找彩色食物 · 按住 E 获取 · 每10秒自动消耗库存的20%成长");
-        return Hint;
-    }
 
 	FString DeliveryHint(AVerdantWorld* W)
 	{
@@ -204,17 +225,22 @@ void AVerdantHUD::BeginPlay()
 	auto Send = [this]()
 	{
 		auto* W = AVerdantWorld::Find(this);
-		if (W && W->Dialogue && InputBox.IsValid() && W->Dialogue->Selected.IsValid() && W->Dialogue->CanAcceptPlayerMessage(W->Dialogue->Selected.Get()))
+		if (bConversationOpen && W && W->Dialogue && InputBox.IsValid() && ConversationTarget.IsValid())
 		{
 			const FString Line = InputBox->GetText().ToString().TrimStartAndEnd();
-			if (!Line.IsEmpty())
+			auto* Target = ConversationTarget->bBroadcast ? nullptr : ConversationTarget->NPC.Get();
+			const bool ValidTarget = ConversationTarget->bBroadcast || (Target && W->Dialogue->CanConverse(Target));
+			if (!Line.IsEmpty() && ValidTarget && W->Dialogue->TrySendPlayerMessage(Target, Line))
 			{
-				W->Dialogue->Request(W->Dialogue->Selected.Get(), Line);
 				W->PlayUISound(TEXT("Confirm"));
 				InputBox->SetText(FText::GetEmpty());
+				CloseConversation();
+				return FReply::Handled();
 			}
+			if (!Line.IsEmpty())InputBox->SetError(FText::FromString(ValidTarget ? TEXT("暂时无法发送") : TEXT("目标不可用")));
 		}
-		if (InputBox.IsValid())FSlateApplication::Get().SetKeyboardFocus(InputBox);
+		if (RefreshPresentation)RefreshPresentation();
+		if (bConversationOpen && InputBox.IsValid())FSlateApplication::Get().SetKeyboardFocus(InputBox);
 		return FReply::Handled();
 	};
 	auto Proposal = [this](const FString& Title, const FString& Prompt)-> TSharedRef<SWidget>
@@ -223,6 +249,7 @@ void AVerdantHUD::BeginPlay()
 			.ButtonStyle(&Theme().Button)
 			.HAlign(HAlign_Center)
 			.ContentPadding(FMargin(12, 10))
+			.IsEnabled_Lambda([this]() { return CanSendConversationTarget(); })
 			.OnClicked_Lambda([this,Prompt]()
 			{
 				FillConversationPrompt(Prompt);
@@ -336,7 +363,9 @@ void AVerdantHUD::BeginPlay()
 								Text([Player]()
 								{
 									auto* P = Player();
-									return P ? FString::Printf(TEXT("%.0f / %.0f"), P->Food, P->FoodCapacity()) : TEXT("—");
+									return P
+										       ? FString::Printf(TEXT("%.1f / %.1f"), P->Food, P->FoodCapacity())
+										       : TEXT("—");
 								}, 24, Gold)
 							]
 						]
@@ -362,7 +391,11 @@ void AVerdantHUD::BeginPlay()
 						Text([Player]()
 						{
 							auto* P = Player();
-                            return P ? FString::Printf(TEXT("第%d档 · %.0f秒后自动成长%s"),P->FoodTier(),P->GrowthSecondsRemaining(),P->IsRespawnProtected()?TEXT(" · 复活保护"):TEXT("")) : TEXT("");
+							return P
+								       ? FString::Printf(
+									       TEXT("第%d档 · %.0f秒后自动成长%s"), P->FoodTier(), P->GrowthSecondsRemaining(),
+									       P->IsRespawnProtected() ? TEXT(" · 复活保护") : TEXT(""))
+								       : TEXT("");
 						}, 12, Muted)
 					]
 				)
@@ -544,7 +577,7 @@ void AVerdantHUD::BeginPlay()
 					     ]
 					     + SHorizontalBox::Slot().AutoWidth().Padding(8, 0)
 					     [
-						     Action(TEXT("10秒"),TEXT("自动成长"))
+						     Action(TEXT("5秒"),TEXT("自动成长"))
 					     ]
 					     + SHorizontalBox::Slot().AutoWidth().Padding(8, 0)
 					     [
@@ -603,7 +636,7 @@ void AVerdantHUD::BeginPlay()
 				     + SVerticalBox::Slot().AutoHeight()
 				     [
 					     Label(TEXT(
-						     "WASD  移动    ·    鼠标  观察    ·    Shift  奔跑\n\n左键 / 右键  轻击 / 重击    ·    空格  闪避\n\n按住 E  连续采集 / 战利品    ·    每10秒自动消耗20%库存并成长\n\nF  分享 / 供奉    ·    Shift + F  批量供奉\n\nT  交谈    ·    B  养护土壤    ·    G  管理果林\n\nTab  生态手记    ·    R  重新开始这一局"), 15,
+						     "WASD  移动    ·    鼠标  观察    ·    Shift  奔跑\n\n左键 / 右键  轻击 / 重击    ·    空格  闪避\n\n按住 E  连续采集 / 战利品    ·    每5秒自动消耗20%库存并成长\n\nF  分享 / 供奉    ·    Shift + F  批量供奉\n\nT  交谈    ·    B  养护土壤    ·    G  管理果林\n\nTab  生态手记    ·    R  重新开始这一局"), 15,
 					           Ink)
 				     ]
 				     + SVerticalBox::Slot().AutoHeight().Padding(0, 20, 0, 0)
@@ -636,12 +669,16 @@ void AVerdantHUD::BeginPlay()
 				     ]
 				     + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0, 24, 0, 0)
 				     [
-					     Text([Player](){auto* P=Player();return P?FString::Printf(TEXT("%.1f秒后回到安全区域"),P->RespawnSecondsRemaining()):FString();},16,Gold)
+					     Text([Player]()
+					     {
+						     auto* P = Player();
+						     return P ? FString::Printf(TEXT("%.1f秒后回到安全区域"), P->RespawnSecondsRemaining()) : FString();
+					     }, 16, Gold)
 				     ]
 				     , FMargin(32))
 			]
 		]
-		// Conversation is a single focus scope; Escape works from every child control.
+		// Compose one line while the world is paused; sending returns focus to play.
 		+ SOverlay::Slot()
 		[
 			SNew(SBorder)
@@ -654,7 +691,7 @@ void AVerdantHUD::BeginPlay()
 		]
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
 		[
-			SNew(SBox).WidthOverride(780).Visibility_Lambda([this]()
+			SNew(SBox).WidthOverride(600).Visibility_Lambda([this]()
 			{
 				return bConversationOpen ? EVisibility::Visible : EVisibility::Collapsed;
 			})
@@ -663,150 +700,131 @@ void AVerdantHUD::BeginPlay()
 					FSimpleDelegate::CreateUObject(this, &AVerdantHUD::CloseConversation))
 				[
 					Card(SNew(SVerticalBox)
-					     + SVerticalBox::Slot().AutoHeight()
-					     [
-						     Label(TEXT("林 间 对 话     /     以 诚 相 待"), 11, Gold)
-					     ]
-					     + SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 8)
-					     [
-						     Text([World]()
-						     {
-							     auto* W = World();
-							     auto* N = W && W->Dialogue ? W->Dialogue->Selected.Get() : nullptr;
-							     return N
-								            ? FString::Printf(TEXT("%s  ·  %s"), *N->DisplayName, *Stance(N))
-								            : TEXT("交谈");
-						     }, 27, Ink)
-					     ]
-					     + SVerticalBox::Slot().AutoHeight()
-					     [
-						     Text([World]()
-						     {
-							     auto* W = World();
-							     auto* N = W && W->Dialogue ? W->Dialogue->Selected.Get() : nullptr;
-							     return N ? N->ActionLabel + TEXT(" · ") + N->Motivation : FString();
-						     }, 13, Muted)
-					     ]
-					     + SVerticalBox::Slot().AutoHeight().Padding(0, 10)
-					     [
-						     Rule()
-					     ]
-					     + SVerticalBox::Slot().AutoHeight()
-					     [
-						     Text([World]()
-						     {
-							     auto* W = World();
-							     auto* N = W && W->Dialogue ? W->Dialogue->Selected.Get() : nullptr;
-							     return N ? W->NegotiationSummary(N) : FString();
-						     }, 13, Ink)
-					     ]
-					     + SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 14)
-					     [
-						     Text([Player,World]() { return PlayerStake(Player(), World()); }, 12, Gold)
-					     ]
-					     + SVerticalBox::Slot().AutoHeight()
-					     [
-						     SNew(SHorizontalBox)
-						     + SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 8, 0)
-						     [
-							     Proposal(TEXT("问问打算"),TEXT("你现在最在意什么？我们怎样合作对彼此都有好处？"))
-						     ]
-						     + SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 8, 0)
-						     [
-							     Proposal(TEXT("用食物交换"),TEXT("我可以分享一些食物。你愿意给我采集许可或降低分成吗？请说说你的条件。"))
-						     ]
-						     + SHorizontalBox::Slot().FillWidth(1)
-						     [
-							     Proposal(TEXT("商量让地"),TEXT("如果我承担果林的养护，你愿意和平地把管理权交给我吗？你希望换取什么？"))
-						     ]
-					     ]
-					     + SVerticalBox::Slot().AutoHeight().Padding(0, 14)
-					     [
-						     SNew(SBorder).BorderImage(&Theme().Inset).Padding(16)
-						     [
-							     SNew(SBox).HeightOverride(170)
-							     [
-								     SAssignNew(ConversationScroll, SScrollBox)
-								     + SScrollBox::Slot()
-								     [
-									     Text([World]()
-									     {
-										     FString Value;
-										     auto* W = World();
-										     if (W && W->Dialogue)
-											     for (const FString& Line : W->Dialogue->Lines)
-												     Value +=
-													     Line + TEXT("\n\n");
-										     return Value.IsEmpty()
-											            ? TEXT("先听听对方的打算，再提出你的交换条件。\n\n上方提议只填入文字，按发送才会开口。")
-											            : Value;
-									     }, 15, Ink)
-								     ]
-							     ]
-						     ]
-					     ]
-					     + SVerticalBox::Slot().AutoHeight()
-					     [
-						     SAssignNew(InputBox, SMultiLineEditableTextBox)
-						     .Style(&Theme().Input)
-						     .Font(Font(16))
-						     .ForegroundColor(Ink)
-						     .HintText(FText::FromString(TEXT("说说你的提议……")))
-						     .AutoWrapText(true)
-						     .AllowMultiLine(false)
-						     .Padding(FMargin(14, 12))
-						     .OnTextCommitted_Lambda([Send](const FText&, ETextCommit::Type Kind)
-						     {
-							     if (Kind == ETextCommit::OnEnter)Send();
-						     })
-					     ]
-					     + SVerticalBox::Slot().AutoHeight().Padding(0, 10)
-					     [
-						     Text([World]()
-						     {
-							     auto* W = World();
-							     return W && W->Dialogue ? W->Dialogue->Status : FString();
-						     }, 12, Muted)
-					     ]
-					     + SVerticalBox::Slot().AutoHeight()
-					     [
-						     SNew(SHorizontalBox)
-						     + SHorizontalBox::Slot().FillWidth(1).VAlign(VAlign_Center)
-						     [
-							     Label(TEXT("承诺需要行动，送达才计入养分。"), 12, Muted)
-						     ]
-						     + SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 10, 0)
-						     [
-							     SNew(SButton)
-							     .ButtonStyle(&Theme().Button)
-							     .ContentPadding(FMargin(16, 10))
-							     .IsEnabled_Lambda([this,World]()
-							     {
-								     auto* W = World();
-								     return W && W->Dialogue && W->Dialogue->CanAcceptPlayerMessage(W->Dialogue->Selected.Get()) && InputBox.IsValid() && !InputBox->
-									     GetText().ToString().TrimStartAndEnd().IsEmpty();
-							     })
-							     .OnClicked_Lambda(Send)
-							     [
-								     Label(TEXT("发送  Enter"), 14, Gold)
-							     ]
-						     ]
-						     + SHorizontalBox::Slot().AutoWidth()
-						     [
-							     SNew(SButton)
-							     .ButtonStyle(&Theme().Button)
-							     .ContentPadding(FMargin(16, 10))
-							     .OnClicked_Lambda([this]()
-							     {
-								     CloseConversation();
-								     return FReply::Handled();
-							     })
-							     [
-								     Label(TEXT("告别  Esc"), 14, Ink)
-							     ]
-						     ]
-					     ]
-					     , FMargin(28))
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 8, 0)
+						[
+							Proposal(TEXT("请求食物"), TEXT("我现在需要些食物。你愿意分给我一些吗？你希望我做什么作为交换？"))
+						]
+						+ SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 8, 0)
+						[
+							Proposal(TEXT("邀请同行"), TEXT("愿意和我结伴行动、互相照应吗？你有什么条件？"))
+						]
+						+ SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 8, 0)
+						[
+							Proposal(TEXT("协商采集"), TEXT("我想在你管理的果林里采集。我们能商量一个双方都愿意接受的条件吗？"))
+						]
+						+ SHorizontalBox::Slot().FillWidth(1)
+						[
+							Proposal(TEXT("供奉母树"), TEXT("我想一起给母树送些食物。你愿意参与吗？我们可以怎样分工？"))
+						]
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 14, 0, 0)
+					[
+						SAssignNew(TargetBox, SComboBox<TSharedPtr<FVerdantConversationTarget>>)
+						.OptionsSource(&ConversationTargets)
+						.ButtonStyle(&Theme().Button)
+						.ContentPadding(FMargin(14, 10))
+						.MaxListHeight(240)
+						.OnGenerateWidget_Lambda([](TSharedPtr<FVerdantConversationTarget> Option)
+						{
+							return SNew(STextBlock)
+								.Font(Font(14))
+								.Text_Lambda([Option]()
+								{
+									return Option.IsValid() ? Option->DisplayText : FText::GetEmpty();
+								})
+								.ColorAndOpacity_Lambda([Option]()
+								{
+									return Option.IsValid() && Option->bReady ? Ink : Muted;
+								});
+						})
+						.OnSelectionChanged_Lambda(
+							[this](TSharedPtr<FVerdantConversationTarget> Option, ESelectInfo::Type)
+							{
+								if (!Option.IsValid())return;
+								ConversationTarget = Option;
+								FString SelectionError;
+								if (auto* W = AVerdantWorld::Find(this))
+									if (W->Dialogue)
+									{
+										W->Dialogue->SelectNPC(
+											Option->bBroadcast ? nullptr : Option->NPC.Get());
+										if ((Option->bBroadcast || Option->NPC.IsValid()) && W->Dialogue->GetPlayerConversationAvailability(
+											Option->bBroadcast ? nullptr : Option->NPC.Get()) == EVerdantConversationAvailability::Busy)
+											SelectionError = TEXT("请先返回场景，等待当前回应结束。");
+									}
+								if (InputBox.IsValid())InputBox->SetError(FText::FromString(SelectionError));
+							})
+						[
+							SNew(STextBlock)
+							.Font(Font(14))
+							.ColorAndOpacity(Ink)
+							.Text_Lambda([this]()
+							{
+								return ConversationTarget.IsValid()
+									       ? ConversationTarget->DisplayText
+									       : FText::FromString(TEXT("广播"));
+							})
+						]
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 14)
+					[
+						SNew(SBox).MaxDesiredHeight(120)
+						[
+							SAssignNew(InputBox, SMultiLineEditableTextBox)
+							.Style(&Theme().Input)
+							.Font(Font(16))
+							.ForegroundColor(Ink)
+							.HintText(FText::FromString(TEXT("想说什么……")))
+							.AutoWrapText(true)
+							.AllowMultiLine(false)
+							.ClearKeyboardFocusOnCommit(false)
+							.Padding(FMargin(14, 12))
+							.OnTextChanged_Lambda([this](const FText&)
+							{
+								if (InputBox.IsValid())InputBox->SetError(FText::GetEmpty());
+							})
+							.OnTextCommitted_Lambda([Send](const FText&, ETextCommit::Type Kind)
+							{
+								if (Kind == ETextCommit::OnEnter)Send();
+							})
+						]
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 10, 0)
+						[
+							SNew(SButton)
+							.ButtonStyle(&Theme().Button)
+							.ContentPadding(FMargin(16, 10))
+							.IsEnabled_Lambda([this]()
+							{
+								return CanSendConversationTarget() && InputBox.IsValid() &&
+									!InputBox->GetText().ToString().TrimStartAndEnd().IsEmpty();
+							})
+							.OnClicked_Lambda(Send)
+							[
+								Label(TEXT("发送  Enter"), 14, Gold)
+							]
+						]
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton)
+							.ButtonStyle(&Theme().Button)
+							.ContentPadding(FMargin(16, 10))
+							.OnClicked_Lambda([this]()
+							{
+								CloseConversation();
+								return FReply::Handled();
+							})
+							[
+								Label(TEXT("取消  Esc"), 14, Ink)
+							]
+						]
+					], FMargin(24))
 				]
 			]
 		];
@@ -824,68 +842,194 @@ void AVerdantHUD::BeginPlay()
 				Overlay
 			]
 		];
-	for (auto& Update : *Updates)Update();
-	GetWorldTimerManager().SetTimer(PresentationTimer, FTimerDelegate::CreateWeakLambda(this, [this,Updates]()
+	RefreshPresentation = [this,Updates]()
 	{
 		for (auto& Update : *Updates)Update();
-		auto* W = AVerdantWorld::Find(this);
-		if (bConversationOpen && W && ConversationScroll.IsValid() && W->Dialogue && LastDialogueLineCount != W->
-			Dialogue->Lines.Num())
-		{
-			LastDialogueLineCount = W->Dialogue->Lines.Num();
-			ConversationScroll->ScrollToEnd();
-		}
+	};
+	RefreshPresentation();
+	GetWorldTimerManager().SetTimer(PresentationTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+	{
+		if (RefreshPresentation)RefreshPresentation();
 	}), .1f, true);
+	// Slate keeps ticking while the input screen pauses the game world.
+	ConversationRefreshTimer = RootWidget->RegisterActiveTimer(.1f,
+	                                                           FWidgetActiveTimerDelegate::CreateWeakLambda(
+		                                                           this, [this](double, float)
+		                                                           {
+			                                                           if (bConversationOpen)
+				                                                           UpdateConversationTargets();
+			                                                           return EActiveTimerReturnType::Continue;
+		                                                           }));
 	if (GEngine && GEngine->GameViewport)GEngine->GameViewport->AddViewportWidgetContent(RootWidget.ToSharedRef(), 5);
 }
 
 void AVerdantHUD::EndPlay(const EEndPlayReason::Type Reason)
 {
 	GetWorldTimerManager().ClearTimer(PresentationTimer);
+	if (RootWidget.IsValid())
+		if (auto Timer = ConversationRefreshTimer.Pin())RootWidget->UnRegisterActiveTimer(Timer.ToSharedRef());
+	ConversationRefreshTimer.Reset();
 	if (bConversationOpen)CloseConversation();
+	RefreshPresentation = nullptr;
 	if (GEngine && GEngine->GameViewport && RootWidget.IsValid())
 		GEngine->GameViewport->RemoveViewportWidgetContent(
 			RootWidget.ToSharedRef());
 	RootWidget.Reset();
 	InputBox.Reset();
-	ConversationScroll.Reset();
+	TargetBox.Reset();
+	ConversationTarget.Reset();
+	ConversationTargets.Reset();
 	JournalScroll.Reset();
 	Observations.Reset();
 	DamageFloats.Reset();
 	Super::EndPlay(Reason);
 }
 
+bool AVerdantHUD::CanSendConversationTarget() const
+{
+	const auto* W = AVerdantWorld::Find(this);
+	if (!W || !W->Dialogue || !ConversationTarget.IsValid())return false;
+	const auto* Target = ConversationTarget->NPC.Get();
+	if (!ConversationTarget->bBroadcast && !IsValid(Target))return false;
+	return W->Dialogue->CanAcceptPlayerMessage(ConversationTarget->bBroadcast ? nullptr : Target);
+}
+
+void AVerdantHUD::UpdateConversationTargets()
+{
+	auto* W = AVerdantWorld::Find(this);
+	if (!W || !W->Dialogue)return;
+	// Preserve selected targets even when they leave range. Never turn a direct
+	// message into a broadcast, and never reorder existing rows under the cursor.
+	bool Changed = ConversationTargets.RemoveAll([this,W](const TSharedPtr<FVerdantConversationTarget>& Option)
+	{
+		return !Option.IsValid() || (!Option->bBroadcast && Option != ConversationTarget
+			&& !W->Dialogue->CanConverse(Option->NPC.Get()));
+	}) > 0;
+	for (AVerdantCharacter* N : W->Folk)
+	{
+		if (!W->Dialogue->CanConverse(N) || ConversationTargets.ContainsByPredicate(
+			[N](const TSharedPtr<FVerdantConversationTarget>& Option)
+			{
+				return !Option->bBroadcast && Option->NPC.Get() == N;
+			}))
+			continue;
+		auto Option = MakeShared<FVerdantConversationTarget>();
+		Option->NPC = N;
+		Option->Label = N->DisplayName;
+		ConversationTargets.Add(Option);
+		Changed = true;
+	}
+	for (const auto& Option : ConversationTargets)
+	{
+		const auto* N = Option->NPC.Get();
+		const auto State = !Option->bBroadcast && !IsValid(N)
+			                   ? EVerdantConversationAvailability::Invalid
+			                   : W->Dialogue->GetPlayerConversationAvailability(Option->bBroadcast ? nullptr : N);
+		const bool WasReady = Option->bReady;
+		Option->bReady = State == EVerdantConversationAvailability::Ready;
+		if (Option == ConversationTarget && Option->bReady && !WasReady && InputBox.IsValid())InputBox->SetError(FText::GetEmpty());
+		if (!Option->bBroadcast && IsValid(N))Option->Label = N->DisplayName;
+		const FString Display = Option->Label + (Option->bReady
+			                                         ? FString()
+			                                         : TEXT(" · ") + ConversationAvailabilityText(State));
+		if (Option->DisplayText.ToString() != Display)Option->DisplayText = FText::FromString(Display);
+	}
+	if (Changed && TargetBox.IsValid())TargetBox->RefreshOptions();
+}
+
+void AVerdantHUD::RefreshConversationTargets(AVerdantCharacter* Preferred)
+{
+	ConversationTargets.Reset();
+	auto Broadcast = MakeShared<FVerdantConversationTarget>();
+	Broadcast->Label = TEXT("广播");
+	Broadcast->bBroadcast = true;
+	ConversationTargets.Add(Broadcast);
+	ConversationTarget = Broadcast;
+	auto* W = AVerdantWorld::Find(this);
+	auto* P = Cast<AVerdantCharacter>(GetOwningPawn());
+	TArray<AVerdantCharacter*> Candidates;
+	if (W && W->Dialogue && P)
+		for (AVerdantCharacter* N : W->Folk)
+			if (W->Dialogue->CanConverse(N))Candidates.Add(N);
+	if (P)
+		Candidates.Sort([P](const AVerdantCharacter& A, const AVerdantCharacter& B)
+		{
+			return FVector::DistSquared(P->GetActorLocation(), A.GetActorLocation())
+				< FVector::DistSquared(P->GetActorLocation(), B.GetActorLocation());
+		});
+	for (auto* N : Candidates)
+	{
+		auto Option = MakeShared<FVerdantConversationTarget>();
+		Option->NPC = N;
+		Option->Label = N->DisplayName;
+		ConversationTargets.Add(Option);
+		if (N == Preferred)ConversationTarget = Option;
+	}
+	// Never reinterpret an explicit target as broadcast if it became unavailable.
+	if (Preferred && ConversationTarget->bBroadcast)
+	{
+		auto Option = MakeShared<FVerdantConversationTarget>();
+		Option->NPC = Preferred;
+		Option->Label = IsValid(Preferred) ? Preferred->DisplayName : TEXT("目标不可用");
+		ConversationTargets.Add(Option);
+		ConversationTarget = Option;
+	}
+	UpdateConversationTargets();
+	if (TargetBox.IsValid())
+	{
+		TargetBox->RefreshOptions();
+		TargetBox->SetSelectedItem(ConversationTarget);
+	}
+}
+
 void AVerdantHUD::OpenConversation(AVerdantCharacter* NPC)
 {
 	auto* W = AVerdantWorld::Find(this);
-	if (!W || !W->Dialogue || !IsValid(NPC) || NPC->bDead || !W->Dialogue->CanConverse(NPC))return;
-	const bool ChangedNPC = W->Dialogue->Selected.Get() != NPC;
-	W->Dialogue->SelectNPC(NPC);
-	if (ChangedNPC)
-	{
-		if (InputBox.IsValid())InputBox->SetText(FText::GetEmpty());
-		LastDialogueLineCount = -1;
-	}
+	auto* Player = Cast<AVerdantCharacter>(GetOwningPawn());
+	if (!W || !W->Dialogue || !IsValid(Player) || Player->bDead)return;
+	if (NPC && !W->Dialogue->CanConverse(NPC))return;
 	if (bConversationOpen)
 	{
 		if (InputBox.IsValid())FSlateApplication::Get().SetKeyboardFocus(InputBox);
 		return;
 	}
+	const float Remaining = W->Dialogue->PlayerSpeechCooldownRemaining();
+	if (Remaining > 0.f)
+	{
+		W->Notify(FString::Printf(TEXT("再等 %.1f 秒就能发言。"), Remaining));
+		return; // Do not freeze a game-time cooldown by opening the paused composer.
+	}
+	if (!W->Dialogue->CanAcceptPlayerMessage(NPC))
+	{
+		W->Notify(TEXT("暂时无法发言，请稍后再试。"));
+		return;
+	}
+	auto* PC = GetOwningPlayerController();
+	if (!PC || UGameplayStatics::IsGamePaused(this))return;
+	if (!PC->SetPause(true))
+	{
+		W->Notify(TEXT("暂时无法暂停场景。"));
+		return;
+	}
+	bPausedForConversation = true;
+	RefreshConversationTargets(NPC);
+	W->Dialogue->SelectNPC(NPC);
+	if (InputBox.IsValid())InputBox->SetError(FText::GetEmpty());
 	bJournalOpen = false;
 	bControlsOpen = false;
 	bConversationOpen = true;
 	W->PlayUISound(TEXT("Open"));
 	if (auto* P = Cast<AVerdantCharacter>(GetOwningPawn()))P->CancelForConversation();
-	if (auto* PC = GetOwningPlayerController())
-	{
-		PC->StopMovement();
-		PC->SetIgnoreMoveInput(true);
-		PC->SetIgnoreLookInput(true);
-		PC->bShowMouseCursor = true;
-		FInputModeUIOnly Mode;
-		if (InputBox.IsValid())Mode.SetWidgetToFocus(InputBox);
-		PC->SetInputMode(Mode);
-	}
+	PC->StopMovement();
+	PC->FlushPressedKeys();
+	PC->SetIgnoreMoveInput(true);
+	PC->SetIgnoreLookInput(true);
+	PC->bShowMouseCursor = true;
+	FInputModeUIOnly Mode;
+	if (InputBox.IsValid())Mode.SetWidgetToFocus(InputBox);
+	PC->SetInputMode(Mode);
+	// The world timer stops while paused; refresh the selected NPC before painting.
+	if (RefreshPresentation)RefreshPresentation();
 	if (InputBox.IsValid())FSlateApplication::Get().SetKeyboardFocus(InputBox);
 }
 
@@ -899,16 +1043,22 @@ void AVerdantHUD::FillConversationPrompt(const FString& Text)
 
 void AVerdantHUD::CloseConversation()
 {
+	if (!bConversationOpen && !bPausedForConversation)return;
 	if (bConversationOpen)
 		if (auto* W = AVerdantWorld::Find(this)) W->PlayUISound(TEXT("Close"));
 	bConversationOpen = false;
 	if (auto* PC = GetOwningPlayerController())
 	{
-		PC->ResetIgnoreMoveInput();
-		PC->ResetIgnoreLookInput();
+		if (bPausedForConversation)PC->SetPause(false);
+		PC->SetIgnoreMoveInput(false);
+		PC->SetIgnoreLookInput(false);
+		PC->FlushPressedKeys();
 		PC->bShowMouseCursor = false;
 		PC->SetInputMode(FInputModeGameOnly());
+		if (FSlateApplication::IsInitialized())FSlateApplication::Get().SetAllUserFocusToGameViewport();
 	}
+	bPausedForConversation = false;
+	if (RefreshPresentation)RefreshPresentation();
 }
 
 void AVerdantHUD::DrawHUD()
@@ -956,14 +1106,8 @@ void AVerdantHUD::DrawHUD()
 	}
 	const float HUDScale = FMath::Max(.25f, FMath::Min(Canvas->SizeX / 1600.f, Canvas->SizeY / 900.f));
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (bConversationOpen && (P->bDead || !W->Dialogue || !W->Dialogue->Selected.IsValid() || W->Dialogue->Selected->
-		bDead))
+	if (bConversationOpen && (P->bDead || !W->Dialogue))
 		CloseConversation();
-	else if (bConversationOpen && !W->Dialogue->CanConverse(W->Dialogue->Selected.Get()))
-	{
-		CloseConversation();
-		W->Notify(TEXT("对方已经走远，靠近后再交谈。"));
-	}
 	FVector ViewLocation;
 	FRotator ViewRotation;
 	PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
@@ -990,21 +1134,26 @@ void AVerdantHUD::DrawHUD()
 		FVector2D SA, SB;
 		if (Project(A, SA, 145.f) && Project(B, SB, 145.f))DrawLine(SA.X, SA.Y, SB.X, SB.Y, Color, Thickness);
 	};
-    if(!bConversationOpen&&!P->bDead)
-    {
-        int32 FoodLabels=0;
-        for (AVerdantFoodPickup* Food : W->FoodPickups)
-        {
-            if(!IsValid(Food)||Food->Remaining<=.001f||FVector::DistSquared2D(Food->GetActorLocation(),P->GetActorLocation())>FMath::Square(800.f))continue;
-            const bool Allowed=P->FoodTier()>=Food->FoodTier;
-            Label(Food->GetActorLocation()+FVector(0,0,35.f),FString::Printf(TEXT("%d档 · %.0f%s"),Food->FoodTier,Food->Remaining,Allowed?TEXT(""):TEXT(" · 未解锁")),Allowed?Gold:Muted,12);
-            if(++FoodLabels>=10)break;
-        }
-    }
+	if (!bConversationOpen && !P->bDead)
+	{
+		int32 FoodLabels = 0;
+		for (AVerdantFoodPickup* Food : W->FoodPickups)
+		{
+			if (!IsValid(Food) || Food->Remaining <= .001f || FVector::DistSquared2D(
+				Food->GetActorLocation(), P->GetActorLocation()) > FMath::Square(800.f))
+				continue;
+			const bool Allowed = P->FoodTier() >= Food->FoodTier;
+			Label(Food->GetActorLocation() + FVector(0, 0, 35.f),
+			      FString::Printf(TEXT("%d档 · %.1f%s"), Food->FoodTier, Food->Remaining,
+			                      Allowed ? TEXT("") : TEXT(" · 未解锁")), Allowed ? Gold : Muted, 12);
+			if (++FoodLabels >= 10)break;
+		}
+	}
 	auto Readable = [&](AVerdantCharacter* Who, const FVector& Head)
 	{
+		const float NameRadius = W->Dialogue ? FMath::Max(6000.f, W->Dialogue->GetHearingRadiusCm() * 1.5f) : 6000.f;
 		if (bConversationOpen || FVector::DistSquared2D(Who->GetActorLocation(), P->GetActorLocation()) >
-			FMath::Square(3800.f))
+			FMath::Square(NameRadius))
 			return false;
 		FVector2D At;
 		if (!Project(Head, At))return false;
@@ -1080,10 +1229,19 @@ void AVerdantHUD::DrawHUD()
 			VisibleFolk.Add(NPC);
 			Observe(NPC, Head);
 			const float Distance = FVector::Dist2D(NPC->GetActorLocation(), P->GetActorLocation());
-			FString Name = FString::Printf(TEXT("%s · %s · %.1fm"), *NPC->DisplayName, *Stance(NPC),
-			                               HalfHeight * .02f);
-			if (NPC->bDead)Name = NPC->Food > 0 ? TEXT("倒下的 ") + NPC->DisplayName + FString::Printf(TEXT(" · 第%d档掉落"),NPC->FoodTier()) : TEXT("");
-			Label(Head, Name, NPC->bDead ? Muted : StanceColor(NPC), 14);
+			const auto TalkState = W->Dialogue ? W->Dialogue->GetPlayerConversationAvailability(NPC)
+				: EVerdantConversationAvailability::Unavailable;
+			const FString Social = Stance(NPC);
+			const FString Talk = ConversationAvailabilityText(TalkState);
+			FString Name = NPC->DisplayName + TEXT(" · ")
+				+ (Social == TEXT("可以交谈") ? FString() : Social + TEXT(" · ")) + Talk;
+			if (NPC->bDead)
+				Name = NPC->Food > 0
+					       ? TEXT("倒下的 ") + NPC->DisplayName + FString::Printf(
+						       TEXT(" · 第%d档掉落"), NPC->FoodTier())
+					       : TEXT("");
+			Label(Head, Name, NPC->bDead || (TalkState != EVerdantConversationAvailability::Ready && NPC->HostileId != 0)
+				? Muted : StanceColor(NPC), 14);
 			// Injured creatures retain a compact bar below their name until healed.
 			// This shares the name's visibility/occlusion gate; damage numbers remain
 			// to the side and action/speech labels remain above it.
@@ -1118,9 +1276,6 @@ void AVerdantHUD::DrawHUD()
 					return Float.Character.Get() == NPC;
 				});
 				if (!ShowingDamage)Label(Head + FVector(0, 0, 30.f * NPC->BodySize), NPC->ActionLabel, Muted, 12);
-				if (NPC->SpeechUntil > Now)
-					Label(Head + FVector(0, 0, 70.f * NPC->BodySize), NPC->LastSpeech.Left(42),
-					      Gold, 14);
 			}
 		}
 	for (auto It = Observations.CreateIterator(); It; ++It)
@@ -1216,10 +1371,12 @@ void AVerdantHUD::DrawHUD()
 			if (FMath::Abs(Start.Y - Top.Y) > 32.f)
 			{
 				TextAt(Top + FVector2D(10, -7), FString::Printf(TEXT("现在 %.2fm"), Height / 100.f), Color, 12, false);
-				TextAt(Start + FVector2D(10, -7), FString::Printf(TEXT("出发时 %.2fm"), StartingHeightCm / 100.f), Old, 12, false);
+				TextAt(Start + FVector2D(10, -7), FString::Printf(TEXT("出发时 %.2fm"), StartingHeightCm / 100.f), Old, 12,
+				       false);
 			}
 			else
-				TextAt(Top + FVector2D(10, -7), FString::Printf(TEXT("%.2fm · 出发时%.2fm"), Height / 100.f, StartingHeightCm / 100.f), Color, 12,
+				TextAt(Top + FVector2D(10, -7),
+				       FString::Printf(TEXT("%.2fm · 出发时%.2fm"), Height / 100.f, StartingHeightCm / 100.f), Color, 12,
 				       false);
 		}
 	}
@@ -1260,4 +1417,6 @@ void AVerdantHUD::DrawHUD()
 					G.Position + FVector(0, 0, 300), G.Name, G.Color, 17);
 		PlaceLabel(W->MotherPosition + FVector(0, 0, 1700), W->bRestored ? TEXT("母树 · 新生") : TEXT("母树"), Gold, 20);
 	}
+	if (!bConversationOpen && HasCanvasFont())
+		VerdantSpeechBubbles::Draw(Canvas, PC, CanvasFont.Get(), W, P);
 }

@@ -68,8 +68,6 @@ void AVerdantWorld::BeginPlay()
 	MotherPosition = SurfacePoint(FVector(0.f, 3600.f, 0.f));
 	BuildLandscape();
 	BuildScenery();
-	SpawnResidents();
-	SpawnFoodField();
 
 	if (auto* Player = Cast<AVerdantCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0)))
 	{
@@ -77,10 +75,6 @@ void AVerdantWorld::BeginPlay()
 		Player->AgentId = 0;
 		Player->UpdateAppearance();
 	}
-	BeginSeasonRecord();
-	Record(TEXT("生长季开始。20位居民分布在山谷，四档散落食物等待探索。母树等待100份养分。"));
-	Record(TEXT("米芽开放采集；陶恩收取两成分成；岚石暂不允许外人进入高地果林。"));
-	Notify(TEXT("WASD 移动 · E 吸收附近食物 · 每10秒自动成长 · T 附近交谈 · F 分享或供奉"));
 	UpdateGroveVisuals();
 	// Detailed groundcover is a bounded world-cell cache, not player-relative scaling.
 	auto* GroundCover = NewObject<UVerdantGroundCoverComponent>(this, TEXT("ValleyGroundCover"));
@@ -95,7 +89,6 @@ void AVerdantWorld::BeginPlay()
 void AVerdantWorld::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	Elapsed += FMath::Max(0.f, DeltaSeconds);
 
 	// GameMode may create the world before the player pawn is possessed.
 	if (auto* Player = Cast<AVerdantCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0)))
@@ -107,6 +100,24 @@ void AVerdantWorld::Tick(float DeltaSeconds)
 			Player->UpdateAppearance();
 		}
 	}
+	if (!bSimulationInitialized)
+	{
+		const float Now = GetWorld()->GetTimeSeconds();
+		if (Now < NextPopulationInitAt) return;
+		NextPopulationInitAt = Now + .1f;
+		SpawnResidents();
+		if (!Population || !Population->HasSpawnedResidents()) return;
+		// Physics queries can become available only after BeginPlay. Keep the food,
+		// opening snapshot and owner-death economy behind the same one-time gate.
+		SpawnFoodField();
+		BeginSeasonRecord();
+		bSimulationInitialized = true;
+		Record(TEXT("生长季开始。20位居民分布在山谷，四档散落食物等待探索。母树等待100份养分。"));
+		Record(TEXT("米芽开放采集；陶恩收取两成分成；岚石暂不允许外人进入高地果林。"));
+		Notify(TEXT("WASD 移动 · E 吸收附近食物 · 每5秒自动成长 · T 附近交谈 · F 分享或供奉"));
+		UpdateGroveVisuals();
+	}
+	Elapsed += FMath::Max(0.f, DeltaSeconds);
 	TickEconomy(DeltaSeconds);
 	TickPolicyProbe(DeltaSeconds);
 	if (GetWorld()->GetTimeSeconds() > NoticeUntil)
@@ -129,6 +140,7 @@ void AVerdantWorld::SpawnResidents()
 
 void AVerdantWorld::TickEconomy(float Dt)
 {
+	if (!bSimulationInitialized) return;
 	EconomyClock += FMath::Max(0.f, Dt);
 	if (EconomyClock < .5f)
 		return;
