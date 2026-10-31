@@ -1,5 +1,9 @@
 # 长大以后 · Verdant Accord
 
+当前编辑器工作副本已切换至 DeepSeek V4.1-Flash：通过 `https://api.qnaigc.com/v1` 调用 `deepseek/deepseek-v4.1-flash-1017`，负责自由对话和协商内容。使用 `Open-Editor.cmd` 打开本工程；启动器不再自动加载 Qwen。StartLux 仅保留按需启动入口，用于未来的次要选择，当前 NPC 日常行为仍由游戏规则驱动。密钥和启动说明见 [AI 配置](Docs/LocalAI.md)。
+
+当前源码包含 DeepSeek 对话、生物角色与界面更新；下文的 v0.3 可玩包及历史验证记录属于原始交付版本，尚未按当前源码重新打包，不能作为这些更新的试玩验收结果。
+
 设计、素材、生成预算与当前进展：[中文项目总览](Docs/ProjectOverview.zh-CN.md)。
 一个原创 UE 5.8 原型：在不同体型居民共同生活的山谷中连续成长，用战斗或 AI 协商取得养分，让母树复苏，并改变果林的开放程度、控制者和居民生存状态。
 

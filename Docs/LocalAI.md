@@ -1,19 +1,57 @@
-# Local AI runtime
+﻿# AI providers
 
-NPC negotiation uses a real local OpenAI-compatible llama.cpp HTTP server at `127.0.0.1:8066`. No paid inference API key is required. The new project does not copy Ember's dialogue plugin or gameplay source.
+The current source project uses **DeepSeek V4.1 Flash 1017 through Qiniu's compatible API** for NPC dialogue and
+consequential negotiation. Qwen3 is no longer automatically started or used as a fallback.
 
-## Components
+## Cloud dialogue configuration
 
-- Qwen/Qwen3-1.7B-GGUF, official Q8_0 weights, Apache-2.0: https://huggingface.co/Qwen/Qwen3-1.7B-GGUF
-- llama.cpp b11463, MIT: https://github.com/ggml-org/llama.cpp/releases/tag/b11463
-- Fresh game-side HTTP client and validated action executor in VerdantDialogue.cpp.
+- Base URL: `https://api.qnaigc.com/v1`
+- Completion endpoint: `https://api.qnaigc.com/v1/chat/completions`
+- Model ID: `deepseek/deepseek-v4.1-flash-1017`
+- Authentication: `Authorization: Bearer <key>` using the key issued by this provider, not an unrelated DeepSeek
+  account.
+- Requests disable thinking for interactive dialogue and use JSON output. The game independently checks the required
+  fields, offered action combinations, current distance, authority and resources before applying any action.
 
-`Tools/setup_ai.py --llama-source <directory containing the vendor llama-server.exe and DLLs>` downloads the official model, verifies the published SHA-256, and stages vendor binaries under ignored `Local/AI`. Model weights and binaries are not put in Git. The initial workstation uses its existing third-party llama.cpp distribution as the binary source.
+Set `DEEPSEEK_API_KEY` in the launching environment, or store only the key in `Local/Secrets/deepseek.key`. The
+environment takes precedence. `Local/` is excluded from Git; never put credentials in source, Config, reports or
+distributable builds. The portable staging process copies `Local/AI`, not `Local/Secrets`, so each recipient must
+provide their own key.
 
-Run `Play.cmd` or `Start-Game.ps1`; the AI server starts hidden if its files are installed. It binds only to localhost. If inference is unavailable, the UI reports that explicitly and never fabricates an AI answer. Day-to-day NPC resource movement is deterministic gameplay logic; free conversation and negotiated choices use the model.
+`Open-Editor.cmd`, `Start-Game.ps1` and AI validation import the private key into the process environment before
+launching Unreal. They do not print it or put it on the command line. If the editor is already open, reopen it using the
+launcher to inherit an environment key, or use the private file in this project.
 
-Supported actions are a bounded vocabulary: speak, give existing food, open/close a controlled grove, set collection share, pledge a real delivery to the tree, follow, migrate, and cease hostility. The executor checks authority, existence, distance and resources. Text alone cannot create food or complete an unperformed trip.
+`Start-Game.ps1 -NoAI` disables AI requests for the launched process. Missing credentials, network failures and rejected
+requests show an explicit dialogue status; the game never silently falls back to Qwen. Movement, combat and rule-based
+NPC behavior remain available.
 
-## Current prototype limits
+## Optional local secondary decisions
 
-The small model may misunderstand requests or refuse imperfectly. Action validation prevents invalid resource changes; failed conditions are shown separately from its speech. This is a prototype, not an unconstrained simulation of arbitrary contracts.
+StartLux-Decision-2B-Q4_K_M is reserved for occasional bounded secondary choices. It does not generate dialogue or
+replace DeepSeek's main negotiation path. Existing routine NPC behavior remains game rules; no recurring StartLux
+requests are made by default.
+
+Run `Start-SecondaryAI.ps1` explicitly when needed, and `Stop-SecondaryAI.ps1` to stop the processes owned by that
+launcher. The scripts use the existing vendor llama.cpp runtime and original StartLux model package, with local-only
+endpoints. `Start-LocalAI.ps1` is a compatibility notice and starts no model.
+
+The secondary launcher's default model and Python paths describe the original development machine. On another machine,
+pass `-ModelDirectory`, `-Python` and, if needed, `-Server` for your installed model package, Python environment and
+llama.cpp executable. These optional local dependencies are not required for DeepSeek dialogue.
+
+## Validation and existing builds
+
+Rebuild the current editor project, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Tools/Validate-Build.ps1 -Editor -Only AI
+```
+
+The validator requires a configured key for AI cases and records the provider/model along with fresh-report and
+process-exit checks. It also requires an actual successful cloud-request marker in the fresh engine log, so an old Qwen
+binary cannot pass as the new provider. These cases make real API calls.
+
+Existing v0.3 native packages and historical reports were produced with Qwen3. They are not automatically upgraded by
+changing the source project; create and validate a new package before distributing the cloud-backed version. The old
+Qwen weights may remain on disk but are not used by the updated launchers.

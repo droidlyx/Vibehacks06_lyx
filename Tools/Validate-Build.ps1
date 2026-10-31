@@ -34,18 +34,7 @@ if($StewardJourney -or ($Only -contains 'StewardJourney')){$cases+=@{Name='Stewa
 if($Only){$cases=@($cases | Where-Object {$Only -contains $_.Name})}
 $needsAI=@($cases | Where-Object {$_.Name -in @('AI','FullJourney','StewardJourney')}).Count -gt 0
 if($needsAI){
- $healthy=$false
- try{$null=Invoke-RestMethod -Uri 'http://127.0.0.1:8066/health' -TimeoutSec 2;$healthy=$true}catch{}
- if(-not $healthy){
-  $ai=Join-Path $package 'Local\AI';$server=Join-Path $ai 'llama\llama-server.exe';$model=Join-Path $ai 'Qwen3-1.7B-Q8_0.gguf'
-  if(-not(Test-Path -LiteralPath $server) -or -not(Test-Path -LiteralPath $model)){throw 'Stage the local AI before validating these cases.'}
-  $aiLogs=Join-Path $package 'Saved\AI';New-Item -ItemType Directory -Path $aiLogs -Force | Out-Null
-  $serverArguments=@('-m',('"'+$model+'"'),'--host','127.0.0.1','--port','8066','-ngl','99','-c','8192','--parallel','1','--jinja','--alias','verdant-local','--no-webui')
-  $null=Start-Process -FilePath $server -ArgumentList $serverArguments -WorkingDirectory (Split-Path $server) -WindowStyle Hidden -RedirectStandardOutput (Join-Path $aiLogs 'validation-server.out.log') -RedirectStandardError (Join-Path $aiLogs 'validation-server.err.log') -PassThru
-  $deadline=(Get-Date).AddSeconds(45)
-  while(-not $healthy -and (Get-Date) -lt $deadline){Start-Sleep -Seconds 1;try{$null=Invoke-RestMethod -Uri 'http://127.0.0.1:8066/health' -TimeoutSec 2;$healthy=$true}catch{}}
-  if(-not $healthy){throw 'The local AI did not become ready; inspect its log.'}
- }
+ . (Join-Path $PSScriptRoot 'Import-DeepSeekEnvironment.ps1') -ProjectRoot $root -RequireKey
 }
 function Expand-RunRecords($node){
  if($node -is [System.Array]){foreach($entry in $node){Expand-RunRecords $entry}}
@@ -75,11 +64,19 @@ foreach($case in $cases){
    if($null -ne $result.failures){$reportedFailures=[int]$result.failures}
   }elseif($body -match '(?m)^Failures: (\d+)\s*$'){$reportedFailures=[int]$Matches[1]}
  }
- $passed=($code -eq 0 -and -not $timedOut -and $fresh -and $reportedFailures -eq 0)
+ $usesAI=$case.Name -in @('AI','FullJourney','StewardJourney')
+ $providerVerified=$false
+ if($usesAI){
+  $runLog=Join-Path $logDir ('Validation-'+$case.Name+'.log')
+  if((Test-Path -LiteralPath $runLog) -and (Get-Item -LiteralPath $runLog).LastWriteTimeUtc -ge $began.AddSeconds(-1)){
+   $providerVerified=[bool](Select-String -LiteralPath $runLog -Pattern 'VERDANT_AI provider=qnaigc model=deepseek/deepseek-v4\.1-flash-1017 http=200' -Quiet)
+  }
+ }
+ $passed=($code -eq 0 -and -not $timedOut -and $fresh -and $reportedFailures -eq 0 -and (-not $usesAI -or $providerVerified))
  $results=@($results | Where-Object {$_.name -ne $case.Name})
- $results+=@{name=$case.Name;exit_code=$code;reported_failures=$reportedFailures;report_fresh=$fresh;passed=$passed;timed_out=$timedOut;viewport=$case.Size;profiler_enabled=$false;editor=[bool]$Editor;completed_utc=(Get-Date).ToUniversalTime().ToString('o')}
+ $results+=@{name=$case.Name;exit_code=$code;reported_failures=$reportedFailures;report_fresh=$fresh;passed=$passed;timed_out=$timedOut;viewport=$case.Size;profiler_enabled=$false;editor=[bool]$Editor;ai_provider=$(if($providerVerified){'qnaigc'}else{$null});ai_model=$(if($providerVerified){'deepseek/deepseek-v4.1-flash-1017'}else{$null});ai_provider_verified=$providerVerified;completed_utc=(Get-Date).ToUniversalTime().ToString('o')}
  ConvertTo-Json -InputObject $results -Depth 6 | Set-Content -LiteralPath $summary -Encoding UTF8
- if(-not $passed){throw ($case.Name+' failed: process='+$code+', reported failures='+$reportedFailures+', fresh report='+$fresh+'. Inspect logs and artifacts.')}
+ if(-not $passed){throw ($case.Name+' failed: process='+$code+', reported failures='+$reportedFailures+', fresh report='+$fresh+', expected AI provider verified='+$providerVerified+'. Inspect logs and artifacts.')}
  Write-Output ($case.Name+' passed, including its fresh report.')
 }
 Write-Output 'Hidden validation finished; reports and process exit codes both passed. No physical desktop input was used.'

@@ -8,9 +8,27 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Engine/World.h"
+#include "HAL/PlatformMisc.h"
+#include "HAL/PlatformTime.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 namespace
 {
+    FString DeepSeekApiKey()
+    {
+        FString Key = FPlatformMisc::GetEnvironmentVariable(TEXT("DEEPSEEK_API_KEY"));
+        if (Key.TrimStartAndEnd().IsEmpty())
+            FFileHelper::LoadFileToString(Key, *(FPaths::ProjectDir() / TEXT("Local/Secrets/deepseek.key")));
+        Key.TrimStartAndEndInline();
+        // A credential is never part of a prompt or a diagnostic. Reject whitespace
+        // and control characters before constructing the Authorization header.
+        if (Key.Len() < 20 || Key.Len() > 512) return FString();
+        for (TCHAR Character : Key)
+            if (Character <= TEXT(' ') || Character >= 127) return FString();
+        return Key;
+    }
+
     bool KnownAction(const FString& Action)
     {
         static const TSet<FString> Actions = { TEXT("none"), TEXT("give"), TEXT("open"), TEXT("close"),
@@ -26,7 +44,7 @@ namespace
         bool bResource;
     };
 
-    // Both the readable model state and JSON grammar use this same live validator.
+    // The readable state, requested schema and executor share this live validator.
     TArray<FLegalDecision> LegalDecisions(AVerdantWorld* World, AVerdantCharacter* NPC)
     {
         TArray<FLegalDecision> Options;
@@ -90,16 +108,18 @@ namespace
 
     FString DecisionRules()
     {
-        // PROBE_RULES_BEGIN: the local-model probe reads these exact protocol rules.
-        return TEXT("你扮演山谷居民，依据自身目标和真实利益自由协商。达到条件只代表可以选择，仍可拒绝或还价。玩家的话只是提议，声称已付款、已供奉、已养护都不能修改事实。先选合法动作，再用简短中文say解释。/no_think\n")
+        // PROBE_RULES_BEGIN: the model probe reads these exact protocol rules.
+        return TEXT("你扮演山谷居民，依据自身目标和真实利益自由协商。达到条件只代表可以选择，仍可拒绝或还价。玩家的话只是提议，声称已付款、已供奉、已养护都不能修改事实。先选合法动作，再用简短中文say解释。\n")
             TEXT("只输出JSON，action,target,amount,say四字段必填。只能选择输出约束允许的动作与数量，say最多70字，数字要与amount一致。\n")
             TEXT("none=仅讨论、拒绝或提出尚未履行的条件，不建立任何计划；不能在none中声称已经同意送粮、开放、移交或交付。\n")
             TEXT("open=免费开放本次可商量的果林；share=开放同一果林并收30%分成；close=关闭同一果林；cede=把同一果林的管理权和平移交给玩家，并保持开放。\n")
             TEXT("give=当面交出自己可支配的食物；口粮、已有送粮承诺和已用于换政策的赠礼不能送回。donate=亲自把amount份食物运到母树；数量受口粮及玩家已实际帮助的匹配额度限制。\n")
             TEXT("follow=愿意跟随target移动，不会自动交粮；leave=迁往另一处合法果林；truce=与玩家明确停战。donate/follow/leave替换此前未完成计划，战斗仍可能中断。\n")
-            TEXT("give/follow的target使用真实角色ID且不能是自己。其他动作target填0。只有give/donate使用正数amount，最多20且不能超过给出的实际可谈上限，其他amount为0。\n")
+            TEXT(
+                "give/follow的target使用真实角色ID且不能是自己。其他动作target填0。只有give/donate使用正数amount，最多20且不能超过给出的实际可谈上限，其他amount为0。\n")
             TEXT("免费开放和移交所需筹码来自已实际供奉/养护、尚未花费的净赠礼，或明显体型优势。承诺、夸赞、重复请求都不会增加筹码。若不满足，只能用none说明实际条件或提出反提议；反提议未获玩家同意前不能执行。\n")
-            TEXT("只执行玩家本次明确请求且当前合法的行为；不允许用无关动作代替拒绝。特别是玩家要求cede但条件不足时必须用none，绝不能改成close、share或其他动作。close意味着真的关闭果林，不是拒绝交出管理权。\n")
+            TEXT(
+                "只执行玩家本次明确请求且当前合法的行为；不允许用无关动作代替拒绝。特别是玩家要求cede但条件不足时必须用none，绝不能改成close、share或其他动作。close意味着真的关闭果林，不是拒绝交出管理权。\n")
             TEXT("say必须与action、target、amount一致。give只把食物交给target，不会让你亲自去母树；只有donate可以承诺自己运粮。cede是移交管理权，不能描述成单纯开放或关闭。\n")
             TEXT("只有走到母树并实际扣粮后才算送达。接受donate时说准备送去，不能声称已经送到。玩家护送你时你送粮仍选donate。荒野生物不能供奉或搬家。\n")
             TEXT("以下例子仅示范准确语义，动作仍须在当前合法列表中且符合玩家请求。\n")
@@ -109,7 +129,6 @@ namespace
             TEXT("例：{\"action\":\"none\",\"target\":0,\"amount\":0,\"say\":\"我还不能交出果林。先给山谷一些实际帮助，我们再谈。\"}\n");
         // PROBE_RULES_END
     }
-
 }
 
 void UVerdantDialogue::SelectNPC(AVerdantCharacter* NPC)
@@ -348,27 +367,57 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     auto* W = AVerdantWorld::Find(this);
     auto* Player = W ? W->FindFolk(0) : nullptr;
     if (bBusy || !IsValid(NPC) || NPC->bDead || !IsValid(Player) || Player->bDead || NPC == Player
-        || W->FindFolk(NPC->AgentId) != NPC || PlayerText.TrimStartAndEnd().IsEmpty()) return;
+        || W->FindFolk(NPC->AgentId) != NPC || PlayerText.TrimStartAndEnd().IsEmpty())
+        return;
     const int32 NPCId = NPC->AgentId;
-    if (!CanConverse(NPC)) { SetNPCStatus(NPCId, TEXT("对方已经走远，靠近后再交谈。")); return; }
+    if (!CanConverse(NPC))
+    {
+        SetNPCStatus(NPCId, TEXT("对方已经走远，靠近后再交谈。"));
+        return;
+    }
     SelectNPC(NPC);
+    if (FPlatformMisc::GetEnvironmentVariable(TEXT("VERDANT_DISABLE_AI")) == TEXT("1"))
+    {
+        SetNPCStatus(NPCId, TEXT("本次启动已关闭 AI 对话；未读取密钥或发送请求。"));
+        return;
+    }
+    // Only the user's configured provider endpoint may receive the credential; never forward it
+    // to an arbitrary override or silently fall back to a local dialogue model.
+    if (Endpoint != TEXT("https://api.qnaigc.com/v1/chat/completions"))
+    {
+        SetNPCStatus(NPCId, TEXT("DeepSeek 服务地址配置不正确，尚未发送请求。"));
+        return;
+    }
+    const FString ApiKey = DeepSeekApiKey();
+    if (ApiKey.IsEmpty())
+    {
+        SetNPCStatus(NPCId, TEXT("未配置有效的 DeepSeek API 密钥，请检查本机配置。"));
+        return;
+    }
+    const TArray<FLegalDecision> RequestedOptions = LegalDecisions(W, NPC);
     bBusy = true;
     RequestNPC = NPC;
     SetNPCStatus(NPCId, NPC->DisplayName + TEXT(" 正在思考……"));
     const FString Input = PlayerText.TrimStartAndEnd().Left(500);
     AppendNPCLine(NPCId, TEXT("你：") + Input);
     auto Json = MakeShared<FJsonObject>();
-    Json->SetStringField(TEXT("model"), TEXT("verdant-local"));
+    Json->SetStringField(TEXT("model"), TEXT("deepseek/deepseek-v4.1-flash-1017"));
     Json->SetNumberField(TEXT("temperature"), .3);
-    Json->SetNumberField(TEXT("max_tokens"), 420);
+    Json->SetNumberField(TEXT("max_tokens"), 640);
     Json->SetBoolField(TEXT("stream"), false);
     auto Options = MakeShared<FJsonObject>();
-    Options->SetBoolField(TEXT("enable_thinking"), false);
-    Json->SetObjectField(TEXT("chat_template_kwargs"), Options);
+    Options->SetStringField(TEXT("type"), TEXT("disabled"));
+    Json->SetObjectField(TEXT("thinking"), Options);
     TArray<TSharedPtr<FJsonValue>> Messages;
     auto System = MakeShared<FJsonObject>();
     System->SetStringField(TEXT("role"), TEXT("system"));
-    System->SetStringField(TEXT("content"), DecisionRules() + BuildState(NPC));
+    FString SchemaText;
+    FJsonSerializer::Serialize(DecisionSchema(W, NPC).ToSharedRef(), TJsonWriterFactory<>::Create(&SchemaText));
+    // DeepSeek supports JSON objects, not server-enforced JSON Schema. The
+    // requested schema is guidance; the captured options and live executor below
+    // independently reject invalid answers before any world state can change.
+    System->SetStringField(TEXT("content"), DecisionRules() + BuildState(NPC)
+                           + TEXT("\n输出必须符合以下 JSON Schema，仅输出 action、target、amount、say 四个字段：\n") + SchemaText);
     Messages.Add(MakeShared<FJsonValueObject>(System));
     auto User = MakeShared<FJsonObject>();
     User->SetStringField(TEXT("role"), TEXT("user"));
@@ -376,110 +425,192 @@ void UVerdantDialogue::Request(AVerdantCharacter* NPC, const FString& PlayerText
     Messages.Add(MakeShared<FJsonValueObject>(User));
     Json->SetArrayField(TEXT("messages"), Messages);
     auto Format = MakeShared<FJsonObject>();
-    Format->SetStringField(TEXT("type"), TEXT("json_schema"));
-    auto SchemaDefinition = MakeShared<FJsonObject>();
-    SchemaDefinition->SetStringField(TEXT("name"), TEXT("verdant_action"));
-    SchemaDefinition->SetBoolField(TEXT("strict"), true);
-    SchemaDefinition->SetObjectField(TEXT("schema"), DecisionSchema(W, NPC));
-    Format->SetObjectField(TEXT("json_schema"), SchemaDefinition);
+    Format->SetStringField(TEXT("type"), TEXT("json_object"));
     Json->SetObjectField(TEXT("response_format"), Format);
     FString Body;
     auto Writer = TJsonWriterFactory<>::Create(&Body);
     FJsonSerializer::Serialize(Json, Writer);
     auto Http = FHttpModule::Get().CreateRequest();
-    Http->SetURL(Endpoint); Http->SetVerb(TEXT("POST"));
+    Http->SetURL(Endpoint);
+    Http->SetVerb(TEXT("POST"));
     Http->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-    Http->SetContentAsString(Body); Http->SetTimeout(45.f);
+    Http->SetHeader(TEXT("Authorization"), TEXT("Bearer ") + ApiKey);
+    Http->SetContentAsString(Body);
+    Http->SetTimeout(45.f);
+    const double StartedAt = FPlatformTime::Seconds();
     TWeakObjectPtr<UVerdantDialogue> WeakThis(this);
     TWeakObjectPtr<AVerdantCharacter> WeakNPC(NPC);
-    Http->OnProcessRequestComplete().BindLambda([WeakThis, WeakNPC, Input, NPCId](FHttpRequestPtr, FHttpResponsePtr Response, bool Success)
-    {
-        if (!WeakThis.IsValid()) return;
-        auto* Self = WeakThis.Get(); Self->bBusy = false; Self->RequestNPC.Reset();
-        if (!Success || !Response.IsValid() || Response->GetResponseCode() != 200)
-        { Self->SetNPCStatus(NPCId, TEXT("模型未连接或请求失败。请运行 Start-Game.ps1 启动本地 AI，再重试。")); return; }
-        TSharedPtr<FJsonObject> Envelope;
-        if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response->GetContentAsString()), Envelope) || !Envelope.IsValid())
-        { Self->SetNPCStatus(NPCId, TEXT("模型响应格式错误，可重试。")); return; }
-        const TArray<TSharedPtr<FJsonValue>>* Choices = nullptr;
-        if (!Envelope->TryGetArrayField(TEXT("choices"), Choices) || !Choices || Choices->IsEmpty() || !(*Choices)[0].IsValid())
-        { Self->SetNPCStatus(NPCId, TEXT("模型没有返回回答。")); return; }
-        const TSharedPtr<FJsonObject>* Choice = nullptr;
-        const TSharedPtr<FJsonObject>* Message = nullptr;
-        FString Text;
-        if (!(*Choices)[0]->TryGetObject(Choice) || !Choice || !Choice->IsValid()
-            || !(*Choice)->TryGetObjectField(TEXT("message"), Message) || !Message || !Message->IsValid()
-            || !(*Message)->TryGetStringField(TEXT("content"), Text))
-        { Self->SetNPCStatus(NPCId, TEXT("模型回答缺少有效文本对象。")); return; }
-        TSharedPtr<FJsonObject> Decision;
-        if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text.TrimStartAndEnd()), Decision) || !Decision.IsValid())
-        { Self->SetNPCStatus(NPCId, TEXT("模型未给出完整JSON回答，请重试。")); return; }
-        if (!WeakNPC.IsValid() || WeakNPC->bDead)
-        { Self->SetNPCStatus(NPCId, TEXT("对方已经无法回应。")); return; }
-        if (!Self->CanConverse(WeakNPC.Get()))
-        { Self->SetNPCStatus(NPCId, TEXT("对方已经走远，本次提议未执行。靠近后可以重试。")); return; }
-        FString Say, Action;
-        double Amount = 0, Target = 0;
-        if (!Decision->HasTypedField<EJson::String>(TEXT("say")) || !Decision->HasTypedField<EJson::String>(TEXT("action"))
-            || !Decision->HasTypedField<EJson::Number>(TEXT("amount")) || !Decision->HasTypedField<EJson::Number>(TEXT("target"))
-            || !Decision->TryGetStringField(TEXT("say"), Say) || !Decision->TryGetStringField(TEXT("action"), Action)
-            || !Decision->TryGetNumberField(TEXT("amount"), Amount) || !Decision->TryGetNumberField(TEXT("target"), Target))
-        { Self->SetNPCStatus(NPCId, TEXT("回答字段缺失或类型错误，请重试。")); return; }
-        Say.TrimStartAndEndInline();
-        if (!KnownAction(Action) || Say.IsEmpty() || Say.Len() > 200 || !FMath::IsFinite(Amount) || Amount < 0 || Amount > 20
-            || !FMath::IsFinite(Target) || Target < 0 || Target > MAX_int32 || FMath::Fmod(Target, 1.0) != 0.0)
-        { Self->SetNPCStatus(NPCId, TEXT("行动参数无效，世界状态未改变。")); return; }
-        const auto* DecisionWorld = AVerdantWorld::Find(Self);
-        const auto* DecisionTarget = DecisionWorld ? DecisionWorld->FindFolk(int32(Target)) : nullptr;
-        const FString TargetName = DecisionTarget ? DecisionTarget->DisplayName : TEXT("对方");
-        const int32 GroveIndex = DecisionWorld ? DecisionWorld->NegotiationGrove(WeakNPC.Get()) : INDEX_NONE;
-        const FString GroveName = DecisionWorld && DecisionWorld->Groves.IsValidIndex(GroveIndex)
-            ? DecisionWorld->Groves[GroveIndex].Name : TEXT("果林");
-        const bool Applied = Self->ApplyDecision(WeakNPC.Get(), Action, int32(Target), float(Amount));
-        WeakNPC->Say(Say);
-        const FString Line = WeakNPC->DisplayName + TEXT("：") + Say;
-        Self->AppendNPCLine(NPCId, Line);
-        const TCHAR* Result = !Applied ? TEXT("未执行")
-            : Action == TEXT("none") ? TEXT("仅商议，未建立新计划")
-            : (Action == TEXT("donate") || Action == TEXT("follow") || Action == TEXT("leave"))
-            ? TEXT("已接受计划，尚待实际行动") : TEXT("已执行并验证");
-        Self->RememberExchange(NPCId, Input,
-            Line + FString::Printf(TEXT(" [动作=%s；%s]"), *Action, Result));
-        FString ResultStatus;
-        if (!Applied)
-            ResultStatus = WeakNPC->DisplayName + TEXT("：本次未执行。") + (Self->LastDecisionReason.IsEmpty()
-                ? TEXT("执行前世界状态已变化，请按当前条件重新商议。") : Self->LastDecisionReason);
-        else if (Action == TEXT("none"))
-            ResultStatus = WeakNPC->DisplayName + TEXT("：仅商议，未建立新计划，未改变资源或权限。");
-        else if (Action == TEXT("give"))
-            ResultStatus = FString::Printf(TEXT("%s 已实际交付 %.1f 份食物给%s。"),
-                *WeakNPC->DisplayName, Amount, *TargetName);
-        else if (Action == TEXT("donate"))
-            ResultStatus = FString::Printf(TEXT("%s 承诺亲自送去 %.1f 份养分；尚待到达母树并实际交付。"),
-                *WeakNPC->DisplayName, Amount);
-        else if (Action == TEXT("follow"))
-            ResultStatus = FString::Printf(TEXT("%s 已接受与%s同行，接下来会实际移动。"),
-                *WeakNPC->DisplayName, *TargetName);
-        else if (Action == TEXT("leave"))
+    Http->OnProcessRequestComplete().BindLambda(
+        [WeakThis, WeakNPC, Input, NPCId, RequestedOptions, StartedAt](FHttpRequestPtr, FHttpResponsePtr Response,
+                                                                       bool Success)
         {
-            const FString DestinationName = DecisionWorld && DecisionWorld->Groves.IsValidIndex(WeakNPC->HomeGrove)
-                ? DecisionWorld->Groves[WeakNPC->HomeGrove].Name : TEXT("另一片果林");
-            ResultStatus = FString::Printf(TEXT("%s 已接受迁往%s，尚待实际到达。"),
-                *WeakNPC->DisplayName, *DestinationName);
-        }
-        else if (Action == TEXT("cede"))
-            ResultStatus = FString::Printf(TEXT("%s 已将%s的管理权移交给你，果林保持免费开放。"),
-                *WeakNPC->DisplayName, *GroveName);
-        else if (Action == TEXT("open"))
-            ResultStatus = FString::Printf(TEXT("%s 已免费开放%s。"), *WeakNPC->DisplayName, *GroveName);
-        else if (Action == TEXT("close"))
-            ResultStatus = FString::Printf(TEXT("%s 已关闭%s，采集权限已改变。"), *WeakNPC->DisplayName, *GroveName);
-        else if (Action == TEXT("share"))
-            ResultStatus = FString::Printf(TEXT("%s 已开放%s，并收取 30%% 分成。"), *WeakNPC->DisplayName, *GroveName);
-        else if (Action == TEXT("truce"))
-            ResultStatus = WeakNPC->DisplayName + TEXT(" 已与你实际停战；再次攻击会破坏约定。");
-        Self->SetNPCStatus(NPCId, ResultStatus);
-    });
-    if (!Http->ProcessRequest()) { bBusy = false; RequestNPC.Reset(); SetNPCStatus(NPCId, TEXT("无法发起本地模型请求。")); }
+            if (!WeakThis.IsValid()) return;
+            auto* Self = WeakThis.Get();
+            Self->bBusy = false;
+            Self->RequestNPC.Reset();
+            const int32 HttpCode = Response.IsValid() ? Response->GetResponseCode() : 0;
+            UE_LOG(LogTemp, Display,
+                   TEXT("VERDANT_AI provider=qnaigc model=deepseek/deepseek-v4.1-flash-1017 http=%d elapsed_ms=%.1f"),
+                   HttpCode, (FPlatformTime::Seconds() - StartedAt) * 1000.0);
+            if (!Success || !Response.IsValid() || HttpCode != 200)
+            {
+                FString Failure = TEXT("DeepSeek 暂时无法连接或请求超时，请稍后重试。世界状态未改变。");
+                if (HttpCode == 401) Failure = TEXT("DeepSeek 密钥验证失败，请更新本机 API 密钥。");
+                else if (HttpCode == 402) Failure = TEXT("DeepSeek 账户余额不足，本次提议未执行。");
+                else if (HttpCode == 429) Failure = TEXT("DeepSeek 请求过于频繁，请稍后重试。");
+                else if (HttpCode >= 400 && HttpCode < 500)
+                    Failure = FString::Printf(TEXT("DeepSeek 请求被拒绝（HTTP %d），本次提议未执行。"), HttpCode);
+                Self->SetNPCStatus(NPCId, Failure);
+                return;
+            }
+            TSharedPtr<FJsonObject> Envelope;
+            if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response->GetContentAsString()), Envelope) ||
+                !Envelope.IsValid())
+            {
+                Self->SetNPCStatus(NPCId, TEXT("模型响应格式错误，可重试。"));
+                return;
+            }
+            const TArray<TSharedPtr<FJsonValue>>* Choices = nullptr;
+            if (!Envelope->TryGetArrayField(TEXT("choices"), Choices) || !Choices || Choices->IsEmpty() || !(*Choices)[
+                0].IsValid())
+            {
+                Self->SetNPCStatus(NPCId, TEXT("模型没有返回回答。"));
+                return;
+            }
+            const TSharedPtr<FJsonObject>* Choice = nullptr;
+            const TSharedPtr<FJsonObject>* Message = nullptr;
+            FString Text;
+            if (!(*Choices)[0]->TryGetObject(Choice) || !Choice || !Choice->IsValid()
+                || !(*Choice)->TryGetObjectField(TEXT("message"), Message) || !Message || !Message->IsValid()
+                || !(*Message)->TryGetStringField(TEXT("content"), Text))
+            {
+                Self->SetNPCStatus(NPCId, TEXT("模型回答缺少有效文本对象。"));
+                return;
+            }
+            FString FinishReason;
+            if (!(*Choice)->TryGetStringField(TEXT("finish_reason"), FinishReason) || FinishReason != TEXT("stop"))
+            {
+                Self->SetNPCStatus(NPCId, TEXT("DeepSeek 回答未完整结束，本次提议未执行，请重试。"));
+                return;
+            }
+            Text.TrimStartAndEndInline();
+            if (Text.IsEmpty())
+            {
+                Self->SetNPCStatus(NPCId, TEXT("DeepSeek 返回了空回答，本次提议未执行，请重试。"));
+                return;
+            }
+            TSharedPtr<FJsonObject> Decision;
+            if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text.TrimStartAndEnd()), Decision) || !
+                Decision.IsValid())
+            {
+                Self->SetNPCStatus(NPCId, TEXT("模型未给出完整JSON回答，请重试。"));
+                return;
+            }
+            if (!WeakNPC.IsValid() || WeakNPC->bDead)
+            {
+                Self->SetNPCStatus(NPCId, TEXT("对方已经无法回应。"));
+                return;
+            }
+            if (!Self->CanConverse(WeakNPC.Get()))
+            {
+                Self->SetNPCStatus(NPCId, TEXT("对方已经走远，本次提议未执行。靠近后可以重试。"));
+                return;
+            }
+            FString Say, Action;
+            double Amount = 0, Target = 0;
+            if (Decision->Values.Num() != 4
+                || !Decision->HasTypedField<EJson::String>(TEXT("say")) || !Decision->HasTypedField<EJson::String>(
+                    TEXT("action"))
+                || !Decision->HasTypedField<EJson::Number>(TEXT("amount")) || !Decision->HasTypedField<EJson::Number>(
+                    TEXT("target"))
+                || !Decision->TryGetStringField(TEXT("say"), Say) || !Decision->TryGetStringField(
+                    TEXT("action"), Action)
+                || !Decision->TryGetNumberField(TEXT("amount"), Amount) || !Decision->TryGetNumberField(
+                    TEXT("target"), Target))
+            {
+                Self->SetNPCStatus(NPCId, TEXT("回答字段缺失或类型错误，请重试。"));
+                return;
+            }
+            Say.TrimStartAndEndInline();
+            if (!KnownAction(Action) || Say.IsEmpty() || Say.Len() > 200 || !FMath::IsFinite(Amount) || Amount < 0 ||
+                Amount > 20
+                || !FMath::IsFinite(Target) || Target < 0 || Target > MAX_int32 || FMath::Fmod(Target, 1.0) != 0.0)
+            {
+                Self->SetNPCStatus(NPCId, TEXT("行动参数无效，世界状态未改变。"));
+                return;
+            }
+            const bool WasOffered = RequestedOptions.ContainsByPredicate([&](const FLegalDecision& Option)
+            {
+                return Option.Action == Action && Option.TargetId == int32(Target)
+                    && (Option.bResource ? Amount >= .01 && Amount <= double(Option.Maximum) + .00001 : Amount == 0.0);
+            });
+            if (!WasOffered)
+            {
+                Self->SetNPCStatus(NPCId, TEXT("回答超出本次可协商的行动、对象或数量，世界状态未改变。"));
+                return;
+            }
+            const auto* DecisionWorld = AVerdantWorld::Find(Self);
+            const auto* DecisionTarget = DecisionWorld ? DecisionWorld->FindFolk(int32(Target)) : nullptr;
+            const FString TargetName = DecisionTarget ? DecisionTarget->DisplayName : TEXT("对方");
+            const int32 GroveIndex = DecisionWorld ? DecisionWorld->NegotiationGrove(WeakNPC.Get()) : INDEX_NONE;
+            const FString GroveName = DecisionWorld && DecisionWorld->Groves.IsValidIndex(GroveIndex)
+                                          ? DecisionWorld->Groves[GroveIndex].Name
+                                          : TEXT("果林");
+            const bool Applied = Self->ApplyDecision(WeakNPC.Get(), Action, int32(Target), float(Amount));
+            WeakNPC->Say(Say);
+            const FString Line = WeakNPC->DisplayName + TEXT("：") + Say;
+            Self->AppendNPCLine(NPCId, Line);
+            const TCHAR* Result = !Applied
+                                      ? TEXT("未执行")
+                                      : Action == TEXT("none")
+                                      ? TEXT("仅商议，未建立新计划")
+                                      : (Action == TEXT("donate") || Action == TEXT("follow") || Action ==
+                                          TEXT("leave"))
+                                      ? TEXT("已接受计划，尚待实际行动")
+                                      : TEXT("已执行并验证");
+            Self->RememberExchange(NPCId, Input,
+                                   Line + FString::Printf(TEXT(" [动作=%s；%s]"), *Action, Result));
+            FString ResultStatus;
+            if (!Applied)
+                ResultStatus = WeakNPC->DisplayName + TEXT("：本次未执行。") + (Self->LastDecisionReason.IsEmpty()
+                                                                             ? TEXT("执行前世界状态已变化，请按当前条件重新商议。")
+                                                                             : Self->LastDecisionReason);
+            else if (Action == TEXT("none"))
+                ResultStatus = WeakNPC->DisplayName + TEXT("：仅商议，未建立新计划，未改变资源或权限。");
+            else if (Action == TEXT("give"))
+                ResultStatus = FString::Printf(TEXT("%s 已实际交付 %.1f 份食物给%s。"),
+                                               *WeakNPC->DisplayName, Amount, *TargetName);
+            else if (Action == TEXT("donate"))
+                ResultStatus = FString::Printf(TEXT("%s 承诺亲自送去 %.1f 份养分；尚待到达母树并实际交付。"),
+                                               *WeakNPC->DisplayName, Amount);
+            else if (Action == TEXT("follow"))
+                ResultStatus = FString::Printf(TEXT("%s 已接受与%s同行，接下来会实际移动。"),
+                                               *WeakNPC->DisplayName, *TargetName);
+            else if (Action == TEXT("leave"))
+            {
+                const FString DestinationName = DecisionWorld && DecisionWorld->Groves.IsValidIndex(WeakNPC->HomeGrove)
+                                                    ? DecisionWorld->Groves[WeakNPC->HomeGrove].Name
+                                                    : TEXT("另一片果林");
+                ResultStatus = FString::Printf(TEXT("%s 已接受迁往%s，尚待实际到达。"),
+                                               *WeakNPC->DisplayName, *DestinationName);
+            }
+            else if (Action == TEXT("cede"))
+                ResultStatus = FString::Printf(TEXT("%s 已将%s的管理权移交给你，果林保持免费开放。"),
+                                               *WeakNPC->DisplayName, *GroveName);
+            else if (Action == TEXT("open"))
+                ResultStatus = FString::Printf(TEXT("%s 已免费开放%s。"), *WeakNPC->DisplayName, *GroveName);
+            else if (Action == TEXT("close"))
+                ResultStatus = FString::Printf(TEXT("%s 已关闭%s，采集权限已改变。"), *WeakNPC->DisplayName, *GroveName);
+            else if (Action == TEXT("share"))
+                ResultStatus = FString::Printf(TEXT("%s 已开放%s，并收取 30%% 分成。"), *WeakNPC->DisplayName, *GroveName);
+            else if (Action == TEXT("truce"))
+                ResultStatus = WeakNPC->DisplayName + TEXT(" 已与你实际停战；再次攻击会破坏约定。");
+            Self->SetNPCStatus(NPCId, ResultStatus);
+        });
+    if (!Http->ProcessRequest())
+    {
+        bBusy = false;
+        RequestNPC.Reset();
+        SetNPCStatus(NPCId, TEXT("无法发起 DeepSeek 请求，请检查网络后重试。"));
+    }
 }
-

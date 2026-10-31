@@ -1,19 +1,19 @@
 ﻿param([switch]$NoAI,[switch]$Editor,[switch]$Smoke)
 $ErrorActionPreference='Stop'
 $projectRoot=$PSScriptRoot
-$aiRoot=Join-Path $projectRoot 'Local\AI'
-if (-not $NoAI) {
-    $healthy=$false
-    try { $null=Invoke-RestMethod -Uri 'http://127.0.0.1:8066/health' -TimeoutSec 2; $healthy=$true } catch {}
-    if (-not $healthy) {
-        $server=Join-Path $aiRoot 'llama\llama-server.exe'
-        $model=Join-Path $aiRoot 'Qwen3-1.7B-Q8_0.gguf'
-        if ((Test-Path -LiteralPath $server) -and (Test-Path -LiteralPath $model)) {
-            $logDir=Join-Path $projectRoot 'Saved\AI'; New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-            $arguments=@('-m',('"'+$model+'"'),'--host','127.0.0.1','--port','8066','-ngl','99','-c','8192','--parallel','1','--jinja','--alias','verdant-local','--no-webui')
-            $null=Start-Process -FilePath $server -ArgumentList $arguments -WorkingDirectory (Split-Path $server) -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logDir 'server.out.log') -RedirectStandardError (Join-Path $logDir 'server.err.log') -PassThru
-            Write-Host 'Local AI is starting in the background. The game can run while it warms up.'
-        } else { Write-Host 'Local AI is not installed. See Docs/LocalAI.md; gameplay remains available.' }
+# Keep this small import inline: portable builds copy this launcher without Tools/.
+# Credentials are inherited by the child process, never passed on its command line.
+if ($NoAI) {
+    $env:VERDANT_DISABLE_AI='1'
+} else {
+    Remove-Item Env:\VERDANT_DISABLE_AI -ErrorAction SilentlyContinue
+    $keyFile=Join-Path $projectRoot 'Local\Secrets\deepseek.key'
+    if ([string]::IsNullOrWhiteSpace($env:DEEPSEEK_API_KEY) -and (Test-Path -LiteralPath $keyFile)) {
+        $env:DEEPSEEK_API_KEY=[IO.File]::ReadAllText($keyFile).Trim()
+    }
+    if ([string]::IsNullOrWhiteSpace($env:DEEPSEEK_API_KEY) -or $env:DEEPSEEK_API_KEY -match '\s') {
+        Remove-Item Env:\DEEPSEEK_API_KEY -ErrorAction SilentlyContinue
+        Write-Host 'DeepSeek API key is missing or invalid. See Docs/LocalAI.md; gameplay remains available.'
     }
 }
 $packaged=Join-Path $projectRoot 'Verdant.exe'
