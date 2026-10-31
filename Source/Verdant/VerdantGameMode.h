@@ -20,6 +20,7 @@ private:
  void TickAIProbe(float Dt);
  void TickInputJourney(float Dt);
  void TickCombatProbe(float Dt);
+ void TickHUDProbe(float Dt);
  float JourneyPhaseAt=0.f, JourneyFirstHarvest=-1.f, JourneyStartSize=0.f, JourneyFoodBefore=0.f;
  bool bJourneyWalking=false;
  int32 JourneyEatCount=0;

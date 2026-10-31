@@ -35,11 +35,16 @@ public:
  bool HasCanvasFont() const;
  bool bConversationOpen=false;
 private:
+ FTimerHandle PresentationTimer;
+ bool bJournalOpen=false;
+ bool bSeasonPresented=false;
+ bool bControlsOpen=false;
  void FillConversationPrompt(const FString& Text);
  UPROPERTY(Transient) TObjectPtr<UFont> CanvasFont;
  TSharedPtr<SWidget> RootWidget;
  TSharedPtr<SMultiLineEditableTextBox> InputBox;
  TSharedPtr<SScrollBox> ConversationScroll;
+ TSharedPtr<SScrollBox> JournalScroll;
  int32 LastDialogueLineCount=-1;
  TMap<int32,FVerdantHUDObservation> Observations;
  TArray<FVerdantHUDDamageFloat> DamageFloats;
