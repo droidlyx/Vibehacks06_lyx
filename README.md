@@ -8,7 +8,11 @@
 
 **最终 Windows 包 · 2026-11-10 · Shipping（r4）**
 
-### 下载最终游戏包（分卷，总计约 1.12 GB）
+### [直接下载完整 ZIP（约 1.12 GB）](https://github.com/droidlyx/Vibehacks06_lyx/releases/download/v2026.11.10-final/Grow_up_final-Windows.zip)
+
+[Release 页面与校验文件](https://github.com/droidlyx/Vibehacks06_lyx/releases/tag/v2026.11.10-final)。完整解压后双击 `Grow_up_final/Grow_up.exe`，无需下载或合并分卷。
+
+### 备用下载：Git LFS 分卷
 
 大文件网络传输不稳定，因此使用 17 个分卷保存同一个完整 ZIP，文件内容经 SHA-256 校验。
 

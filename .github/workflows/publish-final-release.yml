@@ -1,0 +1,40 @@
+name: Publish final Windows Release
+on:
+  push:
+    tags:
+      - v2026.11.10-final
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: final-windows-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v2026.11.10-final
+          lfs: true
+          persist-credentials: false
+      - name: Assemble and verify the existing public package
+        run: python3 Tools/assemble_release.py
+      - name: Publish the complete ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: v2026.11.10-final
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft > release-state.txt 2>/dev/null; then
+            test "$(cat release-state.txt)" = true || { echo 'Release already published; leaving it unchanged.'; exit 0; }
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title 'Grow_up Windows Final Release' --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload "$RELEASE_TAG" Downloads/Grow_up_final-Windows.zip Downloads/SHA256SUMS.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest
