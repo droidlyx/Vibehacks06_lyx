@@ -4,6 +4,12 @@
 
 游戏使用 Unreal Engine 5.8 / C++ 开发。对话结合角色资料、记忆和现场状态提出行动，再由游戏检查可行性；口头承诺不会直接变成实际资源或行动。
 
+## 游戏演示
+
+### [▶ 观看／下载完整演示视频（grow_up.mp4，约 160 MB）](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Docs/Media/grow_up.mp4)
+
+视频保留原始 MP4 文件。浏览器若未直接播放，可下载后用本地播放器打开；也可查看[仓库中的视频文件](Docs/Media/grow_up.mp4)。
+
 ## 下载最新版本
 
 **2026-11-10 · Characters.json 角色配置版 · Windows x64 Shipping**
