@@ -1,25 +1,7 @@
-Binaries/
-Intermediate/
-Saved/
-DerivedDataCache/
-.vs/
-.idea/
-*.sln
-*.suo
-Builds/
 Local/
-# Licensed audio source payloads are rebuilt from the user's local vendor library.
-# Cooked game distribution is permitted; publishing raw sound assets is not.
-Content/Art/Audio/LocalLicensed/
-.env
-.env.*
-*api_keys*
-*.pem
+Saved/
 *.key
-Tools/__pycache__/
-
-Assets/Prepared/**/*.log
-Build/*/FileOpenOrder/
-
-# Generated delivery archive duplicates the versioned catalog directory.
-Docs/CharacterCatalog_complete.zip
+.env
+/Downloads/Grow_up_final-Windows.zip
+/Downloads/Grow_up_final-Windows.zip
+/Downloads/Grow_up_final-Windows.zip

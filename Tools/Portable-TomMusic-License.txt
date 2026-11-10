@@ -1,9 +1,0 @@
-TomMusic — vendor license text
-
-The following paragraph is transcribed verbatim from the ReadMe.rtf included in the acquired TomMusic Fantasy SFX and Music Bundle (WAV SFX/WAV SFX_). The original file remains with the local vendor library; this copy contains only the license and attribution, not any audio assets.
-
-Royalty-free! You can use this in your projects, commercial or otherwise, credit is not mandatory but appreciated. The asset is not to be up for resale or redistribution.
-
-TomMusic
-https://tommusic.itch.io/
-https://www.gamedevmarket.net/member/TomMusic/

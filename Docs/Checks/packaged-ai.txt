@@ -1,7 +1,0 @@
-PASS Game sent a real local-model request
-PASS Real Chinese model reply parsed and recorded by game
-PASS Negotiated action preserves actual resource total
-你：米芽，请给我3份食物，我想把它们送到母树那里。
-米芽：我愿意亲自带3份养分去母树。
-对话完成；移动与供奉将在世界中实际执行。
-Failures: 0

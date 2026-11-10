@@ -1,0 +1,285 @@
+Grow_up / 快快长大 — third-party notices and source records
+
+Unreal Engine
+Unreal® Engine, Copyright 1998–2026, Epic Games, Inc. All rights reserved.
+Unreal® is a trademark or registered trademark of Epic Games, Inc. in the United States of America and elsewhere.
+Keep the engine runtime files and notices staged by Unreal's packaging tools with the game.
+
+Project Titan / Epic Games and Project Titan contributors
+Selected character, animation, material and sky content comes from the locally acquired Project Titan sample.
+These assets retain their applicable Epic / Project Titan terms and are not represented as CC0 or as original Verdant artwork.
+Source records: Assets/Titan/README.md, Assets/Titan/manifest.json, Assets/TitanSky/manifest.json and Docs/CharacterCatalog/model_sources.json.
+The original creature migration and the later population expansion are separate sets; an earlier three-creature record is not a count of the current cast.
+
+Quaternius
+Selected Standard-pack nature, ecology, character and animation source archives include CC0-1.0 notices.
+The specific acquired notices are retained under Assets/Source/Quaternius/; provenance is in Assets/provenance.json and Assets/Environment/ecology-assets.json.
+This attribution applies to those identified inputs, not to Project Titan, the Unreal Engine, or the entire game.
+
+Kenney — RPG Audio
+Selected cloth, leather and book sounds originate from Kenney RPG Audio (CC0-1.0).
+Source: https://kenney.nl/assets/rpg-audio
+Notice and provenance: Assets/Audio/ThirdParty/Kenney/RPG/License.txt and provenance.json.
+
+TomMusic
+Selected ambience, footsteps and UI sounds originate from the user's licensed TomMusic pack.
+Source: https://tommusic.itch.io/
+The vendor permits use in projects and prohibits standalone asset resale or redistribution.
+The vendor license text is retained at Assets/Audio/ThirdParty/TomMusic/License.txt, transcribed from the acquired ReadMe.rtf.
+Only cooked game content is distributed; the vendor library, raw recordings and derived source masters are not included.
+
+Suno / user-supplied music
+Mosslit Paths was supplied by the project owner as a Suno-generated track and approved for integration.
+Received-source and generation-session records: Assets/Audio/Suno/Originals/VA01_Mosslit_Paths.metadata.json and Assets/Audio/Suno/generation-session.json.
+This notice does not grant a separate license to redistribute the track as a standalone music asset.
+
+Verdant-original material
+Project-specific gameplay, writing, procedural visuals and six mathematically synthesized effects have separate provenance in Assets/README.md and Assets/Audio/README.md.
+No blanket CC0 or third-party asset reuse license is granted for the whole game by these notices.
+
+NPC Speech Audio - free CC0 / CC BY sources
+
+All sources are free to use under their listed licenses. CC BY credits must accompany distribution.
+Some files originate from public HQ MP3 previews. Pig is a performed/stylized sound; penguin/wolf source recording methods are not independently verified. DeerDoe uses a deer-group call of unspecified sex.
+
+NPC Speech Audio — attribution and modification record
+
+人形：通用对话短音 / VO_Human_01: nicolebutspooky — CC-BY-4.0
+Source: https://opengameart.org/content/dialogue-blips
+License: https://creativecommons.org/licenses/by/4.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+乌鸦 / VO_Crow_01: zeroisnotnull — CC0-1.0
+Source: https://opengameart.org/content/crow-caw
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+拟人鸟类 / VO_Bird_01: syncopika — CC0-1.0
+Source: https://opengameart.org/content/bird-chirping-sounds
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+猫（兼容旧模型） / VO_Cat_01: Dan Knoflicek (Macro) — CC-BY-3.0
+Source: https://opengameart.org/content/cat-sfx
+License: https://creativecommons.org/licenses/by/3.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+猪：风格化短叫 / VO_Pig_01: Vinrax — CC-BY-3.0
+Source: https://opengameart.org/content/pig-sfx-pack
+License: https://creativecommons.org/licenses/by/3.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+狼 / VO_Wolf_01: NaturesTemper — CC0-1.0
+Source: https://freesound.org/people/NaturesTemper/sounds/398430/
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+拟人鸭 / VO_Duck_01: gibarroule — CC0-1.0
+Source: https://freesound.org/people/gibarroule/sounds/365133/
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+雪貂 / VO_Ferret_01: J.Zazvurek — CC BY 4.0
+Source: https://freesound.org/people/J.Zazvurek/sounds/155115/
+License: https://creativecommons.org/licenses/by/4.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+狐狸 / VO_Fox_01: gadzooks — CC0 1.0
+Source: https://freesound.org/people/gadzooks/sounds/397655/
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+企鹅 / VO_Penguin_01: Wolfgang Wozniak (OpenGameArt uploader Ouren) — CC BY 3.0
+Source: https://opengameart.org/content/penguin-sfx
+License: https://creativecommons.org/licenses/by/3.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+雄鹿 / VO_DeerStag_01: Alexander / Orange Free Sounds — CC BY 4.0
+Source: https://orangefreesounds.com/deer-sound/
+License: https://creativecommons.org/licenses/by/4.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+母鹿模型：鹿群短叫 / VO_DeerDoe_01: msantoro11 — CC0 1.0
+Source: https://freesound.org/people/msantoro11/sounds/351113/
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Changes: Excerpt selection, mono downmix, DC removal, 48 kHz sinc resampling, gain matching, 35 ms fades, PCM16 encoding. Human cue repeats the syllable three times. Playback adds slight pitch variation.
+
+NPC SPEECH EXPANSION (2026-11-07)
+========================================
+NPC voice expansion — source attribution and modifications
+
+VO_Creature_cute_01 / 可爱生物 01
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_cute_03 / 可爱生物 03
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_cute_05 / 可爱生物 05
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_cute_07 / 可爱生物 07
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_cute_08 / 可爱生物 08
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_cute_10 / 可爱生物 10
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_alien_01 / 外星生物 01
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_alien_03 / 外星生物 03
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_alien_05 / 外星生物 05
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_grunt_01 / 生物低哼 01
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_grunt_03 / 生物低哼 03
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Creature_troll_02 / 巨魔 02
+Author: rubberduck
+License: CC0-1.0
+Source: https://opengameart.org/content/80-cc0-creature-sfx
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Adventurer_greet0 / 男性·问候（英语）
+Author: Brandon Song (wolfwoot)
+License: CC0-1.0
+Source: https://opengameart.org/content/voice-clip-pack-male-adventurer-rpg
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Adventurer_yes0 / 男性·赞同 1（英语）
+Author: Brandon Song (wolfwoot)
+License: CC0-1.0
+Source: https://opengameart.org/content/voice-clip-pack-male-adventurer-rpg
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Adventurer_yes1 / 男性·赞同 2（英语）
+Author: Brandon Song (wolfwoot)
+License: CC0-1.0
+Source: https://opengameart.org/content/voice-clip-pack-male-adventurer-rpg
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Adventurer_no0 / 男性·否定（英语）
+Author: Brandon Song (wolfwoot)
+License: CC0-1.0
+Source: https://opengameart.org/content/voice-clip-pack-male-adventurer-rpg
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Adventurer_jump0 / 男性·短促发力 1
+Author: Brandon Song (wolfwoot)
+License: CC0-1.0
+Source: https://opengameart.org/content/voice-clip-pack-male-adventurer-rpg
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Adventurer_jump1 / 男性·短促发力 2
+Author: Brandon Song (wolfwoot)
+License: CC0-1.0
+Source: https://opengameart.org/content/voice-clip-pack-male-adventurer-rpg
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_RodentSpeech_01 / 拟人小兽·说话 1
+Author: Blender Foundation
+License: CC-BY-3.0
+Source: https://opengameart.org/content/rodent-or-alien-speaking-cute-weird-yo-frankie
+License URL: https://creativecommons.org/licenses/by/3.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_RodentSpeech_02 / 拟人小兽·说话 2
+Author: Blender Foundation
+License: CC-BY-3.0
+Source: https://opengameart.org/content/rodent-or-alien-speaking-cute-weird-yo-frankie
+License URL: https://creativecommons.org/licenses/by/3.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_RodentSpeech_03 / 拟人小兽·说话 3
+Author: Blender Foundation
+License: CC-BY-3.0
+Source: https://opengameart.org/content/rodent-or-alien-speaking-cute-weird-yo-frankie
+License URL: https://creativecommons.org/licenses/by/3.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Penguin_Alt01 / 企鹅·另一种叫声 1
+Author: Wolfgang Wozniak (OpenGameArt uploader Ouren)
+License: CC BY 3.0
+Source: https://opengameart.org/content/penguin-sfx
+License URL: https://creativecommons.org/licenses/by/3.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Penguin_Alt02 / 企鹅·另一种叫声 2
+Author: Wolfgang Wozniak (OpenGameArt uploader Ouren)
+License: CC BY 3.0
+Source: https://opengameart.org/content/penguin-sfx
+License URL: https://creativecommons.org/licenses/by/3.0/
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_Bird_Alt01 / 鸟鸣·前段短叫
+Author: syncopika
+License: CC0-1.0
+Source: https://opengameart.org/content/bird-chirping-sounds
+License URL: 
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
+VO_PigNatural_01 / 猪·自然叫声片段
+Author: nomerodin1
+License: CC0-1.0
+Source: https://freesound.org/people/nomerodin1/sounds/652361/
+License URL: 
+Contiguous excerpt, mono downmix, DC removal, sinc resampling to 48 kHz, gain matching (peak <= -6 dBFS), 12 ms fades, PCM16. No pitch shift or repeated-copy variants.
+
