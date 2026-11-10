@@ -76,8 +76,6 @@
 
 本仓库的源码目录按此前约定保留历史版本；**最新可玩版本请以 [itch.io 页面](https://droidlyx86.itch.io/grow-up)为准**。
 
-最新代码和角色资料保存在私有仓库 [droidlyx/Grow_up](https://github.com/droidlyx/Grow_up)，需要仓库访问权限。各发行版本的更新说明请查看 itch.io 页面。
-
 历史开发文档和旧测试记录不代表最新版的完整体验验收。
 
 ## 素材与许可
