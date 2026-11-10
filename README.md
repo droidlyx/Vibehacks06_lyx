@@ -4,25 +4,11 @@
 
 游戏使用 Unreal Engine 5.8 / C++ 开发。对话结合角色资料、记忆和现场状态提出行动，再由游戏检查可行性；口头承诺不会直接变成实际资源或行动。
 
-## 游戏演示
+## 下载与游戏演示
 
-### [▶ 观看／下载完整演示视频（grow_up.mp4，约 160 MB）](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Docs/Media/grow_up.mp4)
+前往 **[Grow_up itch.io 页面](https://droidlyx86.itch.io/grow-up)** 获取最新游戏版本、下载说明与演示内容。
 
-视频保留原始 MP4 文件。浏览器若未直接播放，可下载后用本地播放器打开；也可查看[仓库中的视频文件](Docs/Media/grow_up.mp4)。
-
-## 下载最新版本
-
-**2026-11-10 · Characters.json 角色配置版 · Windows x64 Shipping**
-
-### [下载完整游戏 ZIP（约 1.12 GB）](https://github.com/droidlyx/Vibehacks06_lyx/releases/download/v2026.11.10-characters/Grow_up-Windows-Characters.zip)
-
-[Release 页面](https://github.com/droidlyx/Vibehacks06_lyx/releases/tag/v2026.11.10-characters) · [SHA-256 校验文件](https://github.com/droidlyx/Vibehacks06_lyx/releases/download/v2026.11.10-characters/SHA256SUMS.txt) · [全部版本](https://github.com/droidlyx/Vibehacks06_lyx/releases)
-
-1. 下载并完整解压 `Grow_up-Windows-Characters.zip`。
-2. 双击 `Grow_up_Characters/Grow_up.exe` 启动。
-3. 保留 `Grow_up/`、`Engine/` 等配套目录，不能只复制 EXE。
-
-无需安装 Unreal Editor、Python 或 Git LFS，也不需要合并分卷。若 Windows 提示缺少运行库，运行包内 `Engine/Extras/Redist/en-us/vc_redist.x64.exe`。GitHub 的 **Code → Download ZIP** 是本仓库源码快照，不是上述可玩游戏包。
+下载后请完整解压，并保留游戏 EXE 及配套目录。具体版本信息和启动说明以 itch.io 页面为准。
 
 ## 最新版本内容
 
@@ -35,10 +21,10 @@
 
 ## Characters.json 在哪里
 
-角色文件已包含在 Release 的完整 ZIP 中。解压后的目录关系如下：
+角色文件随游戏包提供。解压后的目录关系如下（外层文件夹名称可能随版本不同）：
 
 ```text
-Grow_up_Characters/
+游戏目录/
 ├─ Grow_up.exe
 ├─ Grow_up/
 │  ├─ Characters.json
@@ -48,12 +34,6 @@ Grow_up_Characters/
 ```
 
 文件应位于 **`Grow_up/Characters.json`**，与运行时代码的 `ProjectDir()/Characters.json` 对应；不要误放在外层 EXE 旁。私有源码工程中的对应位置是项目根目录 `Characters.json`。如自行编辑，请先备份并保持合法的 JSON 格式。
-
-本版角色文件 SHA-256：
-
-```text
-95c5f9ed6d6bf5361c06e42205b77f43cc3be90a302d97ce2adc2067cbea64e0
-```
 
 ## 操作
 
@@ -73,7 +53,7 @@ Grow_up_Characters/
 
 ## 配置模型对话
 
-公开包**不含开发者 API key、SSH key 或存档**。未配置自己的 key 时，可以体验规则驱动的玩法，远程模型对话不可用。
+各版本的默认连接配置以 itch.io 页面说明为准。未配置有效的 API 连接时，可以体验规则驱动的玩法，远程模型对话不可用。
 
 进入 **Esc → API 设置**，选择服务、填写模型与 key，点击“测试连接”，成功后“保存并应用”。需要下次启动继续使用时，勾选“在这台电脑记住密钥”。未通过测试的新配置不会替换当前有效连接。
 
@@ -90,15 +70,15 @@ Grow_up_Characters/
 %LOCALAPPDATA%\Grow_up\Saved\SaveGames
 ```
 
-存档文件为 `Journey_1.json` 等，`.bak` 是备份。更新游戏包时保留该目录即可；Release 不附带开发者的游戏进度。
+存档文件为 `Journey_1.json` 等，`.bak` 是备份。更新游戏包时保留该目录即可；游戏存档独立于安装目录。
 
 ## 源码与版本对应
 
-本仓库的源码目录按此前约定保留历史版本；**最新可玩版本请以 Release 为准**。
+本仓库的源码目录按此前约定保留历史版本；**最新可玩版本请以 [itch.io 页面](https://droidlyx86.itch.io/grow-up)为准**。
 
-最新代码和角色资料保存在私有仓库 [droidlyx/Grow_up](https://github.com/droidlyx/Grow_up)，需要仓库访问权限。本次 Release 对应源码提交 `e05898171fe6a61344b37ef7fc8c4c3750e4ebb2`。
+最新代码和角色资料保存在私有仓库 [droidlyx/Grow_up](https://github.com/droidlyx/Grow_up)，需要仓库访问权限。各发行版本的更新说明请查看 itch.io 页面。
 
-本版已完成离线 Shipping 编译、打包，以及 ZIP 和角色文件哈希校验；未运行额外玩法测试。历史开发文档和旧测试记录不代表最新版的完整体验验收。
+历史开发文档和旧测试记录不代表最新版的完整体验验收。
 
 ## 素材与许可
 
