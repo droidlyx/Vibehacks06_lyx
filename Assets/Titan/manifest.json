@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "copied_at_utc": "2026-10-31T02:59:10.085566+00:00",
+  "source_project": "E:\\UE_projects\\ProjectTitan",
+  "source": "Local Project Titan sample; selected by user for this Unreal Engine project",
+  "rights": "Retain applicable Epic/Project Titan terms; these assets are not represented as CC0. No asset upload to external generation services.",
+  "method": "Conservative /Game string-reference closure; original package paths; source unchanged; SHA-256 verified",
+  "seeds": [
+    "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SKM_Jellybean",
+    "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Animations/Jellybean_Idle",
+    "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Animations/Jellybean_Walk",
+    "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Variants/MI_Jellybean_Green",
+    "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Variants/MI_Jellybean_Blue",
+    "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Variants/MI_Jellybean_Yellow",
+    "/Game/Characters/NPCs/Arctic/Penguin/Rigged/Small/T-Pose_weight_color",
+    "/Game/Characters/NPCs/Arctic/Penguin/Rigged/Small/Idle",
+    "/Game/Characters/NPCs/Arctic/Penguin/Rigged/Small/AS_Penguin_Small_Walk",
+    "/Game/Characters/NPCs/Arctic/Penguin/Rigged/Small/Happy_Idle",
+    "/Game/Characters/NPCs/Arctic/Penguin/Rigged/Small/Jumping",
+    "/Game/Characters/NPCs/Desert/Creatures/Desert_Ferret/SKM_DesertFerrret",
+    "/Game/Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Idle",
+    "/Game/Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Walk",
+    "/Game/Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Run",
+    "/Game/Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Sleep"
+  ],
+  "files": [
+    {
+      "path": "Blueprint/FoliageInteraction/MPC_Player.uasset",
+      "bytes": 2014,
+      "sha256": "13a065a8c5cbfbfb5e05f977f75140fff99871050d569d6af918acfb5c4ff725"
+    },
+    {
+      "path": "Blueprint/FoliageInteraction/RT_Player.uasset",
+      "bytes": 4426,
+      "sha256": "3f05670b9f15f7fdc82e657c51a82d9004d88ff161a2bb23c6edcdfa9311b21f"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Materials/MI_ArcticPenguin_001.uasset",
+      "bytes": 14190,
+      "sha256": "ffa3537294fbb0acc9b8e7daff7e2c5a651b2f234754da62d6ed0c67b0fd70cf"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Materials/T_Penguin_s_Normal.uasset",
+      "bytes": 2898664,
+      "sha256": "c392b30b159a1fee8ee85ad9015c2171a48c4dd807daa94e6d237aa43fc8e043"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Materials/T_Penguin_s_RMOE.uasset",
+      "bytes": 2357986,
+      "sha256": "1370fcfb413f60e2e01f2e273d375bbb0446cca81c9a4ba1e59ce09572a67ab0"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Materials/T_Penguin_s_alb2.uasset",
+      "bytes": 3260400,
+      "sha256": "80d444000d121246dbf0302f0291b3f5d7d215070c325ca40420f2491d9b2f0f"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/AS_Penguin_Small_Walk.uasset",
+      "bytes": 7941173,
+      "sha256": "621edee29dc4be069a25292c18891664b2188001763c1f9c13825dcdbe1e550e"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/Happy_Idle.uasset",
+      "bytes": 145227,
+      "sha256": "4b96944df427dff78c6c454e0ef7638699431ff15726268be5e5bfb8510d0cdc"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/Idle.uasset",
+      "bytes": 441574,
+      "sha256": "44b8b746093cbfba841058ef0e0f57e98013d1ffd55045d1f5cedebe58f84bba"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/Jumping.uasset",
+      "bytes": 9231447,
+      "sha256": "bc36aa43fd976d29eeeab37d88e892b36f9176e0754fa3064479347dc4f5cdb6"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/T-Pose_weight_color.uasset",
+      "bytes": 11290776,
+      "sha256": "9aaa9c2bae1047bdc610d52376f5bd8be56c07de908bb214cd47b8db348c4a63"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/T-Pose_weight_color_PhysicsAsset.uasset",
+      "bytes": 15154,
+      "sha256": "40f2e476136ab2e8ecd88f7136debf94741e6f58530695091af417ef204e9826"
+    },
+    {
+      "path": "Characters/NPCs/Arctic/Penguin/Rigged/Small/T-Pose_weight_color_Skeleton.uasset",
+      "bytes": 13171,
+      "sha256": "09dc40f29e38075fe25b95f83b0a84af17cdffa1664697f42635d8eaa44b04da"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Animations/Jellybean_Idle.uasset",
+      "bytes": 406713,
+      "sha256": "ce106ef0922ac0c524d83ff98a875e285af701e151cce64282b554f04a213416"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Animations/Jellybean_Walk.uasset",
+      "bytes": 177775,
+      "sha256": "19c372bfe1b5795b64845607201208c07f6f6eedf1bc7ef39eb5b48e6e460d47"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/MI_Jellybean.uasset",
+      "bytes": 18736,
+      "sha256": "f1a5a57f52153bc1d844bcbb002cf7dbb05ceaa4e83decc2af6947cd78c9e8c4"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/MI_Jellybean_Extras.uasset",
+      "bytes": 13063,
+      "sha256": "0a453c7b9855f9851281cbece060af5b0786e0a776761c7bc1e8abada2091c72"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/M_Jellybean.uasset",
+      "bytes": 53982,
+      "sha256": "1af14eaaf2c790d300867809d46eac0f5f128a7f3b257ce8074fc139876bfc5a"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Textures/T_Clifftop_Jellybean_Body_N.uasset",
+      "bytes": 9472121,
+      "sha256": "0c9ccedfdcf5d6dffdf503a7fad57254ebc21d3f929b6fcfb298225b86100f20"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Textures/T_Clifftop_Jellybean_Extras_D.uasset",
+      "bytes": 695239,
+      "sha256": "0a70c1434c3bb2f1972ff126c5dbd85f8991599d78ac748e5f8f3ffa24f7c05c"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Textures/T_Clifftop_Jellybean_Extras_N.uasset",
+      "bytes": 2130729,
+      "sha256": "d41d039c9d3e6ce5076879ceb175f4647db98ea19c75d3bf9c7f79bcdcc41dfe"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Textures/T_Clifftop_Jellybean_Extras_RMOH.uasset",
+      "bytes": 1448663,
+      "sha256": "32bd8464a36ec3a49b38a6c72447f5ba54c30e7e86e23c55d12407560d4687c0"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Textures/T_Jellybean_Noise_H.uasset",
+      "bytes": 873309,
+      "sha256": "d6d9a47293a71ea64e044c848cc0a40449e69a15bfcebb1cd8564eabc269069a"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Textures/T_Jellybean_Stars_D.uasset",
+      "bytes": 393064,
+      "sha256": "9b7bbd864784bc4887f8d26441f3d67579d0cdd62d940576eb5973f65242e3bb"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Variants/MI_Jellybean_Blue.uasset",
+      "bytes": 20719,
+      "sha256": "3d3da4b8879b182f2a6a9ed9a370a665f99e728e87cece3f0c8bb82afd764bde"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Variants/MI_Jellybean_Green.uasset",
+      "bytes": 20715,
+      "sha256": "56d13f9ff71b9caaa2aaec04d41ad5bca307b4534b04369684d88e3e4be6414f"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/Materials/Variants/MI_Jellybean_Yellow.uasset",
+      "bytes": 20274,
+      "sha256": "c55c7896bf65c8dafe92ca77e80779fcd70331ace6167b901ca2a0fee9fb608f"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SKM_Jellybean.uasset",
+      "bytes": 1232354,
+      "sha256": "3afdfb220972941971370997b17da00dcf8e93dd1685cabedfff30ba65161371"
+    },
+    {
+      "path": "Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SK_Jellybean.uasset",
+      "bytes": 18932,
+      "sha256": "7be838145b2f2816fd1f128cd8084025f94b219cf54a32c7045538ac1772c80b"
+    },
+    {
+      "path": "Characters/NPCs/Desert/Creatures/Desert_Ferret/Materials/MI_Desert_Ferret.uasset",
+      "bytes": 13417,
+      "sha256": "c6d7b24fb2adbada53817e775c6ab03dae5ce7af77d4dcfbb56a7d20936d376c"
+    },
+    {
+      "path": "Characters/NPCs/Desert/Creatures/Desert_Ferret/SKM_DesertFerrret.uasset",
+      "bytes": 4632301,
+      "sha256": "e57c14623264ee4c2347cc6968b6bdf20eaea9b5a28801f0c90dd29c421ebae7"
+    },
+    {
+      "path": "Characters/NPCs/Desert/Creatures/Desert_Ferret/SKM_DesertFerrret_PhysicsAsset.uasset",
+      "bytes": 39042,
+      "sha256": "f6e9214e0460b9e6d2726d06e3867ac67ac0a6d26dd7f488771ac0e9c0dc78ed"
+    },
+    {
+      "path": "Characters/NPCs/Desert/Creatures/Desert_Ferret/Textures/T_DesertFerrret_BC.uasset",
+      "bytes": 2303100,
+      "sha256": "15ebfa9ec6972cdb8ee63201a7678cb27c83b533c252735e5cf003e2bed2c407"
+    },
+    {
+      "path": "Characters/NPCs/Desert/Creatures/Desert_Ferret/Textures/T_DesertFerrret_N.uasset",
+      "bytes": 4063566,
+      "sha256": "74daf6db5af8d526f51b6382a9191c06dda98fcfd19905bac09f1b2b74ab4583"
+    },
+    {
+      "path": "Characters/NPCs/Desert/Creatures/Desert_Ferret/Textures/T_DesertFerrret_RMO.uasset",
+      "bytes": 2111375,
+      "sha256": "a367c52ebecd83751f2d660e91fdab8cb6cb82c54d28c4f0f585ff6cd1ad1440"
+    },
+    {
+      "path": "Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Idle.uasset",
+      "bytes": 292686,
+      "sha256": "74a22d85d834451461875b1fb6829a8f264af59f2097c7c6c89d437f1c2e4a5a"
+    },
+    {
+      "path": "Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Run.uasset",
+      "bytes": 249845,
+      "sha256": "a492ea11668e70e83b01306a090555b4496e8c12d90a3cda00c224ca5cb25375"
+    },
+    {
+      "path": "Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Sleep.uasset",
+      "bytes": 198639,
+      "sha256": "c4828f6d3a2edea51306f52bf36fcdf852b59628696156e52a0919fa08369f1a"
+    },
+    {
+      "path": "Characters/NPCs/MarshlandType/Kelpie/Animations/AS_Kelpie_Walk.uasset",
+      "bytes": 313116,
+      "sha256": "2056190d980e053cc2dfaaa560ea74b98611d04633c2b3c816bc7d96900d640d"
+    },
+    {
+      "path": "Characters/NPCs/Sulfur/Creatures/Sulfur_Ferret/FerretMesh_PhysicsAsset.uasset",
+      "bytes": 40576,
+      "sha256": "c3caa189f23545f334304662fa18e5dea9bdf6623a04828ace742017abf1e2cd"
+    },
+    {
+      "path": "Characters/NPCs/Sulfur/Creatures/Sulfur_Ferret/Materials/MI_SulfurFerret_Sulfur.uasset",
+      "bytes": 14049,
+      "sha256": "93b0f25f23e2949b856efa5a3b286593e2825e2829ff004d2590b136549121df"
+    },
+    {
+      "path": "Characters/NPCs/Sulfur/Creatures/Sulfur_Ferret/SKM_SulfurFerret.uasset",
+      "bytes": 5430524,
+      "sha256": "10b0c0094d6ee8c1e64c6a9e7825344990482cdee6302da7a4d8b818690c7e45"
+    },
+    {
+      "path": "Characters/NPCs/Sulfur/Creatures/Sulfur_Ferret/Textures/T_SulfurFerret_D.uasset",
+      "bytes": 3514136,
+      "sha256": "93b12c6255aab8b49a976c319361af5f892aa1122e4a2ed66cfb4632811398cf"
+    },
+    {
+      "path": "Characters/NPCs/Sulfur/Creatures/Sulfur_Ferret/Textures/T_SulfurFerret_N.uasset",
+      "bytes": 12448839,
+      "sha256": "bd0e2f514a854de912f3f7b7370fe3dc07f37f23e6a80fb221e212a2f3dacf92"
+    },
+    {
+      "path": "Characters/NPCs/Sulfur/Creatures/Sulfur_Ferret/Textures/T_SulfurFerret_RMO.uasset",
+      "bytes": 1595199,
+      "sha256": "001584d9d95503f6048b11f1e7323bc3e29172f75e75b05be06374f22d0280c6"
+    },
+    {
+      "path": "Characters/QuadrupedBase/SKM_QuadrupedBase.uasset",
+      "bytes": 889322,
+      "sha256": "a144c15e0c6657a4722f2f4552261c5b6755bc41b8844908bd8fa3d541aa7f14"
+    },
+    {
+      "path": "Characters/QuadrupedBase/SK_QuadrupedBase.uasset",
+      "bytes": 51557,
+      "sha256": "920a75516423e59f5e08aef16e010a32ab0b9124d112a968994b3897c5c59847"
+    },
+    {
+      "path": "Environment/Desert/Materials/Rocks/C_DesertCliffStrats.uasset",
+      "bytes": 7150,
+      "sha256": "1e6ac5f5ef79912bd81563b4fd3df966eaf37bdb5f6427e9d288f1d22d4e2302"
+    },
+    {
+      "path": "Environment/_Core/Materials/Functions/MF_BaseMaterialProfile.uasset",
+      "bytes": 160966,
+      "sha256": "343758d6baa4b51feb655851b23a3946d503f9715adc21c588bfe28b58b0df6c"
+    },
+    {
+      "path": "Environment/_Core/Materials/M_BaseMaterial.uasset",
+      "bytes": 32694,
+      "sha256": "503d889b98b9e42d610c5b0494ee9a65228ceee6137109a1624b37ae3799fa85"
+    },
+    {
+      "path": "Environment/_Core/Textures/T_Placeholder_D.uasset",
+      "bytes": 4581,
+      "sha256": "ba422a8652ee8964da6846767243af77c8f08f76af14d8cf23d59d331c799ae2"
+    },
+    {
+      "path": "Environment/_Core/Textures/T_Placeholder_D_VT.uasset",
+      "bytes": 5850,
+      "sha256": "ebf083e46e5a14afaa988a59c19493427e9a7c1a9b064b02928a192d7315a0cb"
+    },
+    {
+      "path": "Environment/_Core/Textures/T_Placeholder_N.uasset",
+      "bytes": 4836,
+      "sha256": "89e6355b6fdfad3537db518a7e6ef85cbe2c420bea71d1870d9d115d7f42bf56"
+    },
+    {
+      "path": "Environment/_Core/Textures/T_Placeholder_N_VT.uasset",
+      "bytes": 6127,
+      "sha256": "7242d1a5c9b7a334164650c8d55cbbbb358a7ec1b534de3469eecae94f52a482"
+    },
+    {
+      "path": "Environment/_Core/Textures/T_Placeholder_RMOH_VT.uasset",
+      "bytes": 5699,
+      "sha256": "15c7b0143fed47671808527023941c78d6856dd2d75765f59d941db9f7c2d982"
+    },
+    {
+      "path": "Landscape/Gradients/CA_Landscape.uasset",
+      "bytes": 9524,
+      "sha256": "7f1c679da3d9e6a3772a51eba2b79dcf5a3dcd922f0dc4b290196fe7b21c7a67"
+    },
+    {
+      "path": "Landscape/Gradients/C_ArcticIce.uasset",
+      "bytes": 5534,
+      "sha256": "1261238ac7c4201b19cac475a26769e2ada93a5e9ba07917bd622f5cb3973050"
+    },
+    {
+      "path": "Landscape/Gradients/C_Default.uasset",
+      "bytes": 5092,
+      "sha256": "bc6b4154aa475ac46f20877b989389acb402547d3337ce465cc3d8fe4e1a7009"
+    },
+    {
+      "path": "Landscape/Gradients/C_Grass.uasset",
+      "bytes": 5544,
+      "sha256": "36c8cca730cb7c74051fc53a473bdcad04715e85634ec818a2404957e5374bfc"
+    },
+    {
+      "path": "Landscape/Gradients/C_Rock.uasset",
+      "bytes": 5188,
+      "sha256": "915cf50a97ab015bab172dcf1e26f19d15973a7f16ab07c901825d714ab4c587"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_BaseLandscapeLayer.uasset",
+      "bytes": 64524,
+      "sha256": "2f17031d9bc1f1eee92f5a5d4c0cbbc05575f4dc5ee8919af4815280bc9c0c1d"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Arctic_Snow.uasset",
+      "bytes": 22854,
+      "sha256": "7be97aaf4f710f5b9bff2f1d9a48779f0f9e1a6dd12836398029ddf643ed6433"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Desert_Rock.uasset",
+      "bytes": 19120,
+      "sha256": "6d26bace519f8f13505a37599473a158e157cdfd17a0ba9eafa2e95f4f0f2ec8"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Grassland_Dirt.uasset",
+      "bytes": 17130,
+      "sha256": "091241f4aff134bde3b2274f7651bde5a016e90347b724c3dd3b6bad3755607c"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Grassland_Grass.uasset",
+      "bytes": 22285,
+      "sha256": "b5e340681b596539f7c71d9d64339ff1366598936d802a9d76f6f30dca50c524"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Grassland_Sand.uasset",
+      "bytes": 19347,
+      "sha256": "fa20b9c98af9a6e6755247a986709d12ec5201428ba75098d6a135338574db75"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Marshlands_Grass.uasset",
+      "bytes": 15267,
+      "sha256": "ff263e40fdae07f40da27a3d4228272f903e799e01959c432e1d160702532ac6"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Sulfur_Ground.uasset",
+      "bytes": 17157,
+      "sha256": "a852fcc73d6d85e4229a05625cc127171c931067686bf232a16498b6f6c76ebe"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LL_Tropic_Grass1.uasset",
+      "bytes": 16516,
+      "sha256": "32449afe03e771ce56b7f97a6afa6ec6f66c72b875d7c8bfc4fbe67bc465cbe1"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_LandscapeLayerSelect.uasset",
+      "bytes": 29628,
+      "sha256": "32f610b501d516bc1fc3ddb3d2482a6a503de5f1d35a7d40badd83466c94e694"
+    },
+    {
+      "path": "Landscape/Materials/Functions/MF_WorldAlignNormalFix.uasset",
+      "bytes": 49262,
+      "sha256": "71b1d8ec87a22db833b2b375248d624457b49a550cfba98926f4ebddabd73b3e"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_CanyonWall_D.uasset",
+      "bytes": 4015985,
+      "sha256": "6413969ba4404f93bbbe74e48033f7e413b6cc18a6d051ed57c5e125f78ce3ba"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_CanyonWall_M.uasset",
+      "bytes": 1243442,
+      "sha256": "b052b728e11e1cc895dc53f13f6dca686881ea7406a959f48606e2557c62b78c"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_CanyonWall_N.uasset",
+      "bytes": 17267490,
+      "sha256": "ca74175719c17f61dc02ba947c92939417429925b8f95441c2c2976a8cc44fd4"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_DirtGround_D.uasset",
+      "bytes": 2558121,
+      "sha256": "6d4f23a4d0b724da951af898a7be0fa4cbaeec0736b630fcab291ffe0902ffad"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_DirtGround_M.uasset",
+      "bytes": 15558628,
+      "sha256": "aab611f631f6828688d3f707404dd248bc676f73cee4330e2facd5f812a3330e"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_DirtGround_N.uasset",
+      "bytes": 18415388,
+      "sha256": "5dfa867749fd7429766f38f6e91db21d6bc1d03c9df5c1f126ed70aeab769759"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_GlobalBlend_M.uasset",
+      "bytes": 170838,
+      "sha256": "67de780dfaf5ec28240726f60e5e6bbf3bbf0ec6ea55be5fd8c0151408641a2f"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Grass_D.uasset",
+      "bytes": 2128148,
+      "sha256": "6bf6b3d261f0d1c58c33b139238bed547e98ac14c0d1d54275a8adc8d60ca80f"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Grass_M.uasset",
+      "bytes": 3926198,
+      "sha256": "b51107973f4e0c5eff7087283449c72f528ecead319ae677d985905eda563823"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Grass_N.uasset",
+      "bytes": 8701964,
+      "sha256": "03b772420dbc013c6fbf9163300df644e4b306be41ef54bfdcbfd3a217e010b3"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Landscape_Sulfur_a_d.uasset",
+      "bytes": 6162973,
+      "sha256": "7fc0ab1c75f6d36ef7b232ad5a759dd6aa9c9f0b5fecef4ae19c734991907388"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Landscape_Sulfur_a_n.uasset",
+      "bytes": 19785666,
+      "sha256": "73ae062d44d30cf721b5a62c4a9745a5d20ccbc90a58bc2eb472d0cdb212c526"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Landscape_Sulfur_a_rmoh.uasset",
+      "bytes": 4991634,
+      "sha256": "32feede8876f1d8b69cd2b06f7ffbdbb65ff90504f7e0ac1454586e2baa0e146"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Tropic_PinkSand_RMOH1.uasset",
+      "bytes": 4823068,
+      "sha256": "d29815af74ee9d250a9dbedeef7ea173cd5ef96fc5f4a881c8c726c9ecd87c5f"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Tropic_PinkSand_basecolor1.uasset",
+      "bytes": 5607044,
+      "sha256": "b7b76445c4b1e036efa5a7acc25ce2e221aec92773aecbdecdd59a425411e11e"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_Tropic_PinkSand_normal1.uasset",
+      "bytes": 11896207,
+      "sha256": "08f5a6689acc1e1d0fb408f3348930d6d8747d31eaa0e7b289f63194600e5550"
+    },
+    {
+      "path": "Landscape/Materials/Textures/T_VariationNoise_M.uasset",
+      "bytes": 3157053,
+      "sha256": "18c280cecd8127786bb0c525f3539a38cc105eea9280dbb7b84f6d35451bb8e1"
+    },
+    {
+      "path": "Landscape/RVT/RVT_Titan_D.uasset",
+      "bytes": 4279,
+      "sha256": "f524bb7c80abfa8f76e18833925bc0b533ce35070bb8bb9436ba01dbbc2d0876"
+    },
+    {
+      "path": "Landscape/RVT/RVT_Titan_H.uasset",
+      "bytes": 8614,
+      "sha256": "bdf06f5b1e0184e73bd770d637d76cbdb8ed82df3949654121551d58cdddc9ae"
+    }
+  ],
+  "missing_source_references": {
+    "Characters/NPCs/Volcanic/MoltedLizard/Molted_Lizard": [
+      "Characters/QuadrupedBase/SK_QuadrupedBase"
+    ],
+    "Landscape/Materials/Textures": [
+      "Landscape/Materials/Textures/T_GlobalBlend_M"
+    ],
+    "Characters/NPCs/MarshlandType/Kelpie/Kelpie": [
+      "Characters/QuadrupedBase/SK_QuadrupedBase"
+    ],
+    "Characters/NPCs/Grasslands/Creatures/Kai_Deer_Mesh": [
+      "Characters/QuadrupedBase/SK_QuadrupedBase"
+    ],
+    "Characters/NPCs/Clifftop/Creatures/Fred/Fred": [
+      "Characters/QuadrupedBase/SK_QuadrupedBase"
+    ]
+  },
+  "missing_reference_note": "Absent in the source before copying. May be editor preview/retarget references or directory strings. Validate load behavior in Unreal; the scanner does not distinguish hard/soft references.",
+  "script_modules": [
+    "/Script/AnimationData",
+    "/Script/AnimationModifiers",
+    "/Script/ControlRig",
+    "/Script/CoreUObject",
+    "/Script/Engine",
+    "/Script/InterchangeCore",
+    "/Script/InterchangeEngine",
+    "/Script/InterchangeFactoryNodes",
+    "/Script/InterchangePipelines",
+    "/Script/MovieScene",
+    "/Script/MovieSceneTracks",
+    "/Script/PhysicsCore",
+    "/Script/UnrealEd"
+  ],
+  "validation": "File integrity only. Mesh/skeleton compatibility, animation playback and material appearance require Unreal inspection."
+}

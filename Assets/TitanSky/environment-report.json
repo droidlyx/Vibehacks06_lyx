@@ -1,0 +1,42 @@
+{
+  "profile": "clear woodland v2 - corrected atmospheric coefficients",
+  "map": "/Game/Maps/Valley.Valley",
+  "map_backup": "E:\\UE_projects\\VerdantAccord_v03\\Saved\\EnvironmentBackup\\20261031T043829760893Z\\Valley.umap",
+  "cloud_source": "/Game/Environment/_Global/Materials/Sky/M_Clouds_Soft",
+  "cloud_instance": "/Game/Art/Environment/MI_FableClouds",
+  "sun_lux": 5.5,
+  "sky_intensity": 0.8999999761581421,
+  "cloud_bottom_km": 1.2000000476837158,
+  "cloud_height_km": 1.0,
+  "fog_density": 0.001500000013038516,
+  "post_process_overrides": [
+    "auto_exposure_method",
+    "auto_exposure_apply_physical_camera_exposure",
+    "auto_exposure_bias",
+    "bloom_intensity",
+    "bloom_threshold",
+    "vignette_intensity",
+    "color_saturation",
+    "color_contrast",
+    "color_gain_highlights",
+    "color_gain_shadows",
+    "ambient_occlusion_intensity",
+    "ambient_occlusion_radius",
+    "ambient_occlusion_quality",
+    "motion_blur_amount"
+  ],
+  "mie_scattering_per_km": 0.0024999999441206455,
+  "volumetric_fog": false,
+  "cloud_shadows": false,
+  "cloud_ambient_occlusion": false,
+  "renderer": "existing DX11 / SM5; no Lumen or renderer migration",
+  "actors": [
+    "Fable_AzureAtmosphere",
+    "Fable_WarmMorningSun",
+    "Fable_CoolSkyFill",
+    "Fable_LayeredValleyHaze",
+    "Fable_SoftDriftingClouds",
+    "Fable_ColourAndExposure"
+  ],
+  "validation": "Saved asset/property verification only; visual and performance review pending user Play"
+}

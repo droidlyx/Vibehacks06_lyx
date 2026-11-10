@@ -1,0 +1,681 @@
+{
+  "schema_version": 2,
+  "probe": "natural_npc_policy_comparison",
+  "variant": "open",
+  "captured_at_utc": "2026-10-30T22:49:47.440Z",
+  "duration_seconds": 600.0142822265625,
+  "requested_duration_seconds": 600,
+  "sample_interval_seconds": 5,
+  "invariant_frames_checked": 36007,
+  "actors_frozen": false,
+  "actors_teleported": false,
+  "resources_injected": false,
+  "scope": "Natural NPC simulation. The player remains idle; this is not a human playthrough.",
+  "external_intervention": {
+    "action": "SetAccess(2,FindFolk(3),true)",
+    "scheduled_seconds": 2,
+    "actual_seconds": 2.016665458679199,
+    "applied": true
+  },
+  "failures": 0,
+  "failure_details": [],
+  "movement_suspect_count": 0,
+  "movement_suspects": [],
+  "movement_suspect_scope": "Sampling heuristic only; resting, replying, combat and near-destination actors are excluded. Suspects do not fail numeric validation.",
+  "sample_count": 121,
+  "sample_encoding_errors": 0,
+  "final_harvest_ledger_net_food": {
+    "1:0": 40,
+    "2:1": 9.550800323486328,
+    "3:2": 50,
+    "2:2": 35,
+    "3:0": 15,
+    "2:0": 5
+  },
+  "final_world_summary": "当前：分立有税 · 居民 3/3 · 野生 3/3\n免税开放 2/3 · 你管理 0处 · 生机 100%\n苔石果林：米芽 · 免费开放 · 粮48\n赤土果林：陶恩 · 开放/分成20% · 粮48\n高地果林：岚石 · 免费开放 · 粮48",
+  "recent_world_events": [
+    "00:00  生长季开始。三片果林由不同居民管理，母树等待 100 份养分。",
+    "00:00  米芽开放采集；陶恩收取两成分成；岚石暂不允许外人进入高地果林。",
+    "00:00  米芽 在苔石果林采得 5.0 份养分。",
+    "00:00  陶恩 在赤土果林采得 5.0 份养分。",
+    "00:00  岚石 在高地果林采得 5.0 份养分。",
+    "00:02  岚石 将高地果林设为开放，采集分成为 0%。",
+    "00:05  陶恩 改变采集路线，前往高地果林。",
+    "00:22  岚石 在高地果林采得 5.0 份养分。",
+    "00:22  米芽 在苔石果林采得 5.0 份养分。",
+    "00:23  陶恩 在高地果林采得 5.0 份养分。",
+    "00:27  米芽 决定把 3.0 份实际储粮带往母树。",
+    "00:41  米芽 向母树供奉 3.0 份养分（3 / 100）。",
+    "00:43  陶恩 在高地果林采得 5.0 份养分。",
+    "00:43  岚石 改变采集路线，前往苔石果林。",
+    "00:48  陶恩 改变采集路线，前往苔石果林。",
+    "00:54  米芽 在苔石果林采得 5.0 份养分。",
+    "01:00  岚石 在苔石果林采得 5.0 份养分。",
+    "01:02  米芽 决定把 2.0 份实际储粮带往母树。",
+    "01:06  陶恩 在苔石果林采得 5.0 份养分。",
+    "01:16  米芽 向母树供奉 2.0 份养分（5 / 100）。"
+  ],
+  "observed_metrics": {
+    "living_main_residents": 3,
+    "non_owner_npc_highland_net_harvest": 35,
+    "tree_nutrition": 5
+  },
+  "source_capture_sha256": "2aca7faeda6b14216b4c001ad401e52dd91c5325bb7b6d0ad31c90c91b9357bc",
+  "first_sample": {
+    "elapsed_seconds": 0.01666666753590107,
+    "world_time_seconds": 0.03333333507180214,
+    "tree_nutrition": 0,
+    "tree_goal": 100,
+    "tree_restored": false,
+    "opening_intervention_applied": false,
+    "harvest_ledger_net_food": {},
+    "actors": [
+      {
+        "agent_id": 1,
+        "name": "米芽",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": -4250,
+          "y": -1750,
+          "z": 226.7661738395691
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 0,
+        "food": 8,
+        "nutrition_reserve": 0,
+        "body_size": 0.6000000238418579,
+        "height_m": 1.0800000429153442,
+        "health": 50.17694091796875,
+        "max_health": 50.17694091796875,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "观察果林",
+        "destination_cm": {
+          "x": -4250,
+          "y": -1750,
+          "z": 265.6154479980469
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 2,
+        "name": "陶恩",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": 4500,
+          "y": -1200,
+          "z": 231.1598858833313
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 1,
+        "food": 12,
+        "nutrition_reserve": 0,
+        "body_size": 1,
+        "height_m": 1.7999999523162842,
+        "health": 100,
+        "max_health": 100,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "观察果林",
+        "destination_cm": {
+          "x": 4500,
+          "y": -1200,
+          "z": 234.0098419189453
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 3,
+        "name": "岚石",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": 850,
+          "y": 6350,
+          "z": 329.2374520301819
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 2,
+        "food": 16,
+        "nutrition_reserve": 0,
+        "body_size": 2,
+        "height_m": 3.5999999046325684,
+        "health": 254.91213989257812,
+        "max_health": 254.91213989257812,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "观察果林",
+        "destination_cm": {
+          "x": 850,
+          "y": 6350,
+          "z": 242.0868377685547
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 4,
+        "name": "荒枝游民",
+        "wild": true,
+        "dead": false,
+        "position_cm": {
+          "x": -1800,
+          "y": -300,
+          "z": 84.89665365219116
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 0,
+        "food": 22,
+        "nutrition_reserve": 0,
+        "body_size": 0.800000011920929,
+        "height_m": 1.4399999380111694,
+        "health": 73.98973846435547,
+        "max_health": 73.98973846435547,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "在荒地觅食",
+        "destination_cm": {
+          "x": -1800,
+          "y": -300,
+          "z": 105.71495056152344
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 5,
+        "name": "赤背掠夺者",
+        "wild": true,
+        "dead": false,
+        "position_cm": {
+          "x": 2800,
+          "y": 3000,
+          "z": 227.69730043411255
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 1,
+        "food": 34,
+        "nutrition_reserve": 0,
+        "body_size": 1.25,
+        "height_m": 2.25,
+        "health": 135.1538848876953,
+        "max_health": 135.1538848876953,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "在荒地觅食",
+        "destination_cm": {
+          "x": 2800,
+          "y": 3000,
+          "z": 208.0406494140625
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 6,
+        "name": "古岩守卫",
+        "wild": true,
+        "dead": false,
+        "position_cm": {
+          "x": -3300,
+          "y": 6200,
+          "z": 364.0959334373474
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 2,
+        "food": 48,
+        "nutrition_reserve": 0,
+        "body_size": 2.0999999046325684,
+        "height_m": 3.7799997329711914,
+        "health": 272.26763916015625,
+        "max_health": 272.26763916015625,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "在荒地觅食",
+        "destination_cm": {
+          "x": -3300,
+          "y": 6200,
+          "z": 267.93927001953125
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 0,
+        "name": "旅人",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": -1000,
+          "y": -5800,
+          "z": 116.32925415039062
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": -1,
+        "food": 8,
+        "nutrition_reserve": 0,
+        "body_size": 0.44999998807907104,
+        "height_m": 0.809999942779541,
+        "health": 34.02803421020508,
+        "max_health": 34.02803421020508,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "",
+        "destination_cm": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      }
+    ],
+    "stationary_travel_suspect_actor_ids": [],
+    "groves": [
+      {
+        "grove_index": 0,
+        "name": "苔石果林",
+        "position_cm": {
+          "x": -4500,
+          "y": -1500,
+          "z": 172.43983459472656
+        },
+        "food": 42,
+        "fertility": 1,
+        "controller_id": 1,
+        "open": true,
+        "share": 0,
+        "permitted_actor_ids": [],
+        "living_actor_ids_within_700cm": [
+          1
+        ]
+      },
+      {
+        "grove_index": 1,
+        "name": "赤土果林",
+        "position_cm": {
+          "x": 4200,
+          "y": -1000,
+          "z": 138.7410430908203
+        },
+        "food": 8,
+        "fertility": 0.3499999940395355,
+        "controller_id": 2,
+        "open": true,
+        "share": 0.20000000298023224,
+        "permitted_actor_ids": [],
+        "living_actor_ids_within_700cm": [
+          2
+        ]
+      },
+      {
+        "grove_index": 2,
+        "name": "高地果林",
+        "position_cm": {
+          "x": 500,
+          "y": 6500,
+          "z": 147.1852264404297
+        },
+        "food": 48,
+        "fertility": 1,
+        "controller_id": 3,
+        "open": false,
+        "share": 0,
+        "permitted_actor_ids": [],
+        "living_actor_ids_within_700cm": [
+          3
+        ]
+      }
+    ]
+  },
+  "last_sample": {
+    "elapsed_seconds": 600.0142822265625,
+    "world_time_seconds": 600.1333646327257,
+    "tree_nutrition": 5,
+    "tree_goal": 100,
+    "tree_restored": false,
+    "opening_intervention_applied": true,
+    "harvest_ledger_net_food": {
+      "1:0": 40,
+      "2:1": 9.550800323486328,
+      "3:2": 50,
+      "2:2": 35,
+      "3:0": 15,
+      "2:0": 5
+    },
+    "actors": [
+      {
+        "agent_id": 1,
+        "name": "米芽",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": -4537.412472430134,
+          "y": -1201.4196384260422,
+          "z": 257.9647768506363
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 0,
+        "food": 28,
+        "nutrition_reserve": 0,
+        "body_size": 0.92254239320755,
+        "height_m": 1.6605762243270874,
+        "health": 89.68742370605469,
+        "max_health": 89.68742370605469,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "守着储粮，观察来往的人",
+        "destination_cm": {
+          "x": -4635.355270385742,
+          "y": -1314.0458374023438,
+          "z": 172.43983459472656
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 2,
+        "name": "陶恩",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": -4497.773879917662,
+          "y": -1569.2914877850108,
+          "z": 305.31896010169777
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 0,
+        "food": 31.550800323486328,
+        "nutrition_reserve": 0,
+        "body_size": 1.4541454315185547,
+        "height_m": 2.617461681365967,
+        "health": 165.77560424804688,
+        "max_health": 165.77560424804688,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "守着储粮，观察来往的人",
+        "destination_cm": {
+          "x": -4570.686538696289,
+          "y": -1718.8684844970703,
+          "z": 172.43983459472656
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 3,
+        "name": "岚石",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": -4172.997216318944,
+          "y": -1263.1917812325933,
+          "z": 390.7530258860875
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 0,
+        "food": 30,
+        "nutrition_reserve": 0,
+        "body_size": 2.4278438091278076,
+        "height_m": 4.370118618011475,
+        "health": 331.167724609375,
+        "max_health": 331.167724609375,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "守着储粮，观察来往的人",
+        "destination_cm": {
+          "x": -4281.446533203125,
+          "y": -1428.3453979492188,
+          "z": 172.43983459472656
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 4,
+        "name": "荒枝游民",
+        "wild": true,
+        "dead": false,
+        "position_cm": {
+          "x": -1425.4326524266282,
+          "y": -165.82660340401392,
+          "z": 99.137283139137
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 0,
+        "food": 19,
+        "nutrition_reserve": 0,
+        "body_size": 0.8649696707725525,
+        "height_m": 1.5569453239440918,
+        "health": 82.21502685546875,
+        "max_health": 82.21502685546875,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "在荒地觅食",
+        "destination_cm": {
+          "x": -1352.7679138183594,
+          "y": -34.701202392578125,
+          "z": 22.549829483032227
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 5,
+        "name": "赤背掠夺者",
+        "wild": true,
+        "dead": false,
+        "position_cm": {
+          "x": 2779.9980034675527,
+          "y": 3382.979215068084,
+          "z": 232.39117024134703
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 1,
+        "food": 28,
+        "nutrition_reserve": 0,
+        "body_size": 1.3361896276474,
+        "height_m": 2.4051413536071777,
+        "health": 147.88424682617188,
+        "max_health": 147.88424682617188,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "在荒地觅食",
+        "destination_cm": {
+          "x": 2664.001693725586,
+          "y": 3501.900848388672,
+          "z": 111.30545806884766
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 6,
+        "name": "古岩守卫",
+        "wild": true,
+        "dead": false,
+        "position_cm": {
+          "x": -3648.2873623594614,
+          "y": 6290.135397360899,
+          "z": 379.00141922215187
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": 2,
+        "food": 39,
+        "nutrition_reserve": 0,
+        "body_size": 2.178144693374634,
+        "height_m": 3.9206602573394775,
+        "health": 286.03363037109375,
+        "max_health": 286.03363037109375,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "在荒地觅食",
+        "destination_cm": {
+          "x": -3819.9901123046875,
+          "y": 6203.214021921158,
+          "z": 186.37026977539062
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      },
+      {
+        "agent_id": 0,
+        "name": "旅人",
+        "wild": false,
+        "dead": false,
+        "position_cm": {
+          "x": -1000,
+          "y": -5800,
+          "z": 113.47948795706033
+        },
+        "speed_cm_per_second": 0,
+        "home_grove": -1,
+        "food": 8,
+        "nutrition_reserve": 0,
+        "body_size": 0.44999998807907104,
+        "height_m": 0.809999942779541,
+        "health": 34.02803421020508,
+        "max_health": 34.02803421020508,
+        "donation_pledge": 0,
+        "follow_id": -1,
+        "hostile_id": -1,
+        "action": "",
+        "destination_cm": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "next_tend_at_world_seconds": 0,
+        "move_recovery_count": 0,
+        "avoid_threat_id": -1,
+        "avoid_threat_until_world_seconds": 0,
+        "awaiting_model_reply": false,
+        "travel_stationary_suspect": false
+      }
+    ],
+    "stationary_travel_suspect_actor_ids": [],
+    "groves": [
+      {
+        "grove_index": 0,
+        "name": "苔石果林",
+        "position_cm": {
+          "x": -4500,
+          "y": -1500,
+          "z": 172.43983459472656
+        },
+        "food": 48,
+        "fertility": 1,
+        "controller_id": 1,
+        "open": true,
+        "share": 0,
+        "permitted_actor_ids": [],
+        "living_actor_ids_within_700cm": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "grove_index": 1,
+        "name": "赤土果林",
+        "position_cm": {
+          "x": 4200,
+          "y": -1000,
+          "z": 138.7410430908203
+        },
+        "food": 48,
+        "fertility": 1,
+        "controller_id": 2,
+        "open": true,
+        "share": 0.20000000298023224,
+        "permitted_actor_ids": [],
+        "living_actor_ids_within_700cm": []
+      },
+      {
+        "grove_index": 2,
+        "name": "高地果林",
+        "position_cm": {
+          "x": 500,
+          "y": 6500,
+          "z": 147.1852264404297
+        },
+        "food": 48,
+        "fertility": 1,
+        "controller_id": 3,
+        "open": true,
+        "share": 0,
+        "permitted_actor_ids": [],
+        "living_actor_ids_within_700cm": []
+      }
+    ]
+  }
+}

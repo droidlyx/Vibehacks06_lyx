@@ -1,0 +1,15 @@
+{
+  "profile": "Mosslit Paths quiet morning",
+  "backup": "E:\\UE_projects\\VerdantAccord_v03\\Saved\\EnvironmentBackup\\20261031T050429064148Z_dawn",
+  "reference": "User music artwork and Assets/Audio/Suno/prompt-pack.txt; user dawn preference supersedes earlier sunny concepts",
+  "sun_lux": 13.0,
+  "preserved_sky_fill": 0.6499999761581421,
+  "preserved_exposure_bias": 0.3499999940395355,
+  "preserved_fog_density": 0.001500000013038516,
+  "preserved_cloud_shape": [
+    1.2000000476837158,
+    1.0
+  ],
+  "preserved_sun_rotation": "<Struct 'Rotator' (0x0000020412A7C6F0) {pitch: -8.000000, yaw: -132.000000, roll: -0.000000}>",
+  "visual_acceptance": "pending user review; no Play or screenshot capture"
+}

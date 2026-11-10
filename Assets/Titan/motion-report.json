@@ -1,0 +1,46 @@
+[
+  {
+    "asset": "/Game/Art/Creatures/Animations/A_Jellybean_Idle",
+    "mesh": "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SKM_Jellybean.SKM_Jellybean",
+    "skeleton": "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SK_Jellybean.SK_Jellybean",
+    "seconds": 2.0,
+    "bones": 54,
+    "frames": 60,
+    "root_motion": false,
+    "reference": "mesh local bind pose",
+    "visual_review": "pending user gameplay review"
+  },
+  {
+    "asset": "/Game/Art/Creatures/Animations/A_Jellybean_Walk",
+    "mesh": "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SKM_Jellybean.SKM_Jellybean",
+    "skeleton": "/Game/Characters/NPCs/Clifftop/Creatures/Jellybean_Cat/SK_Jellybean.SK_Jellybean",
+    "seconds": 1.0,
+    "bones": 54,
+    "frames": 30,
+    "root_motion": false,
+    "reference": "mesh local bind pose",
+    "visual_review": "pending user gameplay review"
+  },
+  {
+    "asset": "/Game/Art/Creatures/Animations/A_Ferret_Idle",
+    "mesh": "/Game/Characters/NPCs/Desert/Creatures/Desert_Ferret/SKM_DesertFerrret.SKM_DesertFerrret",
+    "skeleton": "/Game/Characters/QuadrupedBase/SK_QuadrupedBase.SK_QuadrupedBase",
+    "seconds": 2.0,
+    "bones": 34,
+    "frames": 60,
+    "root_motion": false,
+    "reference": "mesh local bind pose",
+    "visual_review": "pending user gameplay review"
+  },
+  {
+    "asset": "/Game/Art/Creatures/Animations/A_Ferret_Walk",
+    "mesh": "/Game/Characters/NPCs/Desert/Creatures/Desert_Ferret/SKM_DesertFerrret.SKM_DesertFerrret",
+    "skeleton": "/Game/Characters/QuadrupedBase/SK_QuadrupedBase.SK_QuadrupedBase",
+    "seconds": 1.0,
+    "bones": 34,
+    "frames": 30,
+    "root_motion": false,
+    "reference": "mesh local bind pose",
+    "visual_review": "pending user gameplay review"
+  }
+]

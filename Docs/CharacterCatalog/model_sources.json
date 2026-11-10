@@ -1,0 +1,532 @@
+[
+  {
+    "id": "T01",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Tropic\\Agung\\SKM_Agung_NPC.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "144304",
+    "source_md5": "46d7ec928f4298d1ab1d251949a84888",
+    "image": "Models/T01_011_SKM_Agung_NPC.jpg",
+    "image_sha256": "57a1840fdec23b3d3003e6546d9e57d853977c612d0c1c30e8b3efb51114d912",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T02",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Tropic\\Gorilla\\SKM_Gorilla.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "30778",
+    "source_md5": "41cf0c14ce961b050f3101229f3f1777",
+    "image": "Models/T02_012_SKM_Gorilla.jpg",
+    "image_sha256": "88db3eb66faf177caaf92b04bb1baad2c72cda13332d0f397bf16ed28437b7c5",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T03",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Tropic\\Monk\\MaleShiaolin.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "103114",
+    "source_md5": "d7d402ce26c68e8672f7ef93076480b7",
+    "image": "Models/T03_013_MaleShiaolin.jpg",
+    "image_sha256": "79c38942e8a14f06a8f4b0f76e8892c6f67bfe70d7e58fbb017f1136dd64aff0",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T04",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Tropic\\BigCat\\Meshes\\BigCat.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "55072",
+    "source_md5": "dfc16697bc151ac6d4bcb3668cd04f81",
+    "image": "Models/T04_014_BigCat.jpg",
+    "image_sha256": "14fd28525f9a6960d6b233abb75ff23c56796c9772ca2d0a3ea0ed5dc0b41de4",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T05",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\DragonOgre\\SK_DragonOgre.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "121394",
+    "source_md5": "f63826c1def83e9b54cee1c16f1741c9",
+    "image": "Models/T05_015_SK_DragonOgre.jpg",
+    "image_sha256": "6aa2c6049a03007746f8f9425d9ad7bc8997815c0c02a67ed7c9d4d49d69359a",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T06",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\FungalAvatar\\SK_FungalAvatar_Rig.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "368680",
+    "source_md5": "83e53cef43c248fe2c93391d056f8b0a",
+    "image": "Models/T06_018_SK_FungalAvatar_Rig.jpg",
+    "image_sha256": "70a7be8fd64cbf008eca4f1d3e6f22902d68c3aea97aca390df28d03e5b60e8e",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T07",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\Nomad\\SKM_Sulfur_Nomad_NPC.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "69622",
+    "source_md5": "ee15c4dfcd76fab7a2b05fe20a964fea",
+    "image": "Models/T07_019_SKM_Sulfur_Nomad_NPC.jpg",
+    "image_sha256": "e55e7975d55886f5c6f9a31eec3bbaf0123b77f321d02d9df8d82c4b1bbabdb4",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T08",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\Priestess\\SKM_Priestess.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "111486",
+    "source_md5": "8c7877a57ca615c3841a1c6d424a37ec",
+    "image": "Models/T08_020_SKM_Priestess.jpg",
+    "image_sha256": "bd3e28ae8aacbd6cb4446cfe79e80df9554a13c2e4c41a1970ae6fefc0059feb",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T09",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\SulfurCitizen\\SKM_SulfurCitizen_01.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "72575",
+    "source_md5": "c26c957b8be8a9d23b4ff990d8aa2929",
+    "image": "Models/T09_021_SKM_SulfurCitizen_01.jpg",
+    "image_sha256": "2862e87e14468acd852235c545b6fd1852df2b435ec0b1efc42fcbc3c570c7ec",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T10",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\SulfurMiner\\Sulfur_Miner.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "121217",
+    "source_md5": "d19a62f1e321fbb18f6e7cf5c8e9f3d0",
+    "image": "Models/T10_025_Sulfur_Miner.jpg",
+    "image_sha256": "1d87fc716b01a30601367ee397693267b48632e677ad8a66e3111ad1a5767354",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T11",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\Lich\\New_Lich_Version\\SK_Lich.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "158938",
+    "source_md5": "76bf54f2bf3d41e8d45623aba78697f9",
+    "image": "Models/T11_026_SK_Lich.jpg",
+    "image_sha256": "1ccd71701e45bf8c96a97cf5a6197f035c2e28d38069a903fa8c6b82d12305a6",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T12",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\Goblins\\Berserker\\BeserkerGoblin.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "114586",
+    "source_md5": "98efaf22c20fdab64deafd6ccac91847",
+    "image": "Models/T12_027_BeserkerGoblin.jpg",
+    "image_sha256": "ee1c520ac8ef69b36946a59c5f8789809e3e407abf4456545abf8e35b1931e91",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T13",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\Goblins\\Ninja\\NinjaGoblin.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "135742",
+    "source_md5": "4148304246f35501473df02a69350c14",
+    "image": "Models/T13_028_NinjaGoblin.jpg",
+    "image_sha256": "908689524059a2d1606d5036587725bc370019dd56e69b40d0f31620b0770546",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T14",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Sulfur\\Creatures\\Sulfur_Ferret\\SKM_SulfurFerret.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "34382",
+    "source_md5": "119ed1ee34a704e574968cec1b2cc188",
+    "image": "Models/T14_030_SKM_SulfurFerret.jpg",
+    "image_sha256": "122b466f1be570af5bd1cf94cdb3c1b9c1571257b9b7169714bd38924eeccc4a",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T15",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\MarshlandType\\Biscuit\\SKM_Biscuit.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "45056",
+    "source_md5": "7d5f35fcb5f8e7a1a08f74087852f1c2",
+    "image": "Models/T15_031_SKM_Biscuit.jpg",
+    "image_sha256": "c691af53458a11dcc77e36c4a758ba07717afae328a4ab428840919a8cd59d79",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T16",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\MarshlandType\\Mr_Frogward\\SK_MR_Frog.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "277152",
+    "source_md5": "d67ff625771fbfee1368bd30b42bdbe6",
+    "image": "Models/T16_034_SK_MR_Frog.jpg",
+    "image_sha256": "d566d00773cd7df7be2ceb9188814f14536476f0b14e2163babbb86b5f1cdacd",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T17",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\MarshlandType\\Teddy_Lot\\SKM_Teddy_Lot.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "41584",
+    "source_md5": "f217e4d7952625a998763452f2dbe0a1",
+    "image": "Models/T17_035_SKM_Teddy_Lot.jpg",
+    "image_sha256": "2bcc1e6ad40b007848f0e46ba982955e840fac1ea798a7730ca65bb80ffe1e7f",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T18",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\MarshlandType\\WaterFowler\\SKM_Water_Fowler.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "24674",
+    "source_md5": "1a15e35ccebe56f95ecf081d6045d1e3",
+    "image": "Models/T18_037_SKM_Water_Fowler.jpg",
+    "image_sha256": "2c5f562ff973c5ccebf45b40a75d5803ddac2c39f3a6277d9f28af361a558c98",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T19",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\MarshlandType\\WispFin\\SkM_WispFin.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "31382",
+    "source_md5": "cc9893ccb4228c2828a795d1cef1e1a0",
+    "image": "Models/T19_038_SkM_WispFin.jpg",
+    "image_sha256": "79453e5853b6b65ffaa4cdb235f7ac6ef4f274c81c96cac9bb775f47b697ddce",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T20",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Grasslands\\Arizothi\\SKM_Arizothi_NPC.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "71908",
+    "source_md5": "a7caa19fca41fb8f53ffc06f6dcddce9",
+    "image": "Models/T20_039_SKM_Arizothi_NPC.jpg",
+    "image_sha256": "89656daf404f82e72020f3064a3b3f71bb0c8f74848e7552ff495608a05c0c6d",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T21",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Grasslands\\Bunkin\\Bunny_Rigged1.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "30914",
+    "source_md5": "7a1eb0995dabfde2f184852679b80e91",
+    "image": "Models/T21_040_Bunny_Rigged1.jpg",
+    "image_sha256": "e3b21a9eff080d32a6c25e70f805d06e4834176d3e31fb316ef47ae33051b0c4",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T22",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Global\\Ariessa\\Ariessa_Fullbody_V2.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "187132",
+    "source_md5": "af47445e18c4591250300b40668eb930",
+    "image": "Models/T22_046_Ariessa_Fullbody_V2.jpg",
+    "image_sha256": "047731a764ce62d5e2c9699870897380a308d20b970bbc59e5dc8977b806d6ba",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T23",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Global\\BlueMonkey\\SM_BlueMonkeyFinal.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "1055370",
+    "source_md5": "7a40d45296eb17a1e7df50445286767e",
+    "image": "Models/T23_047_SM_BlueMonkeyFinal.jpg",
+    "image_sha256": "1c381549cf10ebb4f6df533c377e1480380c3827169252ac94341c909c5600ac",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T24",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Global\\MalePeasant\\SK_MalePeasant.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "138406",
+    "source_md5": "f85c570e7b49cacb1dcbdb98a68564f3",
+    "image": "Models/T24_049_SK_MalePeasant.jpg",
+    "image_sha256": "1c6a28917d50885c15e3e3e2bc48bfcb1032f57b53f66dd958f1a04e903635ea",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T25",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Global\\Trok\\SKM_PaintTroll_FullBody_Everything.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "119070",
+    "source_md5": "857549794ad2f2c247372e339dad9892",
+    "image": "Models/T25_051_SKM_PaintTroll_FullBody_Everything.jpg",
+    "image_sha256": "0a3201a70eec2b8c24d4bdf735e29c076f671e146a06d7cd4f4e812168b5ed7e",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T26",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Global\\Wizard\\SKM_Wizard.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "32318",
+    "source_md5": "c60ea4b09014203a8b5574410f3060cc",
+    "image": "Models/T26_052_SKM_Wizard.jpg",
+    "image_sha256": "de9e53998269a68241c25e3038612ddd227b160a774f90384dd7a97652f0c9a7",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T27",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Desert\\Blacksmith\\SKM_SandcatBlacksmith.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "116367",
+    "source_md5": "e07a613bcdde25de5ccc4451ad887da3",
+    "image": "Models/T27_053_SKM_SandcatBlacksmith.jpg",
+    "image_sha256": "46e0c5fd2aa4364f14d51c61b7610308a727f819468b7968e53846cbff9662bb",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T28",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Desert\\LittleDemon\\LittleDemon_RIG.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "120758",
+    "source_md5": "82f04031ce33ffbb56a7bab2eb461cb3",
+    "image": "Models/T28_055_LittleDemon_RIG.jpg",
+    "image_sha256": "03f92caf9474522da0a48391c9f35e548b4a1124aac3994dbb914956845ecfc0",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T29",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Desert\\scorpion\\scorpion.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "1948861",
+    "source_md5": "a97095ea3d70ec1733645dc16cecb317",
+    "image": "Models/T29_056_scorpion.jpg",
+    "image_sha256": "66fa805413babeae3b1ca78c3c400d33df767255b58e0d830a52baef669c7a63",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T30",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Desert\\Fanatic_Male\\Mesh\\SKM_Desert_Fanatic_Male.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "60741",
+    "source_md5": "10f553c87aa83a172ba2b7665e284d03",
+    "image": "Models/T30_057_SKM_Desert_Fanatic_Male.jpg",
+    "image_sha256": "4929a94c2a82cfe25026ca652ec1651ee20076b3a449c3263cbd2b7e93eca1e2",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T31",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Desert\\Creatures\\Desert_Ferret\\SKM_DesertFerrret.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "31542",
+    "source_md5": "5222fc45673d508996b5f7efaab25bc7",
+    "image": "Models/T31_058_SKM_DesertFerrret.jpg",
+    "image_sha256": "4527604cf04f4678d74466865c49e544df6d7e113120b15f340f4e07c0bfb17a",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T32",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Birdfolk\\SKM_birdfolk_NPC.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "51421",
+    "source_md5": "12506eede804a9f723af14232ebb4dda",
+    "image": "Models/T32_060_SKM_birdfolk_NPC.jpg",
+    "image_sha256": "99bf8bede5e86b0d8f299a40fd0ff9d831eb5e2555799692336be4f05680afa2",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T33",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Birdfolk\\SK_King_birdfolk.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "54394",
+    "source_md5": "e3f7e10019055cea56f89051c69ea673",
+    "image": "Models/T33_061_SK_King_birdfolk.jpg",
+    "image_sha256": "202e4ad1b6cd9bb25800d239c94581b90f7d2ef8b3cd93e922c6434a3af5cda7",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T34",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Goblin_Guard_Male\\SKM_GoblinGuardMale.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "54170",
+    "source_md5": "f7f58b50174271784c9942f317de98b7",
+    "image": "Models/T34_062_SKM_GoblinGuardMale.jpg",
+    "image_sha256": "53121445bca4b0e851147322ece040d4f02765b5ad8d7e9fcb09a9b533a1d331",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T35",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Lucy_Witch\\SKM_Lucy_Witch.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "55109",
+    "source_md5": "5b7c58407ca279bef7e023141ea13ada",
+    "image": "Models/T35_063_SKM_Lucy_Witch.jpg",
+    "image_sha256": "676f3dd9942dc2690d81dcf1f3e15dbeb8816f12abe3dc3673568dccf5b5d0c6",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T36",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\NoodleDuck\\SKM_clifftops_NoodleDuck_shopowner.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "14450",
+    "source_md5": "bf25438a21ed4b630503ffc3b2768132",
+    "image": "Models/T36_064_SKM_clifftops_NoodleDuck_shopowner.jpg",
+    "image_sha256": "9eee77a47df143654e511da538b1e9b1d6f5c5d2dda50e02bb6bf4fcb323b9c2",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T37",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\produce_mertchant\\SMK_npc_cabbage_merchant.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "18086",
+    "source_md5": "4790206fa5e9ecf9b703ab13d8e4b86b",
+    "image": "Models/T37_065_SMK_npc_cabbage_merchant.jpg",
+    "image_sha256": "65a4339ed35f413c0664345d2c4f886b268c2f2fb59b54e74b322e63980756d7",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T38",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Villager_01\\Villager_001.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "20164",
+    "source_md5": "b8c6a89803f7c955b0ad9f1199436a82",
+    "image": "Models/T38_066_Villager_001.jpg",
+    "image_sha256": "7ef3c7ccec3a1948d2cf5c984eecfa244ff71a7302c7eea351a08acce291e6f3",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T39",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Villager_02\\Villager_002.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "18599",
+    "source_md5": "817b1fd2489ee35d9bd57b4f34a579ec",
+    "image": "Models/T39_067_Villager_002.jpg",
+    "image_sha256": "ce4476b2f21bf2b3679c2691ff2654b0a246d45a863711033ff0108a5d5e9604",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T40",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Villager_03\\Villager_003.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "17371",
+    "source_md5": "ae123515020e88fe5b6ddda4ee6b822f",
+    "image": "Models/T40_068_Villager_003.jpg",
+    "image_sha256": "8a12ba10b3b47fe248a66da5bc857d763c0fe97e47548b720c00987bb178b7ec",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T41",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Villager_04\\Villager_004.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "22440",
+    "source_md5": "81919d030f3974dc22d3a10e3bcb289d",
+    "image": "Models/T41_069_Villager_004.jpg",
+    "image_sha256": "926ad8cf312902ac29f40b099148d843b2bf0b342112611600ea37c4c658aa74",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T42",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Villager_05\\Villager_005.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "19238",
+    "source_md5": "3b0381f12bf6cf490b96f37b5cf705a8",
+    "image": "Models/T42_070_Villager_005.jpg",
+    "image_sha256": "c5946de792e5822d9577ea7e49966f4e7c37eb3117d1da3eafedb7b4c68e6f14",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T43",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Villager_06\\Villager_006.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "22030",
+    "source_md5": "22c31e17bc5c222eac7b5535d77289fd",
+    "image": "Models/T43_071_Villager_006.jpg",
+    "image_sha256": "e5ac39f36bc1b9cdc4d3783de937b258a062dfae22a2d20073791288800eee51",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T44",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Clifftop\\Creatures\\Jellybean_Cat\\SKM_Jellybean.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "8580",
+    "source_md5": "feaef0dca21eb70e802281c00e54f34b",
+    "image": "Models/T44_072_SKM_Jellybean.jpg",
+    "image_sha256": "8eeca8d01957f537e831166dc8ee280b329fa46eab7b78fef1c12c8ba3752a7a",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T45",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Arctic\\CabraMan\\Faun.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "723999",
+    "source_md5": "5978545e7517e9cee01e31cac2be760c",
+    "image": "Models/T45_074_Faun.jpg",
+    "image_sha256": "ac0d51efa381e599fbcec58943f511c6ed591e43b220c4c7ff4bd4bb6f127e1c",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T46",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Arctic\\ICE_CATTLE_SOLDIER\\ICE_BONE_MA.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "441576",
+    "source_md5": "a75dd9ba719425b39af5cb529cb16858",
+    "image": "Models/T46_075_ICE_BONE_MA.jpg",
+    "image_sha256": "f13f2e7855491016fb58f9669d97cacbaca63400b2146cc9d07075342148dc51",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T47",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Arctic\\The_Iktu_Brillipiscis\\SK_iktu_B.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "74591",
+    "source_md5": "de5a750483ee45ce91b04237ac4587b6",
+    "image": "Models/T47_076_SK_iktu_B.jpg",
+    "image_sha256": "2d4bf4c303b1961ed28d308d741896f1dd3167e67baea301a55a0d5c336b0249",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T48",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Arctic\\The_Soldier_Iktu\\SK_Iktu_Soldier_Rig.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "74571",
+    "source_md5": "9a2927f56d8ab99409b5ad8ba9aec7e4",
+    "image": "Models/T48_077_SK_Iktu_Soldier_Rig.jpg",
+    "image_sha256": "010b4d4b53103eec5d637142bead24c90590b6c073f9b9df844920b0a6f1150b",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T49",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\NPCs\\Arctic\\Penguin\\Rigged\\Penguin_LWC.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "88562",
+    "source_md5": "9e31436517f88f4c47e9fdbbad3d9716",
+    "image": "Models/T49_078_Penguin_LWC.jpg",
+    "image_sha256": "881b425040ea5600c2f9aa0cd0601c78925d92209797072f337f5d11ae82a0ab",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T50",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\Main\\Adventurer\\SKM_Adventurer.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "31053",
+    "source_md5": "3ce536da14e55ef2b7d462188fe0373c",
+    "image": "Models/T50_080_SKM_Adventurer.jpg",
+    "image_sha256": "f91ddfff9e713ea9d0380f209034d68aae501288f83d96e445630b49780bd02b",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T51",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\Main\\Amanita_Witch_Mushroom\\SKM_Amanita.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "71388",
+    "source_md5": "e80e8cde2ca3e2d78cbf09673b748b25",
+    "image": "Models/T51_085_SKM_Amanita.jpg",
+    "image_sha256": "9e87eaadfe3142041ca77117568d5ab0fbaacc7fd7a6e59f17ef6bcaf177aa51",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T52",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\Main\\Clown\\SKM_Clown_fullbody_rig3.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "24726",
+    "source_md5": "0f67285a0c6f9c067b40fc76d8f042f6",
+    "image": "Models/T52_103_SKM_Clown_fullbody_rig3.jpg",
+    "image_sha256": "64a52105037f303edb8c482d1b4a7c2b47293ceac7bd1feaa8c9654858120d4c",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  },
+  {
+    "id": "T53",
+    "asset_path": "E:\\UE_projects\\ProjectTitan\\Content\\Characters\\Main\\Courier\\SKM_Sulfur_Courier_NPC.uasset",
+    "asset_class": "/Script/Engine.SkeletalMesh",
+    "triangles_lod0": "64639",
+    "source_md5": "d02f34280b3125c97a450763e96e0a6f",
+    "image": "Models/T53_111_SKM_Sulfur_Courier_NPC.jpg",
+    "image_sha256": "8c7320983462ffc978b3d5d49e17ec40e8f7232266dac55996532052a902b830",
+    "source": "Original embedded Unreal thumbnail; image bytes unchanged; no editor capture."
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "asset": "valley-art-target-v01.png",
+  "created": "2026-10-31",
+  "type": "3D environment visual target concept",
+  "status": "Generated concept; not an Unreal render, mesh, or completed art overhaul. User approval pending.",
+  "generator": "Built-in image_gen; one reference-based generation and one crown-framing correction.",
+  "reference": "Docs/Images/v03/valley-start.png",
+  "prompt": "valley-art-target-v01.prompt.txt",
+  "refinement": "valley-art-target-v01.refinement.txt",
+  "evidence": [
+    "Docs/ArtDirection.md",
+    "Docs/Design.md",
+    "Docs/ProjectOverview.zh-CN.md",
+    "Source/Verdant/VerdantLandscape.cpp",
+    "Source/Verdant/VerdantWorld.cpp",
+    "Source/Verdant/VerdantCharacter.cpp"
+  ],
+  "prior_conversation_decisions": [
+    "2026-10-30: User requested broad natural environment, continuous growth and differently sized inhabitants.",
+    "2026-10-31: Delegated art planning. Established direction: soft low-poly woodland fable, moss greens, sandstone, warm gold and rounded readable silhouettes."
+  ],
+  "retained": [
+    "Third-person hooded traveler and open valley approach",
+    "Branching traversable earth paths",
+    "Mother Tree ahead with amber nutrient core",
+    "Western grove with low nutrient plants and working inhabitants",
+    "Natural rock/tree scale references, no town or new architecture"
+  ],
+  "world_anchor_meters": {
+    "spawn": [
+      -10,
+      -58
+    ],
+    "junction": [
+      0,
+      10
+    ],
+    "mother_tree": [
+      0,
+      36
+    ],
+    "moss_stone_grove": [
+      -45,
+      -15
+    ],
+    "red_earth_grove": [
+      42,
+      -10
+    ],
+    "highland_grove": [
+      5,
+      65
+    ]
+  },
+  "implementation_targets": {
+    "valley_width_m": 400,
+    "mother_tree_height_m": 21,
+    "player_height_range_m": [
+      0.81,
+      4.5
+    ],
+    "horizontal_camera_fov_degrees": 72
+  },
+  "interpretation": "Coordinates and dimensions inform the concept, but generated pixels are not a metrically exact projection. Plant count, foliage density, cliff shapes and apparent landmark distances require adjustment in the actual level. Preserve gameplay clearances while replacing art.",
+  "review": [
+    "Inspected both generated images.",
+    "Rejected first composition's cropped Mother Tree crown; final crown is fully visible.",
+    "Final has no HUD or text; paths, grove interaction space and character silhouette are readable.",
+    "Material microdetail and foliage density should be simplified as needed to match the low-detail art brief and measured runtime budget."
+  ],
+  "scope": "Only concept image and reproduction records added. No gameplay source, map, existing asset inventory, or paid 3D generation services modified."
+}

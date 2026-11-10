@@ -1,0 +1,28 @@
+{
+  "kind": "native_engine_csv_profiler",
+  "build_source_commit": "fc601b7",
+  "resolution": "1280x720 offscreen",
+  "gpu": "NVIDIA GeForce RTX5060 Laptop GPU",
+  "sample_frames": "600..3599",
+  "capture_sha256": "057c6ec301e086289f1fb8edacd97132c28f88df4331155839405556ec7e0d7b",
+  "process_exit_code": 777003,
+  "qualification": "Capture completed and game assertions passed, but this instrumentation-enabled process exited abnormally after engine shutdown. Do not count it as a clean gameplay validation. Ordinary no-profiler run subsequently exited0. Exact engine crash instruction not established.",
+  "metrics_ms": {
+    "FrameTime": {
+      "mean": 4.0977282,
+      "p95": 4.7965
+    },
+    "GameThreadTime": {
+      "mean": 1.7499202666666667,
+      "p95": 1.9857
+    },
+    "RenderThreadTime": {
+      "mean": 3.3566514333333335,
+      "p95": 3.984
+    },
+    "GPUTime": {
+      "mean": 4.087888033333333,
+      "p95": 4.6831
+    }
+  }
+}

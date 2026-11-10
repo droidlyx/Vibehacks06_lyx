@@ -1,0 +1,24 @@
+PASS Escorted wildlife and neutral resident do not initiate mutual combat
+PASS Escorted wildlife keeps its peaceful follow agreement
+PASS Follower acquires its leader's attacker beyond ordinary proximity aggro
+PASS Aggressor actually strikes the leader before its attacks are isolated
+PASS Follower travels and deals real damage to the leader's attacker
+PASS Autonomous aid does not hit its leader or another follower
+PASS Successful aid preserves the follower's agreement
+PASS An actual external strike preserves the companion's follow plan
+PASS An actual attack by the leader breaks the follow agreement
+PASS Injured small resident physically separates from a stronger attacker
+PASS Safe retreat restores health by consuming actual carried rations
+PASS Emergency ration use preserves promised food and a remaining personal reserve
+PASS Resident abandons a distant pursuit outside its home area
+PASS Pursuit cooldown prevents immediate proximity reacquisition
+PASS A new actual strike bypasses search cooldown and immediately marks its attacker
+PASS Resident actually retaliates after receiving a fresh strike during cooldown
+PASS Physical obstruction fixture creates four collidable walls
+PASS Physical inability to progress triggers movement recovery
+PASS Blocked courier retains actual inventory and promise without remote donation
+PASS Courier physically travels around the finite front obstacle
+PASS Restoration changes only after courier reaches the mother tree
+PASS Recovered courier completes its original five-food promise
+PASS Delivery deducts real inventory and records the same amount in the contribution ledger
+Failures: 0

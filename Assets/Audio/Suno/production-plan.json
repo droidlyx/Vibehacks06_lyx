@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "project": "Verdant Accord",
+  "status": "exploration_music_imported_runtime_wiring_added",
+  "prepared_on": "2026-10-31",
+  "provenance": {
+    "kind": "production brief only",
+    "generated_assets_claimed": false,
+    "audition_completed": true,
+    "runtime_mix_approved": false,
+    "replace_existing_audio_automatically": false,
+    "note": "User approved shortlisted audio and integration. Source preparation and 17-asset import verified; final in-game mix awaits user manual play."
+  },
+  "platform_workflow": {
+    "service": "Suno website",
+    "interface": "Visible browser UI; no unofficial API",
+    "music_model_observed": "v6",
+    "instrumental_method_observed": "Leave Lyrics blank",
+    "sounds_modes_verified_by_parent": [
+      "One Shot",
+      "Loop"
+    ],
+    "account_snapshot_reported_by_parent": {
+      "plan": "Pro",
+      "credits_displayed": 2500,
+      "downloads_displayed": 20,
+      "note": "Session UI observation only; not a remaining-credit guarantee or generation cost estimate."
+    },
+    "retention": [
+      "Original downloaded file",
+      "Work URL",
+      "Exact prompt",
+      "Generation time",
+      "Selected model or Sounds mode",
+      "Any displayed credit usage",
+      "Export format",
+      "Rights context at creation"
+    ],
+    "production_limits": [
+      "Requested duration, tempo, key, motif, and seamless looping require inspection; prompts do not guarantee them.",
+      "Independent music generations are not sample-aligned stems and must not be layered as if they share a timeline.",
+      "Prefer a supported continuation or reuse workflow from the accepted exploration theme when developing the restoration piece.",
+      "Keep wildlife and weather out of the music master so ambience remains controllable.",
+      "Do not replace the six current project-original cues until the new files have been downloaded, auditioned, edited, and compared in-game."
+    ]
+  },
+  "direction": {
+    "description_zh": "暖日光、秋叶、苔绿与琥珀生机组成的林地寓言；配乐温暖克制，允许生存压力与人与人之间的分歧。",
+    "tonal_center": "D",
+    "motif": "A short rising seed-like motif, approximately three notes; continuity is an editorial goal, not a generation guarantee.",
+    "shared_instruments": [
+      "wooden flute",
+      "harp",
+      "nylon-string guitar",
+      "felt piano",
+      "cello",
+      "warm string harmonics",
+      "sparse wooden percussion"
+    ],
+    "narrative_constraint": "Mother Tree restoration is renewal rather than the end of the game or proof of a morally good outcome. Society and ecology continue.",
+    "avoid": [
+      "vocals",
+      "choir",
+      "epic brass",
+      "trailer impacts",
+      "EDM",
+      "constant full orchestration",
+      "baked-in birds and wind"
+    ]
+  },
+  "music": [
+    {
+      "id": "MUS_Explore",
+      "title_zh": "苔光小径",
+      "title_en": "Mosslit Paths",
+      "status": "imported_to_unreal",
+      "purpose": "Exploration, harvesting, residents' daily life",
+      "target_duration_seconds": [
+        120,
+        180
+      ],
+      "target_bpm": [
+        76,
+        82
+      ],
+      "target_meter": "6/8",
+      "target_tonality": "D major, open fifths and pentatonic colors",
+      "loop_edit_target": "Select a repeatable middle phrase after audition; do not loop a full generated song blindly.",
+      "game_mapping": "New music system default exploration state; no existing music asset or playback hook is claimed.",
+      "style_prompt": "Instrumental woodland chamber-folk game underscore. Warm autumn sunlight in an inhabited valley; intimate wooden flute, delicate harp and nylon-string guitar, felt piano, soft cello and warm string harmonics. Around 80 BPM, gentle 6/8 sway, D major with open fifths and pentatonic colors. A small rising seed-like motif, quiet curiosity, kindness and room for uncertainty. Sparse evolving arrangement, restrained dynamics, long breathing spaces for exploration and conversation, natural acoustic timbres. Repeatable middle passages. No vocals, choir, epic brass, huge drums, EDM, trailer risers, birds or wind.",
+      "received_file": "Originals/VA01_Mosslit_Paths.mp3"
+    },
+    {
+      "id": "MUS_Tension",
+      "title_zh": "荫下的分歧",
+      "title_en": "Beneath the Canopy",
+      "status": "planned",
+      "purpose": "Nearby real hostility or ongoing combat",
+      "target_duration_seconds": [
+        90,
+        120
+      ],
+      "target_bpm": [
+        96,
+        104
+      ],
+      "target_meter": "4/4",
+      "target_tonality": "D tonal center with Dorian tension and open fifths",
+      "loop_edit_target": "Sustained low-intensity pulse with an editable entry and exit.",
+      "game_mapping": "New music state based on nearby hostility and combat; do not trigger only because a passive wild creature exists.",
+      "style_prompt": "Instrumental low-intensity woodland conflict underscore for a survival and negotiation game. Muted cello ostinato, low viola, dry frame drum, soft wooden percussion, restrained breathy flute fragments. Around 100 BPM, D tonal center with Dorian tension and open fifths. Alert, vulnerable and grounded: a disagreement in a living community. Gradual restrained build, readable pulse, space between attacks, sustained unresolved passages suitable for editing into loops. Acoustic woodland palette. No vocals, choir, aggressive distortion, heavy metal, heroic fanfare, cinematic impacts, or dramatic breakdowns."
+    },
+    {
+      "id": "MUS_Renewal",
+      "title_zh": "母树回声",
+      "title_en": "The Tree Remembers",
+      "status": "planned",
+      "purpose": "Restoration transition followed by renewed exploration",
+      "target_duration_seconds": [
+        90,
+        120
+      ],
+      "target_bpm": [
+        76,
+        82
+      ],
+      "target_meter": "6/8",
+      "target_tonality": "D major, warm suspended harmonies",
+      "loop_edit_target": "Separate a short opening bloom from the repeatable calm middle and preserve a useful tail.",
+      "game_mapping": "New music state after World.bRestored; retain the AFX_Restore event cue as a separate source.",
+      "style_prompt": "Instrumental woodland renewal cue opening into calm exploration. A brief tender bloom of harp, felt piano and warm strings, followed by wooden flute and gently moving cello. Around 80 BPM, flowing 6/8, D major, open suspended harmonies resolving with warmth. A small rising seed-like motif grows into a fuller phrase. Ancient roots receiving nourishment, amber light returning to the canopy, a community whose story continues. Hopeful and quietly emotional with a trace of uncertainty. Restrained dynamics, spacious acoustic arrangement, editable sustained tail and repeatable middle. No vocals, choir, epic brass, trailer percussion, or sound effects."
+    }
+  ],
+  "sound_effects": [
+    {
+      "id": "AFX_Swing",
+      "status": "planned_candidate",
+      "stage": 1,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        0.12,
+        0.25
+      ],
+      "target_variants": 4,
+      "target_format": "Mono, 48 kHz PCM WAV after editing",
+      "tonality": "Unpitched",
+      "current_game_hook": "VerdantCharacter::Attack, PlayCue(\"Swing\")",
+      "existing_ue_path": "/Game/Art/Audio/AFX_Swing",
+      "prompt": "One isolated short unarmed swing whoosh: soft sleeve cloth cutting through air, quick close dry swish, natural woodland adventurer foley. Immediate attack, clean short tail. No impact, voice, music, ambience, echo, or repeated sequence.",
+      "edit_note": "Choose separate light and heavy takes; retain precise immediate attack timing."
+    },
+    {
+      "id": "AFX_Hit",
+      "status": "planned_candidate",
+      "stage": 1,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        0.12,
+        0.3
+      ],
+      "target_variants": 4,
+      "target_format": "Mono, 48 kHz PCM WAV after editing",
+      "tonality": "Unpitched",
+      "current_game_hook": "VerdantCharacter::ReceiveStrike, PlayCue(\"Hit\")",
+      "existing_ue_path": "/Game/Art/Audio/AFX_Hit",
+      "prompt": "One isolated soft body impact through rough cloth: compact low damped thump with a small fabric transient, grounded and readable, non-gory stylized game foley. Immediate attack and quick decay. No bone cracks, metallic ring, voice, music, room echo, or repeated hits.",
+      "edit_note": "Maintain attack readability while keeping peaks below clipping during overlapping combat."
+    },
+    {
+      "id": "AFX_Pickup",
+      "status": "planned_candidate",
+      "stage": 1,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        0.2,
+        0.4
+      ],
+      "target_variants": 4,
+      "target_format": "Mono, 48 kHz PCM WAV after editing",
+      "tonality": "Very quiet D/A two-note accent over foley",
+      "current_game_hook": "World::Harvest, World::Transfer and character loot collection, PlayCue(\"Pickup\")",
+      "existing_ue_path": "/Game/Art/Audio/AFX_Pickup",
+      "prompt": "One isolated woodland fruit pickup: a tiny fruit stem snap, soft leaf rustle, and a very quiet warm two-note wooden chime suggesting D and A. Tactile, gentle, quick and dry. One event only. No coin jingle, arcade beep, voice, music bed, wind, or birds.",
+      "edit_note": "Frequent harvesting needs subtle variants. Sharing currently uses the same cue, so avoid a strong ripping or theft-like character."
+    },
+    {
+      "id": "AFX_Grow",
+      "status": "planned_candidate",
+      "stage": 1,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        0.5,
+        0.9
+      ],
+      "target_variants": 3,
+      "target_format": "Mono, 48 kHz PCM WAV after editing",
+      "tonality": "Warm rising D-to-A fifth",
+      "current_game_hook": "Character nutrition/growth feedback and World::Tend, PlayCue(\"Grow\")",
+      "existing_ue_path": "/Game/Art/Audio/AFX_Grow",
+      "prompt": "One isolated gentle magical growth pulse: soft organic creak and fabric stretch under a warm low resonant tone rising a fifth from D toward A, ending in a tiny leaf shimmer. Intimate natural magic, rounded attack, short soft decay. No dramatic power-up, bass explosion, voice, music bed, or repeated pulses.",
+      "edit_note": "This cue is also used for soil tending; keep the identity organic and not exclusively bodily."
+    },
+    {
+      "id": "AFX_Offer",
+      "status": "planned_candidate",
+      "stage": 1,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        0.4,
+        0.7
+      ],
+      "target_variants": 3,
+      "target_format": "Mono, 48 kHz PCM WAV after editing",
+      "tonality": "Subtle D-major warmth",
+      "current_game_hook": "World::Donate before restoration, PlayCue(\"Offer\")",
+      "existing_ue_path": "/Game/Art/Audio/AFX_Offer",
+      "prompt": "One isolated offering to an ancient tree: a few soft seeds landing in a wooden hollow, followed by a brief warm D-major harp-like resonance. Small, sincere, tactile and luminous. Clean immediate onset, gentle short tail. No coins, victory fanfare, voice, full music, wind, or multiple events.",
+      "edit_note": "The musical accent should remain quieter than the tactile event."
+    },
+    {
+      "id": "AFX_Restore",
+      "status": "planned_candidate",
+      "stage": 1,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        2,
+        4
+      ],
+      "target_variants": 2,
+      "target_format": "Mono for current 3D cue path; stereo only for a separately implemented nonspatial stinger",
+      "tonality": "D-major bloom with open fifths",
+      "current_game_hook": "World::Donate when bRestored changes, PlayCue(\"Restore\")",
+      "existing_ue_path": "/Game/Art/Audio/AFX_Restore",
+      "prompt": "One isolated ancient tree awakening: a soft resonant wooden swell, delicate seed-like chimes rising into a warm D-major bloom, then a clean gentle decay. Hopeful natural magic, restrained and spacious, a world beginning to breathe again. No explosion, epic fanfare, choir, voice, sustained background music, birds, or wind.",
+      "edit_note": "Keep this event separate from MUS_Renewal. Test current 3D attenuation at the player's restoration distance."
+    },
+    {
+      "id": "AMB_Canopy",
+      "status": "optional_stage_2",
+      "stage": 2,
+      "suno_sounds_mode": "Loop",
+      "target_duration_seconds": [
+        20,
+        40
+      ],
+      "target_variants": 2,
+      "target_format": "Stereo 48 kHz PCM WAV after editing",
+      "tonality": "Unpitched",
+      "current_game_hook": "None; requires a new ambience loop player",
+      "prompt": "Seamless quiet woodland canopy ambience loop: gentle broadleaf rustling in a light steady breeze, soft natural air movement, warm open daytime space. Consistent low intensity, no obvious start or ending. No music, voices, footsteps, insects, distinct bird calls, thunder, or sudden gusts.",
+      "edit_note": "Audition the loop boundary repeatedly. Add distant birds as separate sparse sources later."
+    },
+    {
+      "id": "UI_Tap",
+      "status": "optional_stage_2",
+      "stage": 2,
+      "suno_sounds_mode": "One Shot",
+      "target_duration_seconds": [
+        0.06,
+        0.15
+      ],
+      "target_variants": 3,
+      "target_format": "Mono 48 kHz PCM WAV after editing",
+      "tonality": "Unpitched or softly resonant wood",
+      "current_game_hook": "None; requires a new UI sound route",
+      "prompt": "One tiny dry polished-wood tap with a soft felt edge, warm tactile woodland menu confirmation. Extremely short, quiet and crisp. No keyboard typing, electronic beep, chime melody, voice, ambience, echo, or repeated clicks.",
+      "edit_note": "Trim to a precise onset and preserve headroom for rapid UI interactions."
+    }
+  ],
+  "mixing_and_integration": {
+    "status": "guidance_not_implemented",
+    "buses": [
+      "Master",
+      "Music",
+      "Ambience",
+      "SFX",
+      "UI"
+    ],
+    "existing_sfx_route": "/Game/Art/Audio/SC_VerdantSFX",
+    "existing_sfx_class_gain_db": -4,
+    "channel_policy": "Stereo for long music and broad ambience; mono for spatial event cues.",
+    "music_storage": "Stream long music; keep brief event cues readily available.",
+    "crossfade_seconds": [
+      2,
+      4
+    ],
+    "threat_release_hold_seconds": [
+      6,
+      10
+    ],
+    "dialogue_music_duck_db": [
+      -6,
+      -4
+    ],
+    "dialogue_duck_attack_seconds": 0.25,
+    "dialogue_duck_release_seconds": 1,
+    "dialogue_note": "Current dialogue is text-only. Duck music for reading; this is not a claim of an implemented voice sidechain.",
+    "timing_note": "Gameplay impact and UI feedback must trigger immediately. Do not delay them to a music beat. Quantized music changes require measured tempo and an audio-clock implementation.",
+    "size_pitch_note": "The existing PlayCue already varies pitch by body size and time. Review this behavior against each newly generated pitched cue before import.",
+    "concurrency_note": "Existing event concurrency is globally limited to four sounds. Check restoration tails and repeated pickups before changing the limit.",
+    "loudness_note": "Normalize and balance after listening, retain headroom, and inspect combined playback for clipping. Do not infer perceptual approval from PCM measurements."
+  },
+  "acceptance_checks": [
+    "Audition every selected candidate before replacing any existing asset.",
+    "Verify no unintended voice, music bed in foley, or conspicuous generation artifact.",
+    "Verify duration, attack timing, clean tail, export format, and loop edits.",
+    "Listen to at least two consecutive music or ambience loops.",
+    "Compare four consecutive harvests for repetition fatigue.",
+    "Compare combat sounds at small and large character sizes.",
+    "Listen to dialogue opening and closing, including duck recovery.",
+    "Listen to the actual restoration cue followed by the renewed music.",
+    "Check overlapping events on headphones and speakers.",
+    "Keep generated-source records distinct from the existing project-original synthesized audio."
+  ],
+  "sfx_sourcing_recommendation": "Prefer CC0 library assets and project-original synthesis for repeated SFX; reserve Suno generations and exports for music and selected signature cues."
+}

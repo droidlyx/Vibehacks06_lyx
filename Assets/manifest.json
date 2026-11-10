@@ -1,0 +1,606 @@
+{
+  "schema": 2,
+  "updated": "2026-10-31",
+  "assets": [
+    {
+      "id": "SK_Traveler",
+      "category": "skeletal_character",
+      "role": "player and ranger residents",
+      "ue_path": "/Game/Art/Characters/SK_Traveler",
+      "prepared_file": "Assets/Prepared/SK_Traveler.fbx",
+      "source": "Quaternius Modular Character Outfits Fantasy Standard + Universal Base Characters Standard",
+      "source_outfit": "Female_Ranger",
+      "license": "CC0-1.0",
+      "provenance": "Assets/provenance.json",
+      "license_files": [
+        "Assets/Source/Quaternius/outfits/License_Standard.txt",
+        "Assets/Source/Quaternius/base/License_Standard.txt"
+      ],
+      "vertices": 28018,
+      "triangles": 32380,
+      "source_bones": 65,
+      "shared_skeleton": "/Game/Art/Characters/SK_Traveler_Skeleton",
+      "status": "imported",
+      "visual_check": "Blender full-body render inspected; in-game Traveler material and silhouette inspected; full animation timing requires live playback."
+    },
+    {
+      "id": "SK_Gatherer",
+      "category": "skeletal_character",
+      "role": "gatherer residents",
+      "ue_path": "/Game/Art/Characters/SK_Gatherer",
+      "prepared_file": "Assets/Prepared/SK_Gatherer.fbx",
+      "source": "Quaternius Modular Character Outfits Fantasy Standard + Universal Base Characters Standard",
+      "source_outfit": "Male_Peasant",
+      "license": "CC0-1.0",
+      "provenance": "Assets/provenance.json",
+      "license_files": [
+        "Assets/Source/Quaternius/outfits/License_Standard.txt",
+        "Assets/Source/Quaternius/base/License_Standard.txt"
+      ],
+      "vertices": 12542,
+      "triangles": 19031,
+      "source_bones": 65,
+      "shared_skeleton": "/Game/Art/Characters/SK_Traveler_Skeleton",
+      "status": "imported",
+      "visual_check": "Blender full-body render inspected; in-game Traveler material and silhouette inspected; full animation timing requires live playback."
+    },
+    {
+      "id": "SK_Keeper",
+      "category": "skeletal_character",
+      "role": "keeper residents",
+      "ue_path": "/Game/Art/Characters/SK_Keeper",
+      "prepared_file": "Assets/Prepared/SK_Keeper.fbx",
+      "source": "Quaternius Modular Character Outfits Fantasy Standard + Universal Base Characters Standard",
+      "source_outfit": "Female_Peasant",
+      "license": "CC0-1.0",
+      "provenance": "Assets/provenance.json",
+      "license_files": [
+        "Assets/Source/Quaternius/outfits/License_Standard.txt",
+        "Assets/Source/Quaternius/base/License_Standard.txt"
+      ],
+      "vertices": 16895,
+      "triangles": 22266,
+      "source_bones": 65,
+      "shared_skeleton": "/Game/Art/Characters/SK_Traveler_Skeleton",
+      "status": "imported",
+      "visual_check": "Blender full-body render inspected; in-game Traveler material and silhouette inspected; full animation timing requires live playback."
+    },
+    {
+      "id": "A_Idle",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Idle",
+      "prepared_file": "Assets/Prepared/A_Idle.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Idle_Loop",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 2.5,
+      "status": "imported"
+    },
+    {
+      "id": "A_Walk",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Walk",
+      "prepared_file": "Assets/Prepared/A_Walk.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Walk_Loop",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 1.3333333730697632,
+      "status": "imported"
+    },
+    {
+      "id": "A_Run",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Run",
+      "prepared_file": "Assets/Prepared/A_Run.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Jog_Fwd_Loop",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 0.9333333373069763,
+      "status": "imported"
+    },
+    {
+      "id": "A_Attack",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Attack",
+      "prepared_file": "Assets/Prepared/A_Attack.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Punch_Cross",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 1.0,
+      "status": "imported"
+    },
+    {
+      "id": "A_Hit",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Hit",
+      "prepared_file": "Assets/Prepared/A_Hit.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Hit_Chest",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 0.3333333432674408,
+      "status": "imported"
+    },
+    {
+      "id": "A_Death",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Death",
+      "prepared_file": "Assets/Prepared/A_Death.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Death01",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 2.4000000953674316,
+      "status": "imported"
+    },
+    {
+      "id": "A_Dodge",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Dodge",
+      "prepared_file": "Assets/Prepared/A_Dodge.fbx",
+      "source": "Quaternius Universal Animation Library 1 Standard",
+      "source_action": "Roll",
+      "source_file": "Assets/Source/Quaternius/UAL1_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL1_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 1.4666666984558105,
+      "status": "imported"
+    },
+    {
+      "id": "A_Consume",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Consume",
+      "prepared_file": "Assets/Prepared/A_Consume.fbx",
+      "source": "Quaternius Universal Animation Library 2 Standard",
+      "source_action": "Consume",
+      "source_file": "Assets/Source/Quaternius/UAL2_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL2_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 1.3333333730697632,
+      "status": "imported"
+    },
+    {
+      "id": "A_Carry",
+      "category": "skeletal_animation",
+      "ue_path": "/Game/Art/Characters/Animations/A_Carry",
+      "prepared_file": "Assets/Prepared/A_Carry.fbx",
+      "source": "Quaternius Universal Animation Library 2 Standard",
+      "source_action": "Walk_Carry_Loop",
+      "source_file": "Assets/Source/Quaternius/UAL2_Standard.glb",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/UAL2_LICENSE.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "duration_seconds": 2.0,
+      "status": "imported"
+    },
+    {
+      "id": "SM_Tree01",
+      "category": "static_nature",
+      "ue_path": "/Game/Art/Nature/SM_Tree01",
+      "prepared_file": "Assets/Prepared/SM_Tree01.fbx",
+      "source": "Quaternius Stylized Nature MegaKit Standard",
+      "source_model": "CommonTree_1",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/nature/License_Standard.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "vertices": 9458,
+      "triangles": 6265,
+      "status": "imported",
+      "placement": "Instance size and ground alignment use mesh bounds; no authored environment map is reused."
+    },
+    {
+      "id": "SM_Tree02",
+      "category": "static_nature",
+      "ue_path": "/Game/Art/Nature/SM_Tree02",
+      "prepared_file": "Assets/Prepared/SM_Tree02.fbx",
+      "source": "Quaternius Stylized Nature MegaKit Standard",
+      "source_model": "TwistedTree_1",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/nature/License_Standard.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "vertices": 14064,
+      "triangles": 9564,
+      "status": "imported",
+      "placement": "Instance size and ground alignment use mesh bounds; no authored environment map is reused."
+    },
+    {
+      "id": "SM_Rock01",
+      "category": "static_nature",
+      "ue_path": "/Game/Art/Nature/SM_Rock01",
+      "prepared_file": "Assets/Prepared/SM_Rock01.fbx",
+      "source": "Quaternius Stylized Nature MegaKit Standard",
+      "source_model": "Rock_Medium_1",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/nature/License_Standard.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "vertices": 351,
+      "triangles": 342,
+      "status": "imported",
+      "placement": "Instance size and ground alignment use mesh bounds; no authored environment map is reused."
+    },
+    {
+      "id": "SM_Rock02",
+      "category": "static_nature",
+      "ue_path": "/Game/Art/Nature/SM_Rock02",
+      "prepared_file": "Assets/Prepared/SM_Rock02.fbx",
+      "source": "Quaternius Stylized Nature MegaKit Standard",
+      "source_model": "Rock_Medium_2",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/nature/License_Standard.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "vertices": 249,
+      "triangles": 244,
+      "status": "imported",
+      "placement": "Instance size and ground alignment use mesh bounds; no authored environment map is reused."
+    },
+    {
+      "id": "SM_Rock03",
+      "category": "static_nature",
+      "ue_path": "/Game/Art/Nature/SM_Rock03",
+      "prepared_file": "Assets/Prepared/SM_Rock03.fbx",
+      "source": "Quaternius Stylized Nature MegaKit Standard",
+      "source_model": "Rock_Medium_3",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/nature/License_Standard.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "vertices": 531,
+      "triangles": 522,
+      "status": "imported",
+      "placement": "Instance size and ground alignment use mesh bounds; no authored environment map is reused."
+    },
+    {
+      "id": "SM_Grass01",
+      "category": "static_nature",
+      "ue_path": "/Game/Art/Nature/SM_Grass01",
+      "prepared_file": "Assets/Prepared/SM_Grass01.fbx",
+      "source": "Quaternius Stylized Nature MegaKit Standard",
+      "source_model": "Grass_Common_Short",
+      "license": "CC0-1.0",
+      "license_files": [
+        "Assets/Source/Quaternius/nature/License_Standard.txt"
+      ],
+      "provenance": "Assets/provenance.json",
+      "vertices": 153,
+      "triangles": 155,
+      "status": "imported",
+      "placement": "Instance size and ground alignment use mesh bounds; no authored environment map is reused."
+    },
+    {
+      "id": "MotherTree",
+      "category": "procedural_landmark",
+      "role": "World restoration target and visual progress indicator",
+      "source": "Original project composition in Source/Verdant/VerdantLandscape.cpp",
+      "runtime_parts": [
+        "MotherTrunk",
+        "MotherBranch",
+        "MotherOuterCrown",
+        "MotherRoot",
+        "MotherHeart",
+        "MotherSap"
+      ],
+      "inputs": [
+        "/Engine/BasicShapes/Cylinder",
+        "/Engine/BasicShapes/Sphere",
+        "/Engine/BasicShapes/Cone"
+      ],
+      "license": "Original project composition; engine primitives provided by the Unreal Engine installation under its terms.",
+      "provenance": "Source/Verdant/VerdantLandscape.cpp",
+      "status": "runtime_procedural",
+      "generated_api_models": 0
+    },
+    {
+      "id": "NutrientPlants",
+      "category": "procedural_resource_family",
+      "role": "Three grove resource displays; fruit availability reflects live inventory",
+      "source": "Original project composition in Source/Verdant/VerdantLandscape.cpp",
+      "runtime_parts": [
+        "FruitStem",
+        "FruitLeaves",
+        "GroveFruit"
+      ],
+      "inputs": [
+        "/Engine/BasicShapes/Cylinder",
+        "/Engine/BasicShapes/Sphere"
+      ],
+      "license": "Original project composition; engine primitives provided by the Unreal Engine installation under its terms.",
+      "provenance": "Source/Verdant/VerdantLandscape.cpp",
+      "status": "runtime_procedural",
+      "generated_api_models": 0
+    },
+    {
+      "id": "AFX_Swing",
+      "category": "sound_effect",
+      "role": "Soft band-limited air swish",
+      "ue_path": "/Game/Art/Audio/AFX_Swing",
+      "source_file": "Assets/Audio/AFX_Swing.wav",
+      "source": "Original deterministic mathematical synthesis in Tools/generate_sfx.py",
+      "source_script": "Tools/generate_sfx.py",
+      "source_sha256": "e59a07fd1a4dc930a1e1d0dbaa7e8cf348ab32f748b0ce9ddb07f96cb48480eb",
+      "license": "Project-original locally synthesized audio; no separate reuse license declared. Quaternius CC0 licenses do not apply to these original files.",
+      "license_notes": "Assets/Audio/README.md",
+      "provenance": "Assets/provenance.json",
+      "measurements": "Assets/Audio/manifest.json",
+      "sample_rate_hz": 48000,
+      "channels": 1,
+      "bits_per_sample": 16,
+      "duration_seconds": 0.16,
+      "peak_amplitude": 0.199981689453125,
+      "rms_amplitude": 0.0435948932796163,
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "listening_review": "Not performed; actual listening and gameplay mix review remain pending."
+    },
+    {
+      "id": "AFX_Hit",
+      "category": "sound_effect",
+      "role": "Low damped impact with a soft noisy transient",
+      "ue_path": "/Game/Art/Audio/AFX_Hit",
+      "source_file": "Assets/Audio/AFX_Hit.wav",
+      "source": "Original deterministic mathematical synthesis in Tools/generate_sfx.py",
+      "source_script": "Tools/generate_sfx.py",
+      "source_sha256": "383b7cf6ea76512dc0a8996689b37a69c2dde00c19359b4a4fa25f294e1f5b84",
+      "license": "Project-original locally synthesized audio; no separate reuse license declared. Quaternius CC0 licenses do not apply to these original files.",
+      "license_notes": "Assets/Audio/README.md",
+      "provenance": "Assets/provenance.json",
+      "measurements": "Assets/Audio/manifest.json",
+      "sample_rate_hz": 48000,
+      "channels": 1,
+      "bits_per_sample": 16,
+      "duration_seconds": 0.16,
+      "peak_amplitude": 0.22998046875,
+      "rms_amplitude": 0.055396317184380726,
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "listening_review": "Not performed; actual listening and gameplay mix review remain pending."
+    },
+    {
+      "id": "AFX_Pickup",
+      "category": "sound_effect",
+      "role": "Two short clear harmonic chimes",
+      "ue_path": "/Game/Art/Audio/AFX_Pickup",
+      "source_file": "Assets/Audio/AFX_Pickup.wav",
+      "source": "Original deterministic mathematical synthesis in Tools/generate_sfx.py",
+      "source_script": "Tools/generate_sfx.py",
+      "source_sha256": "59169b4175c05a176534777379aaa9986e04ac35356588047663ab32b47879c2",
+      "license": "Project-original locally synthesized audio; no separate reuse license declared. Quaternius CC0 licenses do not apply to these original files.",
+      "license_notes": "Assets/Audio/README.md",
+      "provenance": "Assets/provenance.json",
+      "measurements": "Assets/Audio/manifest.json",
+      "sample_rate_hz": 48000,
+      "channels": 1,
+      "bits_per_sample": 16,
+      "duration_seconds": 0.22,
+      "peak_amplitude": 0.199981689453125,
+      "rms_amplitude": 0.060071823434430544,
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "listening_review": "Not performed; actual listening and gameplay mix review remain pending."
+    },
+    {
+      "id": "AFX_Grow",
+      "category": "sound_effect",
+      "role": "Warm rising fundamental and fifth",
+      "ue_path": "/Game/Art/Audio/AFX_Grow",
+      "source_file": "Assets/Audio/AFX_Grow.wav",
+      "source": "Original deterministic mathematical synthesis in Tools/generate_sfx.py",
+      "source_script": "Tools/generate_sfx.py",
+      "source_sha256": "44786649ea2ebaea019d8b4c45e7b3c85209a21f88a0b8926eaefe7c85dce5f1",
+      "license": "Project-original locally synthesized audio; no separate reuse license declared. Quaternius CC0 licenses do not apply to these original files.",
+      "license_notes": "Assets/Audio/README.md",
+      "provenance": "Assets/provenance.json",
+      "measurements": "Assets/Audio/manifest.json",
+      "sample_rate_hz": 48000,
+      "channels": 1,
+      "bits_per_sample": 16,
+      "duration_seconds": 0.5,
+      "peak_amplitude": 0.19000244140625,
+      "rms_amplitude": 0.07773079418895787,
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "listening_review": "Not performed; actual listening and gameplay mix review remain pending."
+    },
+    {
+      "id": "AFX_Offer",
+      "category": "sound_effect",
+      "role": "Brief warm D-major offering chord",
+      "ue_path": "/Game/Art/Audio/AFX_Offer",
+      "source_file": "Assets/Audio/AFX_Offer.wav",
+      "source": "Original deterministic mathematical synthesis in Tools/generate_sfx.py",
+      "source_script": "Tools/generate_sfx.py",
+      "source_sha256": "5bb88b25f42d583b0f5a532b085338b5582a0d45bccbaf96a8fe9c29a9bff66a",
+      "license": "Project-original locally synthesized audio; no separate reuse license declared. Quaternius CC0 licenses do not apply to these original files.",
+      "license_notes": "Assets/Audio/README.md",
+      "provenance": "Assets/provenance.json",
+      "measurements": "Assets/Audio/manifest.json",
+      "sample_rate_hz": 48000,
+      "channels": 1,
+      "bits_per_sample": 16,
+      "duration_seconds": 0.35,
+      "peak_amplitude": 0.199981689453125,
+      "rms_amplitude": 0.040166858252420376,
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "listening_review": "Not performed; actual listening and gameplay mix review remain pending."
+    },
+    {
+      "id": "AFX_Restore",
+      "category": "sound_effect",
+      "role": "Bright ascending D-major completion chime",
+      "ue_path": "/Game/Art/Audio/AFX_Restore",
+      "source_file": "Assets/Audio/AFX_Restore.wav",
+      "source": "Original deterministic mathematical synthesis in Tools/generate_sfx.py",
+      "source_script": "Tools/generate_sfx.py",
+      "source_sha256": "5052ad7f7af09635881d1ad013010e0fbfca7ec63c9e333bf222c50987888fd4",
+      "license": "Project-original locally synthesized audio; no separate reuse license declared. Quaternius CC0 licenses do not apply to these original files.",
+      "license_notes": "Assets/Audio/README.md",
+      "provenance": "Assets/provenance.json",
+      "measurements": "Assets/Audio/manifest.json",
+      "sample_rate_hz": 48000,
+      "channels": 1,
+      "bits_per_sample": 16,
+      "duration_seconds": 1.0,
+      "peak_amplitude": 0.22998046875,
+      "rms_amplitude": 0.05504876930070724,
+      "sound_class": "/Game/Art/Audio/SC_VerdantSFX",
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "listening_review": "Not performed; actual listening and gameplay mix review remain pending."
+    },
+    {
+      "id": "SC_VerdantSFX",
+      "category": "sound_class",
+      "role": "Shared SFX volume routing",
+      "ue_path": "/Game/Art/Audio/SC_VerdantSFX",
+      "source": "Original project routing authored by Tools/import_sfx.py",
+      "source_script": "Tools/import_sfx.py",
+      "provenance": "Assets/provenance.json",
+      "gain_db": -4.0,
+      "linear_gain": 0.6309573650360107,
+      "status": "imported",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "external_samples": false,
+      "api_calls": 0,
+      "paid_credits_spent": 0,
+      "license": "Project-original audio routing configuration; no separate reuse license declared.",
+      "license_notes": "Assets/Audio/README.md"
+    }
+  ],
+  "counts": {
+    "skeletal_characters": 3,
+    "skeletal_animations": 9,
+    "static_nature_models": 6,
+    "procedural_landmarks": 1,
+    "procedural_resource_families": 1,
+    "generated_api_models": 0,
+    "sound_effects": 6,
+    "sound_classes": 1
+  },
+  "planned": {
+    "generated_humanoid_base": 0,
+    "generated_humanoid_variant": 0,
+    "generated_mother_tree": 0,
+    "generated_nutrient_family": 0,
+    "generated_buildings": 0
+  },
+  "generation_budget": {
+    "ledger": "Assets/generation-ledger.json",
+    "generation_requests": 0,
+    "spent_credits": {
+      "tripo": 0,
+      "v2fun": 0,
+      "hyper3d": 0
+    },
+    "last_observed_available_credits": {
+      "tripo": 3000.0,
+      "v2fun": 5100.0,
+      "hyper3d": 223
+    },
+    "balance_observed_date": "2026-10-31",
+    "balance_check_method": "read-only official API GET",
+    "note": "No generation calls were made. All three service balances were left untouched by this project asset work; values are the recorded read-only balance snapshot."
+  },
+  "validation": {
+    "import_report": "Assets/Prepared/unreal_import_report.json",
+    "import_success": true,
+    "preview": "Assets/Prepared/characters_preview.png",
+    "runtime_smoke": "Saved/Validation/smoke-results.txt",
+    "runtime_smoke_passes": 16,
+    "runtime_smoke_failures": 0,
+    "world_probe": "Saved/Validation/world-probe-results.txt",
+    "world_probe_passes": 13,
+    "world_probe_failures": 0,
+    "visual_evidence": [
+      "Saved/Validation/valley-start.png",
+      "Saved/Validation/valley-restored.png"
+    ],
+    "visual_review": "Start screenshot shows a textured Traveler with a normal walking pose, no missing-material checkerboard or stretched limbs. Motion blur limits detail. Restored screenshot was captured during teleport and is occluded by a tree, so it is not accepted as character visual evidence. Single screenshots do not validate full clip timing or facing versus movement.",
+    "audio": {
+      "source_manifest": "Assets/Audio/manifest.json",
+      "import_report": "Assets/Audio/unreal_import_report.json",
+      "import_success": true,
+      "imported_sound_waves": 6,
+      "source_hashes_match_import_report": true,
+      "sound_class_gain_db": -4.0,
+      "verified_sound_class_linear_gain": 0.6309573650360107,
+      "technical_validation": "Deterministic source bytes, mono 48 kHz 16-bit format, durations, peak/RMS and zero endpoints verified. All six UE SoundWaves imported and routed to SC_VerdantSFX.",
+      "listening_review": "Not performed; technical measurements and successful import are not listening approval.",
+      "runtime_mix_review": "Pending actual in-game listening, including overlapping events."
+    }
+  },
+  "notes": [
+    "This is a newly imported minimal original-source asset set, not copied Ember Unreal packages or maps.",
+    "Original acquired CC0 licenses and hashes are retained in provenance.",
+    "Different NPC sizes reuse these character meshes rather than requiring additional models.",
+    "Raw procedural engine primitive assets are not separately redistributed in the repository.",
+    "Six original short sound effects are synthesized locally from deterministic math and seeded noise; no external recordings, APIs or service credits were used. Their origin is separate from the Quaternius CC0 visual assets."
+  ]
+}

@@ -1,0 +1,515 @@
+{
+  "characters": [
+    {
+      "name": "SK_Traveler",
+      "fbx": "Assets/Prepared/SK_Traveler.fbx",
+      "ue_path": "/Game/Art/Characters/SK_Traveler",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "MI_Ranger",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/outfits/Female_Ranger/T_Ranger_BaseColor.png"
+        },
+        {
+          "slot": 1,
+          "name": "MI_Regular_Female",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/outfits/Female_Ranger/T_Regular_Female_Dark_BaseColor.png"
+        },
+        {
+          "slot": 2,
+          "name": "MI_Hair_2",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Female_FullBody/T_Hair_2_BaseColor.png",
+          "tint": [
+            0.3,
+            0.15,
+            0.065
+          ]
+        },
+        {
+          "slot": 3,
+          "name": "MI_Eyes",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Female_FullBody/T_Eye_Brown.png"
+        },
+        {
+          "slot": 4,
+          "name": "MI_Superhero_Female",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Female_FullBody/T_Superhero_Female_Dark_BaseColor.png"
+        }
+      ],
+      "vertices": 28018,
+      "triangles": 32380,
+      "bones": 65
+    },
+    {
+      "name": "SK_Gatherer",
+      "fbx": "Assets/Prepared/SK_Gatherer.fbx",
+      "ue_path": "/Game/Art/Characters/SK_Gatherer",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "MI_Peasant",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/outfits/Male_Peasant/T_Peasant_BaseColor.png"
+        },
+        {
+          "slot": 1,
+          "name": "MI_Regular_Male",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/outfits/Male_Peasant/T_Regular_Male_Dark_BaseColor.png"
+        },
+        {
+          "slot": 2,
+          "name": "MI_Hair_1",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Male_FullBody/T_Hair_1_BaseColor.png",
+          "tint": [
+            0.3,
+            0.15,
+            0.065
+          ]
+        },
+        {
+          "slot": 3,
+          "name": "MI_Eyes",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Male_FullBody/T_Eye_Brown.png"
+        },
+        {
+          "slot": 4,
+          "name": "MI_Superhero_Male",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Male_FullBody/T_Superhero_Male_Dark.png"
+        },
+        {
+          "slot": 5,
+          "name": "MI_Hair_1.001",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Hair_SimpleParted/T_Hair_1_BaseColor.png",
+          "tint": [
+            0.3,
+            0.15,
+            0.065
+          ]
+        }
+      ],
+      "vertices": 12542,
+      "triangles": 19031,
+      "bones": 65
+    },
+    {
+      "name": "SK_Keeper",
+      "fbx": "Assets/Prepared/SK_Keeper.fbx",
+      "ue_path": "/Game/Art/Characters/SK_Keeper",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "MI_Peasant",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/outfits/Female_Peasant/T_Peasant_BaseColor.png"
+        },
+        {
+          "slot": 1,
+          "name": "MI_Peasant.001",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/outfits/Female_Peasant/T_Peasant_BaseColor.png"
+        },
+        {
+          "slot": 2,
+          "name": "MI_Hair_2",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Female_FullBody/T_Hair_2_BaseColor.png",
+          "tint": [
+            0.3,
+            0.15,
+            0.065
+          ]
+        },
+        {
+          "slot": 3,
+          "name": "MI_Eyes",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Female_FullBody/T_Eye_Brown.png"
+        },
+        {
+          "slot": 4,
+          "name": "MI_Superhero_Female",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Superhero_Female_FullBody/T_Superhero_Female_Dark_BaseColor.png"
+        },
+        {
+          "slot": 5,
+          "name": "MI_Hair_2.001",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 0.8500000238418579,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/base/Hair_Buns/T_Hair_2_BaseColor.png",
+          "tint": [
+            0.3,
+            0.15,
+            0.065
+          ]
+        }
+      ],
+      "vertices": 16895,
+      "triangles": 22266,
+      "bones": 65
+    }
+  ],
+  "animations": [
+    {
+      "name": "A_Idle",
+      "source_action": "Idle_Loop",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Idle.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Idle",
+      "duration": 2.5
+    },
+    {
+      "name": "A_Walk",
+      "source_action": "Walk_Loop",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Walk.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Walk",
+      "duration": 1.3333333333333333
+    },
+    {
+      "name": "A_Run",
+      "source_action": "Jog_Fwd_Loop",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Run.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Run",
+      "duration": 0.9333333333333333
+    },
+    {
+      "name": "A_Attack",
+      "source_action": "Punch_Cross",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Attack.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Attack",
+      "duration": 1.0
+    },
+    {
+      "name": "A_Hit",
+      "source_action": "Hit_Chest",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Hit.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Hit",
+      "duration": 0.3333333333333333
+    },
+    {
+      "name": "A_Death",
+      "source_action": "Death01",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Death.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Death",
+      "duration": 2.4
+    },
+    {
+      "name": "A_Dodge",
+      "source_action": "Roll",
+      "library": 1,
+      "fbx": "Assets/Prepared/A_Dodge.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Dodge",
+      "duration": 1.4666666666666666
+    },
+    {
+      "name": "A_Consume",
+      "source_action": "Consume",
+      "library": 2,
+      "fbx": "Assets/Prepared/A_Consume.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Consume",
+      "duration": 1.3333333333333333
+    },
+    {
+      "name": "A_Carry",
+      "source_action": "Walk_Carry_Loop",
+      "library": 2,
+      "fbx": "Assets/Prepared/A_Carry.fbx",
+      "ue_path": "/Game/Art/Characters/Animations/A_Carry",
+      "duration": 2.0
+    }
+  ],
+  "environment": [
+    {
+      "name": "SM_Tree01",
+      "fbx": "Assets/Prepared/SM_Tree01.fbx",
+      "ue_path": "/Game/Art/Nature/SM_Tree01",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "Bark_NormalTree",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": true,
+          "texture": "Assets/Source/Quaternius/nature/CommonTree_1/Bark_NormalTree.png"
+        },
+        {
+          "slot": 1,
+          "name": "Leaves_NormalTree",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": true,
+          "texture": "Assets/Source/Quaternius/nature/CommonTree_1/Leaves_NormalTree_C.png"
+        }
+      ],
+      "vertices": 9458,
+      "triangles": 6265
+    },
+    {
+      "name": "SM_Tree02",
+      "fbx": "Assets/Prepared/SM_Tree02.fbx",
+      "ue_path": "/Game/Art/Nature/SM_Tree02",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "Bark_TwistedTree",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/nature/TwistedTree_1/Bark_TwistedTree.png"
+        },
+        {
+          "slot": 1,
+          "name": "Leaves_TwistedTree",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": true,
+          "texture": "Assets/Source/Quaternius/nature/TwistedTree_1/Leaves_TwistedTree_C.png"
+        }
+      ],
+      "vertices": 14064,
+      "triangles": 9564
+    },
+    {
+      "name": "SM_Rock01",
+      "fbx": "Assets/Prepared/SM_Rock01.fbx",
+      "ue_path": "/Game/Art/Nature/SM_Rock01",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "Rocks",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/nature/Rock_Medium_1/Rocks_Diffuse.png"
+        }
+      ],
+      "vertices": 351,
+      "triangles": 342
+    },
+    {
+      "name": "SM_Rock02",
+      "fbx": "Assets/Prepared/SM_Rock02.fbx",
+      "ue_path": "/Game/Art/Nature/SM_Rock02",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "Rocks.001",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/nature/Rock_Medium_2/Rocks_Diffuse.png"
+        }
+      ],
+      "vertices": 249,
+      "triangles": 244
+    },
+    {
+      "name": "SM_Rock03",
+      "fbx": "Assets/Prepared/SM_Rock03.fbx",
+      "ue_path": "/Game/Art/Nature/SM_Rock03",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "Rocks.002",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/nature/Rock_Medium_3/Rocks_Diffuse.png"
+        }
+      ],
+      "vertices": 531,
+      "triangles": 522
+    },
+    {
+      "name": "SM_Grass01",
+      "fbx": "Assets/Prepared/SM_Grass01.fbx",
+      "ue_path": "/Game/Art/Nature/SM_Grass01",
+      "materials": [
+        {
+          "slot": 0,
+          "name": "Grass",
+          "color": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            1.0
+          ],
+          "roughness": 1.0,
+          "masked": false,
+          "texture": "Assets/Source/Quaternius/nature/Grass_Common_Short/Grass.png"
+        }
+      ],
+      "vertices": 153,
+      "triangles": 155
+    }
+  ],
+  "blender": "4.5.13 LTS"
+}

@@ -1,87 +1,93 @@
-# Grow_up · 快快长大
+# 快快长大（Grow up）
 
-从 10 厘米高的小生物开始，在山谷中采集食物、逐渐长大，与居民交谈、分享、合作或战斗。当前新旅程默认生成 200 位居民；帮助居民完成心愿、获得 12 次祝福，并让身高超过 10 米，达成通关目标。
+**从18厘米高的小生物开始，在山谷中寻找食物、不断长大，与居民交谈、合作或战斗。**
 
-对话会结合角色身份、记忆和现场状态提出行动，由游戏检查可行性后执行。口头承诺不会直接变成实际资源或行动。支持角色查找、对话历史、望远镜、五个存档栏位及游戏内 API 配置。
+一个使用 **Unreal Engine 5.8.3 / C++** 开发的单人游戏原型。体型改变你的视角、行动能力和与他人的关系；食物既是成长的养分，也是分享、协商和复苏母树的资源。
 
-## 下载与启动
+本文介绍当前源码及本地开发版。旧 v0.3 可玩包与历史验证记录不包含全部新功能，最新玩法与画面仍在迭代。
 
-**最终 Windows 包 · 2026-11-10 · Shipping（r4）**
+## 山谷与居民
 
-### [直接下载完整 ZIP（约 1.12 GB）](https://github.com/droidlyx/Vibehacks06_lyx/releases/download/v2026.11.10-final/Grow_up_final-Windows.zip)
+![快快长大：多尺度山谷美术概念](Assets/Concepts/fractal-world-v01.png)
 
-[Release 页面与校验文件](https://github.com/droidlyx/Vibehacks06_lyx/releases/tag/v2026.11.10-final)。完整解压后双击 `Grow_up_final/Grow_up.exe`，无需下载或合并分卷。
+*美术概念图，非实机画面：展示嵌套山脊、盆地与自然植被的视觉方向。当前实现是约400米宽的有限山谷，不是图中延伸到地平线的完整世界。*
 
-### 备用下载：Git LFS 分卷
+当前场景包含三片果林、一棵母树、**20位不同模型的居民**与160个初始食物点。地形使用五层尺度的侵蚀基底叠加，搭配植被、山间日出、云层与森林配乐。主角是程序化种子／嫩芽小生物，居民使用选定的 Project Titan 角色素材。
 
-大文件网络传输不稳定，因此使用 17 个分卷保存同一个完整 ZIP，文件内容经 SHA-256 校验。
+| 长颈鸭商人 | 菜商 | 企鹅 | 沙漠鼬 |
+|:---:|:---:|:---:|:---:|
+| <img src="Docs/CharacterCatalog/Models/T36_064_SKM_clifftops_NoodleDuck_shopowner.jpg" width="180" alt="长颈鸭商人模型预览"> | <img src="Docs/CharacterCatalog/Models/T37_065_SMK_npc_cabbage_merchant.jpg" width="180" alt="菜商模型预览"> | <img src="Docs/CharacterCatalog/Models/T49_078_Penguin_LWC.jpg" width="180" alt="企鹅模型预览"> | <img src="Docs/CharacterCatalog/Models/T31_058_SKM_DesertFerrret.jpg" width="180" alt="沙漠鼬模型预览"> |
 
-1. 下载下面全部分卷，以及 [Join-Game.cmd](Downloads/Join-Game.cmd)、[Join-Game.ps1](Downloads/Join-Game.ps1)、[parts.sha256](Downloads/parts.sha256)、[SHA256SUMS.txt](Downloads/SHA256SUMS.txt)，放在同一文件夹。脚本和校验文件在 GitHub 文件页选择 Download raw file 下载。
-2. 双击 `Join-Game.cmd`，生成并校验 `Grow_up_final-Windows.zip`。约需 2.3 GB 空间同时保存分卷和 ZIP，解压另需空间。
-3. 完整解压，双击 `Grow_up_final/Grow_up.exe`。保留 `Grow_up/`、`Engine/` 等配套目录，不能只复制 EXE。无需 Unreal Editor 或 Python。若缺少运行库，运行包内 `Engine/Extras/Redist/en-us/vc_redist.x64.exe`。
+*当前选用角色素材预览，取自原始资产缩略图，不是游戏内截图。完整[角色设计库](Docs/CharacterCatalog/README.md)收录53种候选类型，其中20种已接入当前场景。*
 
-<details>
-<summary>展开全部分卷下载链接</summary>
+## 现在可以怎么玩
 
-- [Grow_up_final-Windows.zip.001](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.001)
-- [Grow_up_final-Windows.zip.002](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.002)
-- [Grow_up_final-Windows.zip.003](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.003)
-- [Grow_up_final-Windows.zip.004](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.004)
-- [Grow_up_final-Windows.zip.005](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.005)
-- [Grow_up_final-Windows.zip.006](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.006)
-- [Grow_up_final-Windows.zip.007](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.007)
-- [Grow_up_final-Windows.zip.008](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.008)
-- [Grow_up_final-Windows.zip.009](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.009)
-- [Grow_up_final-Windows.zip.010](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.010)
-- [Grow_up_final-Windows.zip.011](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.011)
-- [Grow_up_final-Windows.zip.012](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.012)
-- [Grow_up_final-Windows.zip.013](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.013)
-- [Grow_up_final-Windows.zip.014](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.014)
-- [Grow_up_final-Windows.zip.015](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.015)
-- [Grow_up_final-Windows.zip.016](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.016)
-- [Grow_up_final-Windows.zip.017](https://media.githubusercontent.com/media/droidlyx/Vibehacks06_lyx/main/Downloads/Grow_up_final-Windows.zip.017)
+- **寻找食物，逐渐长大。** 玩家从18厘米起步，每5秒消耗当时库存的20%用于成长，常规上限4.5米；空间不足时暂缓消耗。NPC的体型保持不变。
+- **体型决定获取能力。** 食物分四档，分别提供1、3、8、20份养分；高档食物需要相应身高，携带容量也随身高增加。每30秒尝试补回采空或缺失的初始食物点，未采空的食物不会直接补满，落点不安全时延后补充。
+- **与有个性的居民交往。** 20位居民拥有各自的人设、动机、库存与实例关系，可采集、分享、跟随、保护、战斗或撤退。承诺送粮需要实际走到目标，口头答应不会让资源隔空到账。
+- **开口协商，也听他们主动交谈。** 可以向附近居民广播，或指定一位对象。全局每10秒尝试安排一组主动交谈，受距离、体型和请求状态限制；不是每位NPC都持续调用模型。
+- **让母树复苏。** 将100份养分送到母树，同时决定食物用于自身成长、分享还是供奉。果林可以免费开放、收取分成或限制采集；生态手记记录本季的资源、居民与归属变化。
+- **失败后继续生活。** 玩家死亡后约2.5秒回到安全起点，保留85%的身高且不低于起始身高；超过新容量的食物留在死亡处。复活有3秒保护，世界与已有关系不因此重置。
 
-</details>
+### 对话如何影响世界
 
-也可以安装 Git LFS 后克隆本仓库，执行 `git lfs pull`，再运行 `Downloads/Join-Game.cmd`。GitHub 的“Download ZIP”源码快照不保证包含真实 LFS 文件，请使用上述下载方式。合并脚本会检查分卷和完整 ZIP，遇到缺失或 LFS 指针文件会停止并提示。
+每个符合条件的听众按“**初步意愿 → 游戏可行性检查 → 最终对白 → 发布时复验**”回应。DeepSeek先判断相关性并给出尚未公开的意愿与草稿；游戏检查距离、生命状态、权限和真实资源后，再请模型整理最终对白。相关回应可能需要两次云端请求，无关内容可在第一阶段提前结束。草稿和可行性检查不会直接执行动作，发布前仍会复验当前条件；情况变化时可以取消回应和新行动。
 
-本仓库用于发布可玩成品；[最新源码、资源与开发文档](https://github.com/droidlyx/Grow_up)已迁移至独立项目仓库。历史提交仍保留。
+当前默认交谈距离为 **40米**，双方身高比不超过 **5倍**；广播最多选择3位候选，主动对话链最多两句实际回复。NPC回复通过头顶气泡显示，回复期间短暂停步并面向交谈对象，随后恢复行动。模型可能拒绝或误解，任意口头承诺并不会自动变成新玩法。
 
-## 最新版本
-
-- Windows x64 **Shipping** 正式便携包，直接运行 `Grow_up.exe`。
-- 全屏与无边框采用显示器原生分辨率；调整设置面板宽度，API 按钮使用单行文字。
-- 新增 **0–200% 全局音量**，音乐和音效保留独立控制；点击“保存游戏设置”应用。
-- 开局说明补齐望远镜操作。
-- 新的 API 连接需先测试成功，再保存应用；无有效自定义连接时使用本机提供的默认七牛配置。
-- 默认七牛接口直连，保留 HTTPS 校验；API 记录包含失败类别与耗时。
-- 存档保存在 `%LOCALAPPDATA%\Grow_up\Saved\SaveGames`，更新游戏目录时继续保留。
+当前链路无需本地 StartLux 或 Qwen。云端服务缺失时，移动、成长、战斗和居民的规则行为仍可运行。
 
 ## 操作
 
-| 操作 | 按键 |
+| 输入 | 行为 |
 |---|---|
-| 移动 / 观察 | WASD / 鼠标 |
-| 跳跃 / 奔跑 / 闪避 | 空格 / Shift / 左 Ctrl |
-| 采集 / 聊天 | 按住 E / T |
-| 分享、归还 / 抢夺 | F / R |
-| 轻击 / 重击 | 鼠标左键 / 右键 |
-| 望远镜 / 调节 2–8 倍 | B / 滚轮 |
-| 对话历史 / 查找居民 | J / N |
-| 帮助 / 暂停、存读档、设置 | H / Esc |
+| WASD / 鼠标 / Shift | 移动 / 观察 / 奔跑 |
+| 鼠标左键 / 右键 / 空格 | 轻击 / 重击 / 闪避 |
+| 按住 E | 连续获取附近食物或尸体食物，受档位与容量限制 |
+| Q | 查看自动成长提示，不额外消耗食物 |
+| F / Shift + F | 分享或供奉 / 在母树附近批量供奉 |
+| T | 打开对话输入并暂停场景，可选广播或指定对象 |
+| Enter / Esc | 发送并恢复场景 / 取消输入 |
+| B / G | 养护土壤 / 接管或管理果林 |
+| Tab / PageUp、PageDown | 打开生态手记 / 翻阅记录 |
+| H | 操作帮助 |
+| R | 手动重新开始整局 |
 
-## API 配置
+**开发模式体型预览：** 按住 `[` / `]` 连续缩小／放大，小键盘 `-` / `+` 等效；每秒按÷1.5／×1.5变化，松开停止。按 `\` 恢复起始大小并退出预览。预览范围约0.18–36米，保留碰撞检查并暂停自动成长；此功能不进入 Shipping 构建，也不代表正常玩法的成长上限。
 
-公开包**不包含开发者 API key、SSH key、存档或本机配置**。默认服务预设为七牛 `https://api.qnaigc.com/v1/chat/completions`，模型为 `deepseek/deepseek-v4.1-flash-1017`。
+## 从源码启动
 
-进入 **Esc → API 设置**，选择服务，填写自己的模型和 key，点击“测试连接”，成功后“保存并应用”。需要下次启动继续使用时，勾选“在这台电脑记住密钥”。也可在游戏根目录自行创建 `Local/Secrets/deepseek.key`，只写入自己的七牛 key，然后直接启动 EXE。调用费用计入所用 key 的账户。
+需要 Windows、Unreal Engine **5.8.3**、对应 C++ 编译工具链及 Git LFS。工程入口仍为 `Verdant.uproject`。
 
-未配置 key 时可游玩规则驱动的部分，但远程模型对话不可用。新的配置未测试成功前，不替换当前有效连接；默认连接只有在本机提供默认 key 时才能发起请求。
+```powershell
+git clone git@github.com:droidlyx/Vibehacks06_lyx.git
+cd Vibehacks06_lyx
+git lfs install
+git lfs pull
+```
 
-## 存档与验证状态
+在启动环境设置 `DEEPSEEK_API_KEY`，或将密钥单独保存在 `Local/Secrets/deepseek.key`。当前使用七牛兼容接口 `https://api.qnaigc.com/v1` 和模型 `deepseek/deepseek-v4.1-flash-1017`，详见[AI配置](Docs/LocalAI.md)。密钥不进入 Git，也不随便携包分发。
 
-存档文件为 `Journey_1.json` 等，`.bak` 为备份。完整游戏包不附带开发者存档。Shipping 编译与打包成功；默认 key 在本机的独立最小请求返回 HTTP 200，但不把该检查等同于打包游戏内全部对话或玩法验收。
+关闭编辑器后编译，再打开项目并手动点击 Play：
 
-## 素材与许可
+```powershell
+# 可通过 UE_ROOT 指定本机引擎目录
+powershell -ExecutionPolicy Bypass -File Tools/Build.ps1
+.\Open-Editor.cmd
+```
 
-请随游戏保留 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) 和包内许可文件。Unreal、Project Titan、Quaternius 及音频等素材各自适用其原有条款；本项目未授予统一的素材再分发许可。
+也可使用 `Start-Game.ps1 -Editor -NoAI` 启动不发送模型请求的编辑器进程。部分授权音效只保存在本机，其他机器需按[音频说明](Assets/Audio/README.md)重建；素材准备工具中的本机路径也需按环境配置。
+
+如需独立构建，运行 `Tools/Build.ps1 -Package -Configuration Shipping -Version my-build`，再用 `Tools/Stage-Portable.ps1 -Version my-build` 整理对应版本。历史 `Builds/v0.3/Windows` 属于旧版本，不能代替当前源码构建。
+
+## 当前边界与资料
+
+这是持续迭代的原型，尚无存档、多人联机或完整剧情战役。当前地形、对话、移动和界面的实际体验以人工试玩为准；历史测试结果只适用于各自记录的版本。
+
+- [玩法与接入记录](Docs/RuntimeIntegration.zh-CN.md)：人口、食物、成长与复活。
+- [对话架构](Docs/ConversationRuntime.zh-CN.md)：调度、回应与行为边界。
+- [分形地形](Docs/FractalTerrain.md) · [环境与天空](Docs/EnvironmentLook.md)：地形规则和视觉迭代。
+- [开发记录](Docs/DevelopmentLog.md)：各阶段修改、验证与待办。
+- [素材说明](Assets/README.md) · [音频来源](Assets/Audio/README.md)：Project Titan、Quaternius、Kenney及音乐的来源与使用范围。Titan素材不属于CC0，项目中的不同素材不共享同一许可。
+
+历史工程标识为 **Verdant Accord / Verdant**；本项目展示名为 **快快长大（Grow up）**。

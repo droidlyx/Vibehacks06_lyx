@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "budgets": {
+    "tripo": {
+      "user_limit": 3000,
+      "round_cap": 600
+    },
+    "v2fun": {
+      "user_limit": 5100,
+      "round_cap": 300
+    },
+    "hyper3d": {
+      "user_limit": 223,
+      "round_cap": 10
+    }
+  },
+  "requests": [],
+  "balance_checks": [
+    {
+      "date": "2026-10-31",
+      "tripo": 3000.0,
+      "tripo_frozen": 0.0,
+      "v2fun": 5100.0,
+      "hyper3d": 223,
+      "method": "read-only official API GET",
+      "spent": 0
+    }
+  ]
+}
