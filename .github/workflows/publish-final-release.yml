@@ -1,6 +1,10 @@
 name: Publish final Windows Release
 on:
   push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/publish-final-release.yml
     tags:
       - v2026.11.10-final
   workflow_dispatch:
